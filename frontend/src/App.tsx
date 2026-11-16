@@ -292,7 +292,7 @@ function App() {
                   <div className="message-body">
                     <div className="message-heading"><strong>{message.name}</strong>{message.role && <span className="role-tag">{message.role}</span>}<time>{message.time}</time></div>
                     <p>{message.text}</p>
-                    {message.reactions && <div className="reactions">{message.reactions.map((reaction) => <button key={reaction} onClick={() => notify('Reaction updated.')}>{reaction}</button>}<button className="add-reaction" onClick={() => notify('Choose a reaction.')}>+</button></div>}
+                    {message.reactions && <div className="reactions">{message.reactions.map((reaction) => <button key={reaction} onClick={() => notify('Reaction updated.')}>{reaction}</button>)}<button className="add-reaction" onClick={() => notify('Choose a reaction.')}>+</button></div>}
                     <div className="message-hover-actions">
                       <button title="Add reaction" onClick={() => notify('Choose a reaction.')}><Icon name="smile" size={15} /></button>
                       <button title="Reply" onClick={() => { setDraft('@' + message.name + ' '); inputRef.current?.focus() }}><Icon name="reply" size={15} /></button>
