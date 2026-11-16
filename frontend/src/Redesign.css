@@ -214,7 +214,7 @@ button:active{transform:translateY(1px)}
 .social-post-actions .social-save{margin-left:auto}
 .social-reply-form{display:flex;align-items:center;gap:8px;margin-top:12px;padding:7px 8px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
 .social-reply-form input{flex:1;min-width:0;height:30px;border:0;outline:0;background:transparent;color:var(--text);font-size:10px}
-.social-reply-form button{height:29px;padding:0 12px;border:0;border-radius:999px;background:var(--accent);color:#172214;font-size:9px;font-weight:800}
+ .social-reply-form button{height:29px;padding:0 12px;border:0;border-radius:999px;background:var(--accent);color:#fff;font-size:9px;font-weight:800}
 .social-reply-form button:disabled{opacity:.4}
 .social-replies{display:flex;gap:11px;margin-top:12px}
 .social-reply-stem{width:1px;flex:0 0 1px;margin:3px 0 2px 19px;background:var(--line)}
