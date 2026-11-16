@@ -224,7 +224,7 @@ function App() {
                     {group.title === 'COMMUNITY' && <i className="unread-dot" />}
                   </button>
                   {!collapsed.includes(group.title) && group.channels.map((channel) => (
-                    <button key={channel.name} className={'channel-link' + (activeChannel === channel.name ? ' selected' : '')} onClick={() => channel.voice ? setVoiceConnected((value) => !value) : chooseChannel(channel.name)}>
+                    <button key={channel.name} className={'channel-link' + (activeChannel === channel.name ? ' selected' : '')} onClick={() => ('voice' in channel && channel.voice) ? setVoiceConnected((value) => !value) : chooseChannel(channel.name)}>
                       <Icon name={channel.icon} size={17} /><span>{channel.name}</span>
                       {'voice' in channel && channel.voice && <small>{channel.people}</small>}
                       {'voice' in channel && channel.voice && <span className="voice-live"><Icon name="volume" size={13} /></span>}
