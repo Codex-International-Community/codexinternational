@@ -11,10 +11,11 @@ Editorial community software: warm ink surfaces, pale mineral text, restrained l
 - **Social:** a Threads/X-inspired timeline with For You, Following, Latest, and Saved views; compose, reply, like, repost, bookmark, share, creator discovery, and topic discovery.
 - **Discover / Activity / Settings:** supporting areas, with the same typography, spacing, and interaction language.
 
-## Design tokens
-- Background: ink green-black #0D1510; sidebar #111A14; raised surface #17241B.
-- Text: soft mineral #EDF2E8; secondary #A7B2A4; quiet #79877A.
-- Accent: restrained leaf #C6ED72; use for primary actions and selected states, not decoration.
+## Color direction
+X-inspired neutral palette; Commons keeps its own layout, components, naming, and brand mark.
+- Dark / Lights Out: background #000000, raised surface #16181C, hover surface #202327, border #2F3336, text #E7E9EA, muted #AAB0B6.
+- Light / Default: background #FFFFFF, surface #F7F9F9, hover surface #EFF3F4, border #CFD9DE, text #0F1419, muted #536471.
+- Shared accent: X blue #1D9BF0 with a subtle blue-tinted selection surface. Keep success green #00BA7C and danger red #F4212E only for semantic status.
 - Radius: 9–15px for controls and interactive surfaces; asymmetric 5px corner only as a quiet signature.
 - Spacing: 4px base rhythm, with 8 / 12 / 16 / 24 / 32px steps.
 - Typography: system sans for interface and body copy; Georgia for editorial display headlines.
