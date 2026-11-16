@@ -28,7 +28,7 @@ Editorial community software: warm ink surfaces, pale mineral text, restrained l
 - Mobile navigation retains direct access to Chat, Social, Channels, and People.
 
 ## Responsive behavior
-Use available workspace width, not device labels alone. Keep feed content readable, collapse secondary panels before shrinking the main conversation, and replace desktop navigation with a five-item mobile bar. Long text wraps without horizontal overflow.
+Use available workspace width, not device labels alone. Keep feed content readable, collapse secondary panels before shrinking the main conversation, and replace desktop navigation with a four-item mobile bar. Long text wraps without horizontal overflow.
 
 ## Content principles
 Use concrete, believable community content. Avoid fake counters, exaggerated marketing claims, generic filler labels, and repeated decorative cards. The UI should prioritize actual conversations and creator content.
