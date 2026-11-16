@@ -351,3 +351,7 @@ button:active{transform:translateY(1px)}
 @media(prefers-reduced-motion:reduce){
  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+.social-follow-inline{flex:0 0 auto;padding:6px 11px;border:1px solid rgba(198,237,114,.28);border-radius:999px;background:var(--accent-bg);color:var(--accent);font-size:9px;font-weight:800;cursor:pointer}
+.social-follow-inline.following{border-color:var(--line);background:transparent;color:var(--muted)}
+.social-follow-inline:hover{border-color:var(--accent);color:var(--text)}
