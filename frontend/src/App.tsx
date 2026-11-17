@@ -1,209 +1,820 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import './App.css'
 import './Redesign.css'
 
-type IconName = 'home'|'compass'|'plus'|'chevron'|'hash'|'volume'|'search'|'bell'|'users'|'pin'|'inbox'|'help'|'settings'|'mic'|'headphones'|'more'|'send'|'smile'|'paperclip'|'gift'|'image'|'reply'|'copy'|'close'|'menu'|'phone'|'video'|'screen'|'shield'|'at'|'calendar'|'sparkles'|'logout'|'check'|'user'|'message'|'edit'|'bookmark'|'external'|'mute'|'thread'|'flag'|'link'|'arrow'|'trash'|'save'|'moon'|'sun'|'play'|'arrowUp'|'heart'|'share'
-const iconPaths: Record<IconName,string> = {
- home:'M3 10.5 12 3l9 7.5V21H3V10.5ZM9 21v-7h6v7',compass:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4 6-2.2 5.8L8 16l2.2-5.8L16 8Z',plus:'M12 5v14M5 12h14',chevron:'m9 18 6-6-6-6',hash:'M4 9h16M4 15h16M10 3 8 21M16 3l-2 18',volume:'M11 5 6 9H3v6h3l5 4V5ZM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13',search:'m20 20-4.5-4.5M18 10.5a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z',bell:'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4',users:'M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM20 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',pin:'M16 3 21 8l-4 1-4 4 1 4-2 2-3-6-6-3 2-2 4 1 4-4 1-4Z',inbox:'M4 4h16v13h-5l-3 3-3-3H4V4ZM4 13h4l1.5 2h5L16 13h4',help:'M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 5M12 18h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z',settings:'M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7ZM19.4 13.5a7.7 7.7 0 0 0 0-3l2-1.5-2-3.5-2.4 1a8 8 0 0 0-2.6-1.5L14 2h-4l-.4 3a8 8 0 0 0-2.6 1.5l-2.4-1-2 3.5 2 1.5a7.7 7.7 0 0 0 0 3l-2 1.5 2 3.5 2.4-1a8 8 0 0 0 2.6 1.5l.4 3h4l.4-3a8 8 0 0 0 2.6-1.5l2.4 1 2-3.5-2-1.5Z',mic:'M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3ZM19 11v1a7 7 0 0 1-14 0v-1M12 19v3M8 22h8',headphones:'M3 14v-3a9 9 0 0 1 18 0v3M3 14h4v7H5a2 2 0 0 1-2-2v-5ZM21 14h-4v7h2a2 2 0 0 0 2-2v-5Z',more:'M5 12h.01M12 12h.01M19 12h.01',send:'m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13',smile:'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20ZM8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01',paperclip:'m21 11.5-8.5 8.5a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8',gift:'M20 12v10H4V12M2 7h20v5H2zM12 7v15',image:'M4 4h16v16H4zM8 10h.01M20 15l-5-5L5 20',reply:'M9 17 4 12l5-5M4 12h10a6 6 0 0 1 6 6v1',copy:'M8 8V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-4M4 8h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2Z',close:'M18 6 6 18M6 6l12 12',menu:'M4 6h16M4 12h16M4 18h16',phone:'M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.4 19.4 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7l.5 3a2 2 0 0 1-.6 1.9L7.7 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 1.9-.6l3 .5a2 2 0 0 1 1.7 2.4Z',video:'M15 10 20 7v10l-5-3M3 6h12v12H3z',screen:'M3 4h18v13H3zM8 21h8M12 17v4',shield:'M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11ZM9 12l2 2 4-4',at:'M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',calendar:'M7 2v4M17 2v4M3 9h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z',sparkles:'m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3ZM19 16l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1 1-2.5Z',logout:'M10 17l5-5-5-5M15 12H3M21 19V5a2 2 0 0 0-2-2h-7',check:'m5 12 4 4L19 6',user:'M20 21a8 8 0 0 0-16 0M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',message:'M21 11.5a8.4 8.4 0 0 1-9 8.4 9.5 9.5 0 0 1-4-.9L3 21l1.5-4.3A8 8 0 0 1 3 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5Z',edit:'m15 5 4 4M4 20l4-.8L19 8a2.1 2.1 0 0 0-3-3L5 16l-1 4Z',bookmark:'M6 3h12v18l-6-4-6 4V3Z',external:'M14 3h7v7M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6',mute:'M3 9v6h4l5 4V5L7 9H3ZM17 9l5 6M22 9l-5 6',thread:'M4 5h16v11H9l-5 4V5Z',flag:'M4 22V4M4 4c7-5 9 5 16 0v11c-7 5-9-5-16 0',link:'M10 13a5 5 0 0 0 7.5.5l3-3A5 5 0 0 0 13.5 3l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3A5 5 0 0 0 10.5 21l1.7-1.7',arrow:'M5 12h14M13 6l6 6-6 6',trash:'M3 6h18M8 6V4h8v2m3 0-1 15H6L5 6m4 4v7m6-7v7',save:'M5 3h12l4 4v14H3V3h2Zm2 0v6h10V3M7 21v-7h10v7',moon:'M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5Z',sun:'M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z',play:'m8 5 12 7-12 7V5Z',arrowUp:'M12 19V5m-6 6 6-6 6 6',heart:'M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z',share:'M12 16V3m-5 5 5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6'
-}
-function Icon({name,size=18}:{name:IconName;size?:number}){return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={iconPaths[name]}/></svg>}
+import type { Attachment, View } from './types/common'
+import type { Channel, Data, Message, Server } from './types/chat'
+import type { SocialPost, SocialTab } from './types/social'
 
-type Server={id:string;name:string;abbr:string;tone:string}
-type Channel={id:string;name:string;type:'text'|'voice'}
-type User={id:string;name:string;initials:string;tone:string;status:'online'|'idle';role?:string}
-type Attachment={name:string;type:string;url:string}
-type Message={id:string;authorId:string;author:string;initials:string;tone:string;time:string;text:string;reactions:Record<string,string[]>;replyTo?:string;attachment?:Attachment;edited?:boolean;role?:string}
-type Conversation={id:string;userId:string;lastMessage:string;unread:number}
-type Data={servers:Server[];channels:Record<string,Channel[]>;messages:Record<string,Message[]>;dmMessages:Record<string,Message[]>;conversations:Conversation[];displayName:string;theme:'dark'|'light';pins:Record<string,string[]>}
-type View='channel'|'dm'|'discover'|'settings'|'notifications'|'pinned'|'social'|'channels'|'people'
+import { people, roomKey } from './constants/seedData'
+import {
+  clearDemoStorage,
+  loadData,
+  loadFollowedHandles,
+  loadSocialPosts,
+  saveData,
+  saveFollowedHandles,
+  saveSocialPosts,
+} from './utils/storage'
 
-type SocialReply={id:string;author:string;handle:string;text:string;time:string}
-type SocialPost={id:string;author:string;handle:string;initials:string;tone:string;time:string;createdAt:number;text:string;media?:string;mediaAlt?:string;verified?:boolean;likes:number;reposts:number;replies:SocialReply[];liked:boolean;reposted:boolean;saved:boolean}
-const socialSeed:SocialPost[]=[
- {id:'post-1',author:'Mika Tanaka',handle:'mikatanaka',initials:'MT',tone:'rose',time:'12m',createdAt:1794836400000,text:'A good community product should make it easy to talk, easy to share, and just as easy to step away. That balance is the hard part.',verified:true,likes:284,reposts:32,replies:[{id:'r-1',author:'Arlo Bennett',handle:'arlob',text:'The quiet parts of a product matter just as much as the loud ones.',time:'8m'},{id:'r-2',author:'Sofia Chen',handle:'sofiachen',text:'Especially when people come here to spend time, not just attention.',time:'5m'}],liked:false,reposted:false,saved:false},
- {id:'post-2',author:'Sofia Chen',handle:'sofiachen',initials:'SC',tone:'amber',time:'34m',createdAt:1794835080000,text:'A small reminder to leave room in your week for places that make you feel like yourself.',media:'https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1400&q=85',mediaAlt:'A quiet alpine lake surrounded by mountain peaks',likes:1260,reposts:84,replies:[{id:'r-3',author:'Elena Park',handle:'elenapark',text:'Saving this for the next long weekend.',time:'19m'}],liked:false,reposted:false,saved:false},
- {id:'post-3',author:'Arlo Bennett',handle:'arlob',initials:'AB',tone:'blue',time:'1h',createdAt:1794832200000,text:'Hot take: a timeline is better when it gives you control over what you see. Chronology is a feature, not a setting to hide.',verified:true,likes:492,reposts:106,replies:[],liked:false,reposted:false,saved:false},
- {id:'post-4',author:'Kai Morgan',handle:'kaimakes',initials:'KM',tone:'violet',time:'2h',createdAt:1794828600000,text:'Working in public today. Turning a rough sketch into something people can actually use. Sharing progress later.',likes:178,reposts:14,replies:[{id:'r-4',author:'Noah Williams',handle:'noahw',text:'Would love to see the iterations.',time:'1h'}],liked:false,reposted:false,saved:false}
-]
-const socialSuggestions=[
- {name:'Elena Park',handle:'elenapark',initials:'EP',tone:'pink',bio:'Photography · city walks'},
- {name:'Noah Williams',handle:'noahw',initials:'NW',tone:'green',bio:'Building small things'},
- {name:'Sofia Chen',handle:'sofiachen',initials:'SC',tone:'amber',bio:'Slow travel · visual stories'}
-]
-function loadSocialPosts():SocialPost[]{try{const raw=localStorage.getItem('community-social-posts');if(!raw)return socialSeed;const parsed=JSON.parse(raw);return Array.isArray(parsed)?parsed:socialSeed}catch{return socialSeed}}
-function loadFollowedHandles():string[]{try{const raw=localStorage.getItem('community-social-follows');const parsed=raw?JSON.parse(raw):['mikatanaka'];return Array.isArray(parsed)?parsed:['mikatanaka']}catch{return ['mikatanaka']}}
+import { Toast } from './components/common/Toast'
+import { ServerRail } from './components/layout/ServerRail'
+import { ChannelSidebar } from './components/layout/ChannelSidebar'
+import { Topbar } from './components/layout/Topbar'
+import { SearchStrip } from './components/layout/SearchStrip'
+import { MobileTabs, type MobileTab } from './components/layout/MobileTabs'
+import { ActionModal, type ActionModalType } from './components/modals/ActionModal'
+import { CallModal } from './components/modals/CallModal'
 
+import { ChatPanel } from './components/chat/ChatPanel'
+import { MembersPanel } from './components/chat/MembersPanel'
+import { SocialFeed } from './components/social/SocialFeed'
+import { SocialAside } from './components/social/SocialAside'
+import { ChannelDirectory } from './components/directories/ChannelDirectory'
+import { PeopleDirectory } from './components/directories/PeopleDirectory'
+import { DiscoverView } from './components/views/DiscoverView'
+import { SettingsView } from './components/views/SettingsView'
+import { NotificationsView } from './components/views/NotificationsView'
+import { PinnedView } from './components/views/PinnedView'
 
-const people:User[]=[
- {id:'mika',name:'Mika Tanaka',initials:'MT',tone:'rose',status:'online',role:'OWNER'},
- {id:'arlo',name:'Arlo Bennett',initials:'AB',tone:'blue',status:'online',role:'MOD'},
- {id:'sofia',name:'Sofia Chen',initials:'SC',tone:'amber',status:'online'},
- {id:'noah',name:'Noah Williams',initials:'NW',tone:'green',status:'online'},
- {id:'kai',name:'Kai Morgan',initials:'KM',tone:'violet',status:'idle'},
- {id:'elena',name:'Elena Park',initials:'EP',tone:'pink',status:'idle'},
-]
-const seedServers:Server[]=[{id:'studio',name:'The Studio',abbr:'TS',tone:'lavender'},{id:'gaming',name:'After Hours',abbr:'AH',tone:'blue'},{id:'design',name:'Design Club',abbr:'DC',tone:'orange'},{id:'dev',name:'Build Space',abbr:'BS',tone:'green'}]
-const seedChannels:Record<string,Channel[]>={studio:[{id:'welcome',name:'welcome',type:'text'},{id:'announcements',name:'announcements',type:'text'},{id:'general',name:'general',type:'text'},{id:'introductions',name:'introductions',type:'text'},{id:'showcase',name:'showcase',type:'text'},{id:'resources',name:'resources',type:'text'},{id:'lounge',name:'The Lounge',type:'voice'},{id:'study',name:'Study Room',type:'voice'}],gaming:[{id:'general',name:'general',type:'text'},{id:'looking',name:'looking-for-group',type:'text'},{id:'voice',name:'Squad Room',type:'voice'}],design:[{id:'general',name:'general',type:'text'},{id:'feedback',name:'feedback',type:'text'}],dev:[{id:'general',name:'general',type:'text'},{id:'help',name:'help',type:'text'}]}
-function makeMessage(id:string,author:User,text:string,time:string,extra:Partial<Message>={}):Message{return {id,authorId:author.id,author:author.name,initials:author.initials,tone:author.tone,time,text,reactions:{},...extra}}
-const seedMessages:Record<string,Message[]>={ 'studio:general':[
- makeMessage('m1',people[0],'Morning everyone! I pushed the first pass of the workspace layout. Would love a second pair of eyes on the channel hierarchy.','09:14',{reactions:{'✨':['arlo','sofia'],'💜':['noah']}}),
- makeMessage('m2',people[1],'The channel grouping feels much clearer now. I especially like keeping the voice rooms separate from the text channels.','09:17',{reactions:{'👍':['mika','kai']}}),
- makeMessage('m3',people[2],'One thought: member details should be contextual. When the window gets tight, the conversation deserves the space.','09:22'),
- makeMessage('m4',people[3],'That also means the channel sidebar should have a compact state. Keep the server rail visible where possible.','09:31',{reactions:{'👀':['mika']}}),
- makeMessage('m5',{id:'self',name:'You',initials:'YO',tone:'self',status:'online'},'Agreed. I want the workspace to adapt to its available width, not just switch layouts at arbitrary device sizes.','09:36')
-], 'studio:welcome':[makeMessage('w1',people[0],'Welcome in! Start here, say hello and make yourself comfortable.','08:45')], 'studio:announcements':[makeMessage('a1',people[0],'The community space is now open. Please keep conversations friendly and constructive.','Yesterday',{role:'OWNER'})]}
-const defaultData:Data={servers:seedServers,channels:seedChannels,messages:seedMessages,dmMessages:{mika:[makeMessage('dm1',people[0],'Hey! Welcome to the studio. How is the new interface coming along?','Yesterday')],arlo:[makeMessage('dm2',people[1],'I left a few notes on the channel layout. Let me know what you think.','10:15')],sofia:[],noah:[],kai:[],elena:[]},conversations:[{id:'c1',userId:'mika',lastMessage:'How is the new interface coming along?',unread:1},{id:'c2',userId:'arlo',lastMessage:'I left a few notes on the channel layout.',unread:0},{id:'c3',userId:'sofia',lastMessage:'Thanks for the feedback!',unread:0},{id:'c4',userId:'noah',lastMessage:'See you in the lounge.',unread:0}],displayName:'your account',theme:'dark',pins:{}}
-function loadData():Data{try{const raw=localStorage.getItem('community-frontend-state');if(!raw)return defaultData;const parsed=JSON.parse(raw) as Partial<Data>;return {...defaultData,...parsed,servers:Array.isArray(parsed.servers)?parsed.servers:defaultData.servers,channels:parsed.channels??defaultData.channels,messages:parsed.messages??defaultData.messages,dmMessages:parsed.dmMessages??defaultData.dmMessages,conversations:parsed.conversations??defaultData.conversations,pins:parsed.pins??{}}}catch{return defaultData}}
-const me:User={id:'self',name:'You',initials:'YO',tone:'self',status:'online'}
-const roomKey=(serverId:string,channelId:string)=>serverId+':'+channelId
-function Avatar({user,size='normal'}:{user:User;size?:'small'|'normal'|'large'}){return <span className={'avatar '+user.tone+' '+size}>{user.initials}<i className={'status '+user.status}/></span>}
+function App() {
+  const [data, setData] = useState<Data>(loadData)
+  const [view, setView] = useState<View>('channel')
+  const [serverId, setServerId] = useState('studio')
+  const [channelId, setChannelId] = useState('general')
+  const [dmId, setDmId] = useState('mika')
+  const [membersOpen, setMembersOpen] = useState(true)
+  const [channelSidebarOpen, setChannelSidebarOpen] = useState(true)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [mobileTab, setMobileTab] = useState<MobileTab>('chat')
+  const [composer, setComposer] = useState('')
+  const [replyTo, setReplyTo] = useState<Message | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [modal, setModal] = useState<ActionModalType | 'call' | null>(null)
+  const [modalValue, setModalValue] = useState('')
+  const [toast, setToast] = useState('')
+  const [attachment, setAttachment] = useState<Attachment | null>(null)
+  const [voiceId, setVoiceId] = useState<string | null>(null)
+  const [muted, setMuted] = useState(false)
+  const [deafened, setDeafened] = useState(false)
+  const [cameraOn, setCameraOn] = useState(false)
+  const [screenSharing, setScreenSharing] = useState(false)
+  const [profileMenu, setProfileMenu] = useState(false)
+  const [notificationRead, setNotificationRead] = useState(false)
+  const [socialPosts, setSocialPosts] = useState<SocialPost[]>(loadSocialPosts)
+  const [socialDraft, setSocialDraft] = useState('')
+  const [socialTab, setSocialTab] = useState<SocialTab>('for-you')
+  const [followedHandles, setFollowedHandles] = useState<string[]>(loadFollowedHandles)
 
-function App(){
- const [data,setData]=useState<Data>(loadData)
- const [view,setView]=useState<View>('channel')
- const [serverId,setServerId]=useState('studio')
- const [channelId,setChannelId]=useState('general')
- const [dmId,setDmId]=useState('mika')
- const [membersOpen,setMembersOpen]=useState(true)
- const [channelSidebarOpen,setChannelSidebarOpen]=useState(true)
- const [drawerOpen,setDrawerOpen]=useState(false)
- const [mobileTab,setMobileTab]=useState<'chat'|'social'|'channels'|'people'>('chat')
- const [composer,setComposer]=useState('')
- const [replyTo,setReplyTo]=useState<Message|null>(null)
- const [editingId,setEditingId]=useState<string|null>(null)
- const [searchOpen,setSearchOpen]=useState(false)
- const [search,setSearch]=useState('')
- const [modal,setModal]=useState<'server'|'channel'|'dm'|'invite'|'call'|null>(null)
- const [modalValue,setModalValue]=useState('')
- const [toast,setToast]=useState('')
- const [menuId,setMenuId]=useState<string|null>(null)
- const [attachment,setAttachment]=useState<Attachment|null>(null)
- const [voiceId,setVoiceId]=useState<string|null>(null)
- const [muted,setMuted]=useState(false)
- const [deafened,setDeafened]=useState(false)
- const [cameraOn,setCameraOn]=useState(false)
- const [screenSharing,setScreenSharing]=useState(false)
- const [profileMenu,setProfileMenu]=useState(false)
- const [notificationRead,setNotificationRead]=useState(false)
- const [socialPosts,setSocialPosts]=useState<SocialPost[]>(loadSocialPosts)
- const [socialDraft,setSocialDraft]=useState('')
- const [socialTab,setSocialTab]=useState<'for-you'|'following'|'latest'|'saved'>('for-you')
- const [socialReplyFor,setSocialReplyFor]=useState<string|null>(null)
- const [socialReplyDraft,setSocialReplyDraft]=useState('')
- const [followedHandles,setFollowedHandles]=useState<string[]>(loadFollowedHandles)
- const [channelFilter,setChannelFilter]=useState<'all'|'text'|'voice'>('all')
- const [channelSearch,setChannelSearch]=useState('')
- const [peopleFilter,setPeopleFilter]=useState<'all'|'online'|'idle'>('all')
- const [peopleSearch,setPeopleSearch]=useState('')
- const fileRef=useRef<HTMLInputElement>(null)
- const messageInput=useRef<HTMLInputElement>(null)
- const feedRef=useRef<HTMLDivElement>(null)
- const socialInput=useRef<HTMLTextAreaElement>(null)
+  const messageInputRef = useRef<HTMLInputElement>(null)
+  const feedRef = useRef<HTMLDivElement>(null)
+  const socialInputRef = useRef<HTMLTextAreaElement>(null)
 
- useEffect(()=>{try{localStorage.setItem('community-frontend-state',JSON.stringify(data))}catch{setToast('Browser storage is full. Remove large attachments to continue saving.') }},[data])
- useEffect(()=>{if(feedRef.current)feedRef.current.scrollTop=feedRef.current.scrollHeight},[view,serverId,channelId,dmId])
- useEffect(()=>{try{localStorage.setItem('community-social-posts',JSON.stringify(socialPosts))}catch{notify('Social timeline is full. Remove large media to continue saving.')}},[socialPosts])
- useEffect(()=>{try{localStorage.setItem('community-social-follows',JSON.stringify(followedHandles))}catch{}},[followedHandles])
- useEffect(()=>{const onKey=(e:globalThis.KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();setSearchOpen(true);setTimeout(()=>messageInput.current?.focus(),0)}if(e.key==='Escape'){setModal(null);setDrawerOpen(false);setSearchOpen(false);setMenuId(null);setProfileMenu(false)}};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[])
- const notify=(text:string)=>{setToast(text);window.setTimeout(()=>setToast(current=>current===text?'':current),2600)}
- const server=data.servers.find(s=>s.id===serverId)??data.servers[0]
- const channels=data.channels[serverId]??[]
- const channel=channels.find(c=>c.id===channelId)??channels.find(c=>c.type==='text')
- const currentDm=people.find(p=>p.id===dmId)??people[0]
- const key=view==='dm'?'dm:'+dmId:roomKey(serverId,channel?.id??'general')
- const allMessages=view==='dm'?(data.dmMessages[dmId]??[]):(data.messages[key]??[])
- const currentMessages=useMemo(()=>allMessages.filter(m=>!search||(m.text+' '+m.author).toLowerCase().includes(search.toLowerCase())),[allMessages,search])
- const unreadCount=data.conversations.reduce((sum,c)=>sum+c.unread,0)
- const socialFeedPosts=useMemo(()=>{if(socialTab==='following')return socialPosts.filter(post=>followedHandles.includes(post.handle));if(socialTab==='saved')return socialPosts.filter(post=>post.saved);if(socialTab==='latest')return [...socialPosts].sort((a,b)=>b.createdAt-a.createdAt);return socialPosts},[socialPosts,socialTab,followedHandles])
- const channelDirectoryItems=useMemo(()=>data.servers.flatMap(server=>(data.channels[server.id]??[]).filter(channel=>(channelFilter==='all'||channel.type===channelFilter)&&channel.name.toLowerCase().includes(channelSearch.toLowerCase())).map(channel=>({server,channel}))),[data.servers,data.channels,channelFilter,channelSearch])
- const filteredPeople=useMemo(()=>people.filter(person=>(peopleFilter==='all'||person.status===peopleFilter)&&person.name.toLowerCase().includes(peopleSearch.toLowerCase())),[peopleFilter,peopleSearch])
- const onlinePeopleCount=people.filter(person=>person.status==='online').length
+  const notify = useCallback((text: string) => {
+    setToast(text)
+    window.setTimeout(() => setToast((curr) => (curr === text ? '' : curr)), 2600)
+  }, [])
 
- const updateMessages=(updater:(items:Message[])=>Message[])=>setData(prev=>view==='dm'?{...prev,dmMessages:{...prev.dmMessages,[dmId]:updater(prev.dmMessages[dmId]??[])}}:{...prev,messages:{...prev.messages,[key]:updater(prev.messages[key]??[])}})
- const pickServer=(id:string)=>{setServerId(id);const first=(data.channels[id]??[]).find(c=>c.type==='text');setChannelId(first?.id??'general');setView('channel');setDrawerOpen(false);setMobileTab('chat');setSearch('')}
- const pickChannel=(item:Channel,targetServerId?:string)=>{if(targetServerId)setServerId(targetServerId);setChannelId(item.id);if(item.type==='voice'){setVoiceId(item.id);setMuted(false);setDeafened(false);notify('Connected to '+item.name+' · demo voice room')}setView('channel');setDrawerOpen(false);setMobileTab('chat');setSearch('')}
- const openDm=(id:string)=>{setDmId(id);setView('dm');setDrawerOpen(false);setMobileTab('chat');setSearch('');setData(prev=>({...prev,conversations:[{id:'c-'+id,userId:id,lastMessage:prev.dmMessages[id]?.at(-1)?.text??'Start a conversation',unread:0},...prev.conversations.filter(c=>c.userId!==id)]}))}
- const send=(event?:FormEvent)=>{event?.preventDefault();const text=composer.trim();if(!text&&!attachment)return;if(editingId){updateMessages(list=>list.map(m=>m.id===editingId?{...m,text,edited:true}:m));setEditingId(null);setComposer('');setAttachment(null);notify('Message updated.');return}const msg:Message={id:crypto.randomUUID(),authorId:'self',author:data.displayName,initials:'YO',tone:'self',time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),text,reactions:{},...(replyTo?{replyTo:replyTo.id}:{}),...(attachment?{attachment}:{})};updateMessages(list=>[...list,msg]);if(view==='dm')setData(prev=>({...prev,conversations:[{id:'c-'+dmId,userId:dmId,lastMessage:text||'Attachment',unread:0},...prev.conversations.filter(c=>c.userId!==dmId)]}));setComposer('');setAttachment(null);setReplyTo(null)}
- const onComposerKey=(e:KeyboardEvent<HTMLInputElement>)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}}
- const createEntity=(e:FormEvent)=>{e.preventDefault();const name=modalValue.trim();if(!name&&modal!=='invite')return;if(modal==='server'){const id=crypto.randomUUID();const fresh:Server={id,name,abbr:name.split(/\s+/).map(s=>s[0]).join('').slice(0,2).toUpperCase(),tone:'lavender'};setData(prev=>({...prev,servers:[...prev.servers,fresh],channels:{...prev.channels,[id]:[{id:'general',name:'general',type:'text'}]}}));setServerId(id);setChannelId('general');setView('channel');notify('Community created locally.')}else if(modal==='channel'){const id=crypto.randomUUID();const fresh:Channel={id,name:name.replace(/^#+/,''),type:'text'};setData(prev=>({...prev,channels:{...prev.channels,[serverId]:[...(prev.channels[serverId]??[]),fresh]}}));setChannelId(id);setView('channel');notify('Channel created locally.')}else if(modal==='dm'){const person=people.find(p=>p.id===modalValue);if(person)openDm(person.id)}else if(modal==='invite'){navigator.clipboard?.writeText('https://community.example/invite/demo').then(()=>notify('Invite link copied.')).catch(()=>notify('Demo invite: community.example/invite/demo'))}setModal(null);setModalValue('')}
- const react=(messageId:string,emoji:string)=>updateMessages(list=>list.map(m=>{if(m.id!==messageId)return m;const users=m.reactions[emoji]??[];const next=users.includes('self')?users.filter(u=>u!=='self'):[...users,'self'];return {...m,reactions:{...m.reactions,[emoji]:next}}}))
- const edit=(m:Message)=>{if(m.authorId!=='self'){notify('You can only edit your own messages.');return}setEditingId(m.id);setComposer(m.text);setReplyTo(null);setMenuId(null);messageInput.current?.focus()}
- const remove=(m:Message)=>{if(m.authorId!=='self'){notify('You can only delete your own messages.');return}updateMessages(list=>list.filter(item=>item.id!==m.id));setMenuId(null);notify('Message deleted.')}
- const togglePin=(m:Message)=>{setData(prev=>{const ids=prev.pins[key]??[];return {...prev,pins:{...prev.pins,[key]:ids.includes(m.id)?ids.filter(id=>id!==m.id):[...ids,m.id]}}});setMenuId(null);notify((data.pins[key]??[]).includes(m.id)?'Message unpinned.':'Message pinned.')}
- const startReply=(m:Message)=>{setReplyTo(m);setEditingId(null);setComposer('');setMenuId(null);messageInput.current?.focus()}
- const selectAttachment=(file?:File)=>{if(!file)return;if(file.size>1_500_000){notify('Demo attachment limit is 1.5 MB.');return}const reader=new FileReader();reader.onload=()=>setAttachment({name:file.name,type:file.type,url:String(reader.result??'')});reader.readAsDataURL(file)}
- const toggleTheme=()=>setData(prev=>({...prev,theme:prev.theme==='dark'?'light':'dark'}))
- const publishSocialPost=(event:FormEvent)=>{event.preventDefault();const text=socialDraft.trim();if(!text)return;const fresh:SocialPost={id:crypto.randomUUID(),author:data.displayName,handle:data.displayName.toLowerCase().trim().replace(/[^a-z0-9]+/g,'').slice(0,18)||'you',initials:'YO',tone:'self',time:'now',createdAt:Date.now(),text,likes:0,reposts:0,replies:[],liked:false,reposted:false,saved:false};setSocialPosts(prev=>[fresh,...prev]);setSocialDraft('');setSocialTab('for-you');notify('Post published in this browser.')}
- const toggleSocialAction=(id:string,action:'liked'|'reposted'|'saved')=>setSocialPosts(prev=>prev.map(post=>post.id===id?{...post,[action]:!post[action]}:post))
- const submitSocialReply=(event:FormEvent,id:string)=>{event.preventDefault();const text=socialReplyDraft.trim();if(!text)return;const reply:SocialReply={id:crypto.randomUUID(),author:data.displayName,handle:'you',text,time:'now'};setSocialPosts(prev=>prev.map(post=>post.id===id?{...post,replies:[...post.replies,reply]}:post));setSocialReplyDraft('');setSocialReplyFor(null);notify('Reply added.')}
- const toggleSocialFollow=(handle:string)=>setFollowedHandles(prev=>prev.includes(handle)?prev.filter(item=>item!==handle):[...prev,handle])
- const shareSocialPost=(id:string)=>{const url=window.location.origin+'/#post-'+id;navigator.clipboard?.writeText(url).then(()=>notify('Post link copied.')).catch(()=>notify('Post link: '+url))}
- const viewTitle=view==='social'?'Threads & X':view==='channels'?'Channels':view==='people'?'People':view==='dm'?currentDm.name:view==='discover'?'Discover communities':view==='settings'?'User settings':view==='notifications'?'Activity':view==='pinned'?'Pinned messages':channel?.name??'general'
- const pinnedMessages=Object.entries(data.pins).flatMap(([scope,ids])=>ids.map(id=>({scope,message:(scope.startsWith('dm:')?data.dmMessages[scope.slice(3)]:data.messages[scope])?.find(m=>m.id===id)}))).filter((entry):entry is {scope:string;message:Message}=>Boolean(entry.message))
+  useEffect(() => {
+    const ok = saveData(data)
+    if (!ok) {
+      setTimeout(
+        () => setToast('Browser storage is full. Remove large attachments to continue saving.'),
+        0,
+      )
+    }
+  }, [data])
 
- return <div className={'app-shell view-'+view+' theme-'+data.theme+(drawerOpen?' drawer-open':'')+(channelSidebarOpen?'':' channels-hidden')}>
-  <button className="drawer-scrim" aria-label="Close navigation" onClick={()=>setDrawerOpen(false)}/>
-  <aside className="server-rail">
-   <button className="brand-mark" title="Home" onClick={()=>{setView('channel');pickServer('studio')}}>c</button><div className="rail-rule"/>
-   <div className="rail-list">{data.servers.map(s=><button key={s.id} title={s.name} className={'server-pill '+s.tone+(serverId===s.id&&view==='channel'?' active':'')} onClick={()=>pickServer(s.id)}>{s.abbr}<i/></button>)}</div>
-   <button className="rail-add" title="Create community" onClick={()=>{setModal('server');setModalValue('')}}><Icon name="plus"/></button>
-   <button className={'rail-discover '+(view==='discover'?'active':'')} title="Discover" onClick={()=>{setView('discover');setDrawerOpen(false)}}><Icon name="compass"/></button><button className={'rail-social '+(view==='social'?'active':'')} title="Social timeline" onClick={()=>{setView('social');setSocialTab('for-you');setDrawerOpen(false)}}><span>＠</span></button><button className={'rail-directory '+(view==='channels'?'active':'')} title="Channels" onClick={()=>{setView('channels');setDrawerOpen(false)}}><Icon name="hash"/></button><button className={'rail-directory '+(view==='people'?'active':'')} title="People" onClick={()=>{setView('people');setDrawerOpen(false)}}><Icon name="users"/></button>
-   <div className="rail-spacer"/>
-   <button className="rail-bottom" title="Settings" onClick={()=>{setView('settings');setDrawerOpen(false)}}><Icon name="settings"/></button>
-  </aside>
+  useEffect(() => {
+    if (feedRef.current) {
+      feedRef.current.scrollTop = feedRef.current.scrollHeight
+    }
+  }, [view, serverId, channelId, dmId])
 
-  <aside className="channel-sidebar">
-   <button className="server-title" onClick={()=>setProfileMenu(v=>!v)}><span><small>{view==='social'?'SOCIAL FEED':view==='channels'?'DIRECTORY':view==='people'?'COMMUNITY PEOPLE':view==='dm'?'DIRECT MESSAGES':'COMMUNITY'}</small><strong>{view==='social'?'Threads & X':view==='channels'?'Channels':view==='people'?'People':view==='dm'?'Messages':server?.name??'Community'}</strong></span><Icon name="chevron" size={16}/></button>
-   {view==='social'&&<div className="social-side-nav"><span className="side-nav-label">YOUR TIMELINE</span><button className={socialTab==='for-you'?'selected':''} onClick={()=>setSocialTab('for-you')}><span>◉</span> For you</button><button className={socialTab==='following'?'selected':''} onClick={()=>setSocialTab('following')}><Icon name="users" size={16}/> Following</button><button className={socialTab==='latest'?'selected':''} onClick={()=>setSocialTab('latest')}><Icon name="calendar" size={16}/> Latest</button><button className={socialTab==='saved'?'selected':''} onClick={()=>setSocialTab('saved')}><Icon name="bookmark" size={16}/> Saved posts</button><div className="side-nav-divider"/><span className="side-nav-label">YOUR SPACE</span><p>Short thoughts, longer conversations, and people worth following.</p></div>}
-   <div className="channel-list">
-    <button className="quick-search" onClick={()=>{setSearchOpen(true);setTimeout(()=>messageInput.current?.focus(),0)}}><Icon name="search" size={15}/><span>Search</span><kbd>⌘ K</kbd></button>
-    {view==='dm'?<><div className="section-label"><span>DIRECT MESSAGES</span><button onClick={()=>{setModal('dm');setModalValue(people[0].id)}}><Icon name="plus" size={14}/></button></div>{data.conversations.map(c=>{const p=people.find(u=>u.id===c.userId);if(!p)return null;return <button key={c.userId} className={'dm-row '+(dmId===p.id?'chosen':'')} onClick={()=>openDm(p.id)}><Avatar user={p} size="small"/><span><strong>{p.name}</strong><small>{c.lastMessage}</small></span>{c.unread>0&&<i className="unread-badge">{c.unread}</i>}</button>})}</>:<><div className="section-label"><span>TEXT CHANNELS</span><button onClick={()=>{setModal('channel');setModalValue('')}} title="Create channel"><Icon name="plus" size={14}/></button></div>{channels.filter(c=>c.type==='text').map(c=><button key={c.id} className={'channel-item '+(channelId===c.id&&view==='channel'?'chosen':'')} onClick={()=>pickChannel(c)}><Icon name="hash" size={17}/><span>{c.name}</span></button>)}<div className="section-label voice-label"><span>VOICE CHANNELS</span><button onClick={()=>notify('Create voice channel from channel settings.')}><Icon name="plus" size={14}/></button></div>{channels.filter(c=>c.type==='voice').map(c=><button key={c.id} className="channel-item" onClick={()=>pickChannel(c)}><Icon name="volume" size={17}/><span>{c.name}</span></button>)}<button className="create-channel" onClick={()=>{setModal('channel');setModalValue('')}}><Icon name="plus" size={15}/> Create channel</button><div className="section-label dm-label"><span>DIRECT MESSAGES</span><button onClick={()=>{setModal('dm');setModalValue(people[0].id)}} title="New direct message"><Icon name="plus" size={14}/></button></div>{data.conversations.map(c=>{const p=people.find(u=>u.id===c.userId);if(!p)return null;return <button key={p.id} className="dm-row" onClick={()=>openDm(p.id)}><Avatar user={p} size="small"/><span><strong>{p.name}</strong><small>{c.lastMessage}</small></span>{c.unread>0&&<i className="unread-badge">{c.unread}</i>}</button>})}</>}
-   </div>
-   {voiceId&&<div className="voice-card"><div><i/>VOICE CONNECTED</div><strong>{channels.find(c=>c.id===voiceId)?.name}</strong><span>Local demo session</span><div className="voice-actions"><button onClick={()=>setMuted(v=>!v)} className={muted?'active':''}><Icon name="mic" size={14}/></button><button onClick={()=>setDeafened(v=>!v)} className={deafened?'active':''}><Icon name="headphones" size={14}/></button><button onClick={()=>setVoiceId(null)} title="Disconnect"><Icon name="logout" size={14}/></button></div></div>}
-   <div className="account-panel"><button className="account-main" onClick={()=>setProfileMenu(v=>!v)}><Avatar user={me}/><span><strong>{data.displayName}</strong><small>Online</small></span><Icon name="more" size={18}/></button><div className="account-actions"><button title="Mute mic" className={muted?'active':''} onClick={()=>setMuted(v=>!v)}><Icon name="mic" size={16}/></button><button title="Deafen" className={deafened?'active':''} onClick={()=>setDeafened(v=>!v)}><Icon name="headphones" size={16}/></button><button title="Settings" onClick={()=>setView('settings')}><Icon name="settings" size={16}/></button></div></div>
-   {profileMenu&&<div className="profile-menu"><strong>{data.displayName}</strong><span>Online · Available</span><button onClick={()=>{setView('settings');setProfileMenu(false)}}><Icon name="user" size={15}/> Edit profile</button><button onClick={()=>{toggleTheme();setProfileMenu(false)}}><Icon name={data.theme==='dark'?'sun':'moon'} size={15}/> Switch theme</button></div>}
-  </aside>
+  useEffect(() => {
+    const ok = saveSocialPosts(socialPosts)
+    if (!ok) {
+      setTimeout(
+        () => notify('Social timeline is full. Remove large media to continue saving.'),
+        0,
+      )
+    }
+  }, [socialPosts, notify])
 
-  <main className="workspace">
-   <header className="topbar"><div className="topbar-title"><button className="mobile-menu" onClick={()=>setDrawerOpen(true)} aria-label="Open navigation"><Icon name="menu"/></button><button className="collapse-channels" onClick={()=>setChannelSidebarOpen(v=>!v)} title="Toggle sidebar"><Icon name="menu"/></button><span className="channel-symbol"><Icon name={view==='social'?'at':view==='channels'?'hash':view==='people'?'users':view==='dm'?'message':view==='discover'?'compass':view==='settings'?'settings':view==='notifications'?'bell':view==='pinned'?'pin':channel?.type==='voice'?'volume':'hash'}/></span><strong>{viewTitle}</strong><i/><span className="channel-topic">{view==='channel'?'A place to share ideas and catch up.':view==='dm'?'Your private conversation.':view==='social'?'Public thoughts and conversations from your people.':'Your space, your way.'}</span></div><div className="topbar-actions">{view==='social'?<button className="topbar-compose" title="Write a post" onClick={()=>socialInput.current?.focus()}><Icon name="edit" size={15}/> <span>Write a post</span></button>:(view==='channel'||view==='dm')?<><button title="Voice call" onClick={()=>setModal('call')}><Icon name="phone"/></button><button title="Video call" onClick={()=>{setCameraOn(true);setModal('call')}}><Icon name="video"/></button><button title="Pinned messages" onClick={()=>setView('pinned')}><Icon name="pin"/></button><span className="top-separator"/><button title="Members" className={membersOpen?'active':''} onClick={()=>setMembersOpen(v=>!v)}><Icon name="users"/></button><button title="Search" className={searchOpen?'active':''} onClick={()=>{setSearchOpen(v=>!v);setSearch('')}}><Icon name="search"/></button><button title="Notifications" onClick={()=>{setView('notifications');setNotificationRead(true)}}><Icon name="bell"/>{!notificationRead&&<i className="notify-dot"/>}</button><button title="Inbox" onClick={()=>setView('dm')}><Icon name="inbox"/>{unreadCount>0&&<i className="notify-dot"/>}</button></>:null}</div></header>
-   {searchOpen&&<div className="search-strip"><Icon name="search" size={16}/><input autoFocus ref={messageInput} value={search} onChange={e=>setSearch(e.target.value)} placeholder="Filter messages in this conversation..."/><kbd>ESC</kbd><button onClick={()=>{setSearchOpen(false);setSearch('')}}><Icon name="close" size={15}/></button></div>}
-   <div className="workspace-body">
-    <section className="chat-panel">
-     {view==='channels'?<div className="directory-page">
-       <header className="directory-heading"><div><span className="eyebrow">YOUR COMMUNITIES</span><h1>Channels</h1><p>Browse every text and voice room across the communities you have joined.</p></div><button className="primary-action" onClick={()=>{setModal('channel');setModalValue('')}}><Icon name="plus" size={15}/> Create channel</button></header>
-       <div className="directory-toolbar"><div className="directory-tabs"><button className={channelFilter==='all'?'active':''} onClick={()=>setChannelFilter('all')}>All rooms</button><button className={channelFilter==='text'?'active':''} onClick={()=>setChannelFilter('text')}>Text</button><button className={channelFilter==='voice'?'active':''} onClick={()=>setChannelFilter('voice')}>Voice</button></div><label className="directory-search"><Icon name="search" size={16}/><input value={channelSearch} onChange={e=>setChannelSearch(e.target.value)} placeholder="Find a channel"/></label></div>
-       <div className="channel-directory-list">{data.servers.map(community=>{const items=channelDirectoryItems.filter(item=>item.server.id===community.id);if(!items.length)return null;return <section className="directory-community" key={community.id}><header><span className={'directory-server-mark '+community.tone}>{community.abbr}</span><div><strong>{community.name}</strong><small>{items.length} {items.length===1?'room':'rooms'} shown</small></div><button onClick={()=>{setServerId(community.id);setModal('channel');setModalValue('')}}><Icon name="plus" size={14}/> Add channel</button></header><div className="directory-channel-rows">{items.map(({channel:room,server:roomServer})=><button className="directory-channel-row" key={roomServer.id+':'+room.id} onClick={()=>pickChannel(room,roomServer.id)}><span className="directory-room-icon"><Icon name={room.type==='voice'?'volume':'hash'} size={17}/></span><span className="directory-room-name"><strong>{room.name}</strong><small>{room.type==='voice'?'Voice room':'Text channel'}</small></span><span className="directory-room-action">{room.type==='voice'?'Join room':'Open channel'} <Icon name="arrow" size={14}/></span></button>)}</div></section>})}{channelDirectoryItems.length===0&&<div className="directory-empty"><Icon name="search" size={24}/><strong>No channels found</strong><span>Try another name or switch the room filter.</span><button onClick={()=>{setChannelSearch('');setChannelFilter('all')}}>Clear filters</button></div>}</div>
-      </div>
-     :view==='people'?<div className="directory-page">
-       <header className="directory-heading"><div><span className="eyebrow">THE PEOPLE BEHIND THE COMMUNITY</span><h1>People</h1><p>{people.length} members · {onlinePeopleCount} online right now in this demo.</p></div><button className="primary-action" onClick={()=>setModal('invite')}><Icon name="plus" size={15}/> Invite people</button></header>
-       <div className="directory-toolbar"><div className="directory-tabs"><button className={peopleFilter==='all'?'active':''} onClick={()=>setPeopleFilter('all')}>Everyone</button><button className={peopleFilter==='online'?'active':''} onClick={()=>setPeopleFilter('online')}>Online <span>{onlinePeopleCount}</span></button><button className={peopleFilter==='idle'?'active':''} onClick={()=>setPeopleFilter('idle')}>Away</button></div><label className="directory-search"><Icon name="search" size={16}/><input value={peopleSearch} onChange={e=>setPeopleSearch(e.target.value)} placeholder="Find a person"/></label></div>
-       <div className="people-directory-list">{filteredPeople.map(person=><article className="people-directory-row" key={person.id}><Avatar user={person} size="large"/><div className="people-directory-copy"><strong>{person.name}</strong><span>{person.role==='OWNER'?'Community owner':person.role==='MOD'?'Moderator':'Member'}</span><small><i className={'presence-dot '+person.status}/>{person.status==='online'?'Online':'Away'}</small></div><button onClick={()=>openDm(person.id)}><Icon name="message" size={15}/> Message</button></article>)}{filteredPeople.length===0&&<div className="directory-empty"><Icon name="users" size={24}/><strong>No people found</strong><span>Try a different name or status filter.</span><button onClick={()=>{setPeopleSearch('');setPeopleFilter('all')}}>Clear filters</button></div>}</div>
-      </div>
-     :view==='social'?<div className="social-layout">
-       <div className="social-feed-column">
-        <div className="social-heading"><div><span className="social-kicker">A PUBLIC SQUARE FOR YOUR COMMUNITY</span><h1>Threads <em>&amp;</em> X</h1><p>Quick thoughts, shared interests, and conversations that keep going.</p></div><span className="social-state">LOCAL TIMELINE <i/></span></div>
-        <form className="social-composer" onSubmit={publishSocialPost}><Avatar user={me} size="large"/><div className="social-compose-body"><textarea ref={socialInput} value={socialDraft} onChange={e=>setSocialDraft(e.target.value)} placeholder="What’s happening in your corner of the internet?" rows={3} maxLength={500}/><div className="social-compose-footer"><span>{socialDraft.length}/500</span><button disabled={!socialDraft.trim()}><Icon name="arrowUp" size={15}/> Publish</button></div></div></form>
-        <div className="social-feed-tabs">{[{id:'for-you',label:'For you'},{id:'following',label:'Following'},{id:'latest',label:'Latest'},{id:'saved',label:'Saved'}].map(tab=><button key={tab.id} className={socialTab===tab.id?'active':''} onClick={()=>setSocialTab(tab.id as typeof socialTab)}>{tab.label}</button>)}</div>
-        <div className="social-post-list">{socialFeedPosts.map(post=><article className="social-post" key={post.id} id={'post-'+post.id}><div className="social-post-avatar"><Avatar user={{id:post.handle,name:post.author,initials:post.initials,tone:post.tone,status:'online'}}/></div><div className="social-post-main"><div className="social-post-meta"><div><strong>{post.author}</strong>{post.verified&&<span className="social-verified" title="Community verified">✓</span>}<span>@{post.handle}</span><i>·</i><time>{post.time}</time></div><button className={'social-follow-inline '+(followedHandles.includes(post.handle)?'following':'')} title={followedHandles.includes(post.handle)?'Unfollow':'Follow'} onClick={()=>toggleSocialFollow(post.handle)}>{followedHandles.includes(post.handle)?'Following':'+ Follow'}</button></div><p className="social-post-copy">{post.text}</p>{post.media&&<img className="social-post-media" src={post.media} alt={post.mediaAlt??''} loading="lazy"/>}<div className="social-post-actions"><button className={socialReplyFor===post.id?'active':''} onClick={()=>{setSocialReplyFor(socialReplyFor===post.id?null:post.id);setSocialReplyDraft('')}} title="Reply"><Icon name="message" size={17}/><span>{post.replies.length}</span></button><button className={post.reposted?'is-reposted':''} onClick={()=>toggleSocialAction(post.id,'reposted')} title="Repost"><span className="social-repost-mark">↻</span><span>{post.reposts+(post.reposted?1:0)}</span></button><button className={post.liked?'is-liked':''} onClick={()=>toggleSocialAction(post.id,'liked')} title="Like"><Icon name="heart" size={17}/><span>{(post.likes+(post.liked?1:0)).toLocaleString()}</span></button><button onClick={()=>shareSocialPost(post.id)} title="Share"><Icon name="share" size={16}/><span>Share</span></button><button className={'social-save '+(post.saved?'is-saved':'')} onClick={()=>toggleSocialAction(post.id,'saved')} title={post.saved?'Remove bookmark':'Save post'}><Icon name="bookmark" size={16}/></button></div>{socialReplyFor===post.id&&<form className="social-reply-form" onSubmit={e=>submitSocialReply(e,post.id)}><Avatar user={me} size="small"/><input autoFocus value={socialReplyDraft} onChange={e=>setSocialReplyDraft(e.target.value)} placeholder={'Reply to @'+post.handle}/><button disabled={!socialReplyDraft.trim()}>Reply</button></form>}{post.replies.length>0&&<div className="social-replies"><span className="social-reply-stem"/><div>{post.replies.slice(-2).map(reply=><div className="social-reply" key={reply.id}><strong>{reply.author}</strong><span>@{reply.handle}</span><time>{reply.time}</time><p>{reply.text}</p></div>)}</div></div>}</div></article>)}
-         {socialFeedPosts.length===0&&<div className="social-empty"><span>◎</span><strong>{socialTab==='following'?'Your Following feed is quiet.':socialTab==='saved'?'No saved posts yet.':'Nothing here yet.'}</strong><p>{socialTab==='following'?'Follow a few people to bring their conversations into this feed.':'Save posts you want to come back to.'}</p><button onClick={()=>setSocialTab('for-you')}>Explore the timeline</button></div>}
+  useEffect(() => {
+    saveFollowedHandles(followedHandles)
+  }, [followedHandles])
+
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+        setTimeout(() => messageInputRef.current?.focus(), 0)
+      }
+      if (e.key === 'Escape') {
+        setModal(null)
+        setDrawerOpen(false)
+        setSearchOpen(false)
+        setProfileMenu(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const server = data.servers.find((s) => s.id === serverId) ?? data.servers[0]
+  const channels = data.channels[serverId] ?? []
+  const channel = channels.find((c) => c.id === channelId) ?? channels.find((c) => c.type === 'text')
+  const currentDm = people.find((p) => p.id === dmId) ?? people[0]
+  const key = view === 'dm' ? `dm:${dmId}` : roomKey(serverId, channel?.id ?? 'general')
+
+  const allMessages = useMemo(
+    () => (view === 'dm' ? data.dmMessages[dmId] ?? [] : data.messages[key] ?? []),
+    [view, dmId, key, data.dmMessages, data.messages],
+  )
+
+  const currentMessages = useMemo(
+    () =>
+      allMessages.filter(
+        (m) =>
+          !search ||
+          `${m.text} ${m.author}`.toLowerCase().includes(search.toLowerCase()),
+      ),
+    [allMessages, search],
+  )
+
+  const unreadCount = data.conversations.reduce((sum, c) => sum + c.unread, 0)
+
+  const socialFeedPosts = useMemo(() => {
+    if (socialTab === 'following') {
+      return socialPosts.filter((post) => followedHandles.includes(post.handle))
+    }
+    if (socialTab === 'saved') {
+      return socialPosts.filter((post) => post.saved)
+    }
+    if (socialTab === 'latest') {
+      return [...socialPosts].sort((a, b) => b.createdAt - a.createdAt)
+    }
+    return socialPosts
+  }, [socialPosts, socialTab, followedHandles])
+
+  const pinnedMessages = useMemo(
+    () =>
+      Object.entries(data.pins)
+        .flatMap(([scope, ids]) =>
+          ids.map((id) => ({
+            scope,
+            message: (scope.startsWith('dm:')
+              ? data.dmMessages[scope.slice(3)]
+              : data.messages[scope]
+            )?.find((m) => m.id === id),
+          })),
+        )
+        .filter((entry): entry is { scope: string; message: Message } =>
+          Boolean(entry.message),
+        ),
+    [data.pins, data.dmMessages, data.messages],
+  )
+
+  const updateMessages = (updater: (items: Message[]) => Message[]) => {
+    setData((prev) =>
+      view === 'dm'
+        ? { ...prev, dmMessages: { ...prev.dmMessages, [dmId]: updater(prev.dmMessages[dmId] ?? []) } }
+        : { ...prev, messages: { ...prev.messages, [key]: updater(prev.messages[key] ?? []) } },
+    )
+  }
+
+  const pickServer = (id: string) => {
+    setServerId(id)
+    const first = (data.channels[id] ?? []).find((c) => c.type === 'text')
+    setChannelId(first?.id ?? 'general')
+    setView('channel')
+    setDrawerOpen(false)
+    setMobileTab('chat')
+    setSearch('')
+  }
+
+  const pickChannel = (item: Channel, targetServerId?: string) => {
+    if (targetServerId) setServerId(targetServerId)
+    setChannelId(item.id)
+    if (item.type === 'voice') {
+      setVoiceId(item.id)
+      setMuted(false)
+      setDeafened(false)
+      notify(`Connected to ${item.name} · demo voice room`)
+    }
+    setView('channel')
+    setDrawerOpen(false)
+    setMobileTab('chat')
+    setSearch('')
+  }
+
+  const openDm = (id: string) => {
+    setDmId(id)
+    setView('dm')
+    setDrawerOpen(false)
+    setMobileTab('chat')
+    setSearch('')
+    setData((prev) => ({
+      ...prev,
+      conversations: [
+        {
+          id: `c-${id}`,
+          userId: id,
+          lastMessage: prev.dmMessages[id]?.at(-1)?.text ?? 'Start a conversation',
+          unread: 0,
+        },
+        ...prev.conversations.filter((c) => c.userId !== id),
+      ],
+    }))
+  }
+
+  const sendMessage = (event?: FormEvent) => {
+    event?.preventDefault()
+    const text = composer.trim()
+    if (!text && !attachment) return
+
+    if (editingId) {
+      updateMessages((list) =>
+        list.map((m) => (m.id === editingId ? { ...m, text, edited: true } : m)),
+      )
+      setEditingId(null)
+      setComposer('')
+      setAttachment(null)
+      notify('Message updated.')
+      return
+    }
+
+    const msg: Message = {
+      id: crypto.randomUUID(),
+      authorId: 'self',
+      author: data.displayName,
+      initials: 'YO',
+      tone: 'self',
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      text,
+      reactions: {},
+      ...(replyTo ? { replyTo: replyTo.id } : {}),
+      ...(attachment ? { attachment } : {}),
+    }
+
+    updateMessages((list) => [...list, msg])
+
+    if (view === 'dm') {
+      setData((prev) => ({
+        ...prev,
+        conversations: [
+          {
+            id: `c-${dmId}`,
+            userId: dmId,
+            lastMessage: text || 'Attachment',
+            unread: 0,
+          },
+          ...prev.conversations.filter((c) => c.userId !== dmId),
+        ],
+      }))
+    }
+
+    setComposer('')
+    setAttachment(null)
+    setReplyTo(null)
+  }
+
+  const createEntity = (e: FormEvent) => {
+    e.preventDefault()
+    const name = modalValue.trim()
+    if (!name && modal !== 'invite') return
+
+    if (modal === 'server') {
+      const id = crypto.randomUUID()
+      const fresh: Server = {
+        id,
+        name,
+        abbr: name.split(/\s+/).map((s) => s[0]).join('').slice(0, 2).toUpperCase(),
+        tone: 'lavender',
+      }
+      setData((prev) => ({
+        ...prev,
+        servers: [...prev.servers, fresh],
+        channels: { ...prev.channels, [id]: [{ id: 'general', name: 'general', type: 'text' }] },
+      }))
+      setServerId(id)
+      setChannelId('general')
+      setView('channel')
+      notify('Community created locally.')
+    } else if (modal === 'channel') {
+      const id = crypto.randomUUID()
+      const fresh: Channel = { id, name: name.replace(/^#+/, ''), type: 'text' }
+      setData((prev) => ({
+        ...prev,
+        channels: {
+          ...prev.channels,
+          [serverId]: [...(prev.channels[serverId] ?? []), fresh],
+        },
+      }))
+      setChannelId(id)
+      setView('channel')
+      notify('Channel created locally.')
+    } else if (modal === 'dm') {
+      const person = people.find((p) => p.id === modalValue)
+      if (person) openDm(person.id)
+    } else if (modal === 'invite') {
+      navigator.clipboard
+        ?.writeText('https://community.example/invite/demo')
+        .then(() => notify('Invite link copied.'))
+        .catch(() => notify('Demo invite: community.example/invite/demo'))
+    }
+
+    setModal(null)
+    setModalValue('')
+  }
+
+  const react = (messageId: string, emoji: string) => {
+    updateMessages((list) =>
+      list.map((m) => {
+        if (m.id !== messageId) return m
+        const users = m.reactions[emoji] ?? []
+        const next = users.includes('self')
+          ? users.filter((u) => u !== 'self')
+          : [...users, 'self']
+        return { ...m, reactions: { ...m.reactions, [emoji]: next } }
+      }),
+    )
+  }
+
+  const startEdit = (m: Message) => {
+    if (m.authorId !== 'self') {
+      notify('You can only edit your own messages.')
+      return
+    }
+    setEditingId(m.id)
+    setComposer(m.text)
+    setReplyTo(null)
+    messageInputRef.current?.focus()
+  }
+
+  const removeMessage = (m: Message) => {
+    if (m.authorId !== 'self') {
+      notify('You can only delete your own messages.')
+      return
+    }
+    updateMessages((list) => list.filter((item) => item.id !== m.id))
+    notify('Message deleted.')
+  }
+
+  const togglePin = (m: Message) => {
+    setData((prev) => {
+      const ids = prev.pins[key] ?? []
+      return {
+        ...prev,
+        pins: {
+          ...prev.pins,
+          [key]: ids.includes(m.id) ? ids.filter((id) => id !== m.id) : [...ids, m.id],
+        },
+      }
+    })
+    notify((data.pins[key] ?? []).includes(m.id) ? 'Message unpinned.' : 'Message pinned.')
+  }
+
+  const startReply = (m: Message) => {
+    setReplyTo(m)
+    setEditingId(null)
+    setComposer('')
+    messageInputRef.current?.focus()
+  }
+
+  const selectAttachment = (file?: File) => {
+    if (!file) return
+    if (file.size > 1_500_000) {
+      notify('Demo attachment limit is 1.5 MB.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () =>
+      setAttachment({ name: file.name, type: file.type, url: String(reader.result ?? '') })
+    reader.readAsDataURL(file)
+  }
+
+  const toggleTheme = () => {
+    setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))
+  }
+
+  const publishSocialPost = (event: FormEvent) => {
+    event.preventDefault()
+    const text = socialDraft.trim()
+    if (!text) return
+
+    const fresh: SocialPost = {
+      id: crypto.randomUUID(),
+      author: data.displayName,
+      handle:
+        data.displayName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '').slice(0, 18) || 'you',
+      initials: 'YO',
+      tone: 'self',
+      time: 'now',
+      createdAt: Date.now(),
+      text,
+      likes: 0,
+      reposts: 0,
+      replies: [],
+      liked: false,
+      reposted: false,
+      saved: false,
+    }
+
+    setSocialPosts((prev) => [fresh, ...prev])
+    setSocialDraft('')
+    setSocialTab('for-you')
+    notify('Post published in this browser.')
+  }
+
+  const toggleSocialAction = (id: string, action: 'liked' | 'reposted' | 'saved') => {
+    setSocialPosts((prev) =>
+      prev.map((post) => (post.id === id ? { ...post, [action]: !post[action] } : post)),
+    )
+  }
+
+  const submitSocialReply = (event: FormEvent, id: string, text: string) => {
+    event.preventDefault()
+    const reply = {
+      id: crypto.randomUUID(),
+      author: data.displayName,
+      handle: 'you',
+      text,
+      time: 'now',
+    }
+    setSocialPosts((prev) =>
+      prev.map((post) => (post.id === id ? { ...post, replies: [...post.replies, reply] } : post)),
+    )
+    notify('Reply added.')
+  }
+
+  const toggleSocialFollow = (handle: string) => {
+    setFollowedHandles((prev) =>
+      prev.includes(handle) ? prev.filter((item) => item !== handle) : [...prev, handle],
+    )
+  }
+
+  const shareSocialPost = (id: string) => {
+    const url = `${window.location.origin}/#post-${id}`
+    navigator.clipboard
+      ?.writeText(url)
+      .then(() => notify('Post link copied.'))
+      .catch(() => notify(`Post link: ${url}`))
+  }
+
+  const resetAllData = () => {
+    if (window.confirm('Reset all local demo data?')) {
+      clearDemoStorage()
+      window.location.reload()
+    }
+  }
+
+  const openConversationByScope = (scope: string) => {
+    if (scope.startsWith('dm:')) {
+      setDmId(scope.slice(3))
+      setView('dm')
+    } else {
+      const [sid, cid] = scope.split(':')
+      setServerId(sid)
+      setChannelId(cid)
+      setView('channel')
+    }
+  }
+
+  const viewTitle =
+    view === 'social'
+      ? 'Threads & X'
+      : view === 'channels'
+        ? 'Channels'
+        : view === 'people'
+          ? 'People'
+          : view === 'dm'
+            ? currentDm.name
+            : view === 'discover'
+              ? 'Discover communities'
+              : view === 'settings'
+                ? 'User settings'
+                : view === 'notifications'
+                  ? 'Activity'
+                  : view === 'pinned'
+                    ? 'Pinned messages'
+                    : channel?.name ?? 'general'
+
+  const showMembersPanel =
+    membersOpen &&
+    view !== 'social' &&
+    view !== 'channels' &&
+    view !== 'people' &&
+    view !== 'settings' &&
+    view !== 'discover' &&
+    view !== 'notifications' &&
+    view !== 'pinned'
+
+  return (
+    <div
+      className={`app-shell view-${view} theme-${data.theme}${
+        drawerOpen ? ' drawer-open' : ''
+      }${channelSidebarOpen ? '' : ' channels-hidden'}`}
+    >
+      <button
+        className="drawer-scrim"
+        aria-label="Close navigation"
+        onClick={() => setDrawerOpen(false)}
+      />
+
+      <ServerRail
+        servers={data.servers}
+        activeServerId={serverId}
+        activeView={view}
+        onSelectHome={() => {
+          setView('channel')
+          pickServer('studio')
+        }}
+        onSelectServer={pickServer}
+        onCreateServer={() => {
+          setModal('server')
+          setModalValue('')
+        }}
+        onNavigateView={(v) => {
+          setView(v)
+          if (v === 'social') setSocialTab('for-you')
+          setDrawerOpen(false)
+        }}
+      />
+
+      <ChannelSidebar
+        view={view}
+        server={server}
+        channels={channels}
+        channelId={channelId}
+        dmId={dmId}
+        conversations={data.conversations}
+        people={people}
+        displayName={data.displayName}
+        theme={data.theme}
+        socialTab={socialTab}
+        voiceId={voiceId}
+        muted={muted}
+        deafened={deafened}
+        profileMenuOpen={profileMenu}
+        onToggleProfileMenu={() => setProfileMenu((v) => !v)}
+        onSelectSocialTab={setSocialTab}
+        onOpenQuickSearch={() => {
+          setSearchOpen(true)
+          setTimeout(() => messageInputRef.current?.focus(), 0)
+        }}
+        onSelectChannel={pickChannel}
+        onOpenDm={openDm}
+        onCreateChannelModal={() => {
+          setModal('channel')
+          setModalValue('')
+        }}
+        onNewDmModal={() => {
+          setModal('dm')
+          setModalValue(people[0].id)
+        }}
+        onVoiceChannelNotice={() => notify('Create voice channel from channel settings.')}
+        onToggleMute={() => setMuted((v) => !v)}
+        onToggleDeafen={() => setDeafened((v) => !v)}
+        onDisconnectVoice={() => setVoiceId(null)}
+        onNavigateSettings={() => setView('settings')}
+        onToggleTheme={toggleTheme}
+      />
+
+      <main className="workspace">
+        <Topbar
+          view={view}
+          title={viewTitle}
+          channel={channel}
+          membersOpen={membersOpen}
+          searchOpen={searchOpen}
+          notificationRead={notificationRead}
+          unreadCount={unreadCount}
+          onOpenDrawer={() => setDrawerOpen(true)}
+          onToggleSidebar={() => setChannelSidebarOpen((v) => !v)}
+          onFocusSocialComposer={() => socialInputRef.current?.focus()}
+          onVoiceCallModal={() => setModal('call')}
+          onVideoCallModal={() => {
+            setCameraOn(true)
+            setModal('call')
+          }}
+          onOpenPinned={() => setView('pinned')}
+          onToggleMembers={() => setMembersOpen((v) => !v)}
+          onToggleSearch={() => {
+            setSearchOpen((v) => !v)
+            setSearch('')
+          }}
+          onOpenNotifications={() => {
+            setView('notifications')
+            setNotificationRead(true)
+          }}
+          onOpenInbox={() => setView('dm')}
+        />
+
+        {searchOpen && (
+          <SearchStrip
+            inputRef={messageInputRef}
+            value={search}
+            onChange={setSearch}
+            onClose={() => {
+              setSearchOpen(false)
+              setSearch('')
+            }}
+          />
+        )}
+
+        <div className="workspace-body">
+          <section className="chat-panel">
+            {view === 'channels' ? (
+              <ChannelDirectory
+                servers={data.servers}
+                channels={data.channels}
+                onSelectChannel={pickChannel}
+                onCreateChannel={(sid) => {
+                  if (sid) setServerId(sid)
+                  setModal('channel')
+                  setModalValue('')
+                }}
+              />
+            ) : view === 'people' ? (
+              <PeopleDirectory
+                people={people}
+                onOpenDm={openDm}
+                onInvite={() => setModal('invite')}
+              />
+            ) : view === 'social' ? (
+              <SocialFeed
+                posts={socialFeedPosts}
+                socialTab={socialTab}
+                followedHandles={followedHandles}
+                composerRef={socialInputRef}
+                draft={socialDraft}
+                onDraftChange={setSocialDraft}
+                onPublish={publishSocialPost}
+                onTabChange={setSocialTab}
+                onToggleFollow={toggleSocialFollow}
+                onToggleAction={toggleSocialAction}
+                onSubmitReply={submitSocialReply}
+                onShare={shareSocialPost}
+              />
+            ) : view === 'settings' ? (
+              <SettingsView
+                displayName={data.displayName}
+                theme={data.theme}
+                onDisplayNameChange={(name) =>
+                  setData((prev) => ({ ...prev, displayName: name }))
+                }
+                onToggleTheme={toggleTheme}
+                onResetData={resetAllData}
+              />
+            ) : view === 'discover' ? (
+              <DiscoverView
+                onCreateCommunity={() => {
+                  setModal('server')
+                  setModalValue('')
+                }}
+                onJoinCommunity={(s) => {
+                  if (!data.servers.some((x) => x.id === s.id)) {
+                    setData((prev) => ({
+                      ...prev,
+                      servers: [...prev.servers, s],
+                      channels: { ...prev.channels, [s.id]: [{ id: 'general', name: 'general', type: 'text' }] },
+                    }))
+                  }
+                  pickServer(s.id)
+                  notify(`Joined ${s.name}`)
+                }}
+              />
+            ) : view === 'notifications' ? (
+              <NotificationsView
+                onOpenChannel={(cid) => {
+                  setView('channel')
+                  setChannelId(cid)
+                }}
+                onOpenDm={openDm}
+              />
+            ) : view === 'pinned' ? (
+              <PinnedView
+                pinnedMessages={pinnedMessages}
+                onOpenConversation={openConversationByScope}
+              />
+            ) : (
+              <ChatPanel
+                isDm={view === 'dm'}
+                currentDm={currentDm}
+                channel={channel}
+                server={server}
+                feedRef={feedRef}
+                messageInputRef={messageInputRef}
+                messages={currentMessages}
+                pinnedMessageIds={data.pins[key] ?? []}
+                composerText={composer}
+                replyTo={replyTo}
+                editingId={editingId}
+                attachment={attachment}
+                onComposerTextChange={setComposer}
+                onSendMessage={sendMessage}
+                onCancelReply={() => setReplyTo(null)}
+                onCancelEdit={() => {
+                  setEditingId(null)
+                  setComposer('')
+                }}
+                onAttachmentSelect={selectAttachment}
+                onRemoveAttachment={() => setAttachment(null)}
+                onAddEmoji={(emoji) => setComposer((v) => `${v} ${emoji}`)}
+                onReact={react}
+                onReply={startReply}
+                onEdit={startEdit}
+                onRemove={removeMessage}
+                onTogglePin={togglePin}
+                onOpenPinnedView={() => setView('pinned')}
+                onInvite={() => {
+                  setModal('invite')
+                  setModalValue('')
+                }}
+                onNotify={notify}
+              />
+            )}
+          </section>
+
+          {view === 'social' && (
+            <SocialAside
+              followedHandles={followedHandles}
+              onFocusComposer={() => socialInputRef.current?.focus()}
+              onToggleFollow={toggleSocialFollow}
+              onSelectTopic={(topic) => {
+                setSocialDraft((d) => (d ? `${d} ${topic}` : topic))
+                socialInputRef.current?.focus()
+              }}
+            />
+          )}
+
+          {showMembersPanel && (
+            <MembersPanel
+              isDm={view === 'dm'}
+              currentDmUser={currentDm}
+              people={people}
+              onOpenDm={openDm}
+              onInvite={() => setModal('invite')}
+              onNotify={notify}
+            />
+          )}
         </div>
-       </div>
-      </div>
-     :view==='settings'?<div className="page-scroll"><h1>Settings</h1><p className="page-subtitle">Personalize this browser preview.</p><section className="settings-card"><h2>Profile</h2><label>Display name</label><input value={data.displayName} onChange={e=>setData(prev=>({...prev,displayName:e.target.value||'your account'}))}/><p>Your name is used for messages you send in this browser.</p></section><section className="settings-card"><h2>Appearance</h2><div className="setting-row"><div><strong>Color theme</strong><small>Choose your workspace appearance.</small></div><button className="setting-action" onClick={toggleTheme}><Icon name={data.theme==='dark'?'sun':'moon'} size={16}/>{data.theme==='dark'?'Switch to light':'Switch to dark'}</button></div></section><section className="settings-card"><h2>Local data</h2><p>Demo servers, channels, conversations and messages are stored in this browser only.</p><button className="danger-button" onClick={()=>{if(window.confirm('Reset all local demo data?')){localStorage.removeItem('community-frontend-state');localStorage.removeItem('community-social-posts');localStorage.removeItem('community-social-follows');window.location.reload()}}}>Reset demo data</button></section></div>
-     :view==='discover'?<div className="page-scroll"><div className="discover-heading"><div><span className="eyebrow">FIND YOUR PEOPLE</span><h1>Discover communities</h1><p>Explore spaces built around things you love.</p></div><button className="primary-action" onClick={()=>{setModal('server');setModalValue('')}}><Icon name="plus" size={15}/> Create community</button></div><div className="discover-grid">{[{id:'music',title:'Music Makers',desc:'Share tracks, production tips and inspiration.',members:'8.2k members',tone:'card-purple',tag:'CREATIVE'},{id:'games',title:'Indie Game Hub',desc:'Find teammates, playtests and new releases.',members:'12.4k members',tone:'card-blue',tag:'GAMING'},{id:'art',title:'Digital Atelier',desc:'A welcoming place for artists and designers.',members:'5.1k members',tone:'card-orange',tag:'ART & DESIGN'},{id:'code',title:'Open Source Café',desc:'Build in public and learn with other developers.',members:'3.7k members',tone:'card-green',tag:'TECHNOLOGY'}].map(c=><article className="discover-card" key={c.id}><div className={'discover-art '+c.tone}><span>{c.title.slice(0,1)}</span><small>{c.tag}</small></div><div className="discover-card-body"><h2>{c.title}</h2><p>{c.desc}</p><div><span>{c.members}</span><button onClick={()=>{const s:Server={id:c.id,name:c.title,abbr:c.title.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),tone:'lavender'};if(!data.servers.some(x=>x.id===s.id)){setData(prev=>({...prev,servers:[...prev.servers,s],channels:{...prev.channels,[s.id]:[{id:'general',name:'general',type:'text'}]}}))}pickServer(s.id);notify('Joined '+c.title)}}>Join community</button></div></div></article>)}</div></div>
-     :view==='notifications'?<div className="page-scroll"><h1>Activity</h1><p className="page-subtitle">You're all caught up in this demo.</p><section className="activity-card"><Avatar user={people[0]}/><div><strong>Mika Tanaka mentioned the community</strong><p>Welcome to the space. Say hello in #introductions.</p><small>Today · 09:14</small></div><button onClick={()=>{setView('channel');setChannelId('introductions')}}>Open channel</button></section><section className="activity-card"><Avatar user={people[1]}/><div><strong>Arlo Bennett sent you a message</strong><p>I left a few notes on the channel layout.</p><small>Today · 10:15</small></div><button onClick={()=>openDm('arlo')}>Reply</button></section></div>
-     :view==='pinned'?<div className="page-scroll"><h1>Pinned messages</h1><p className="page-subtitle">Messages saved across your conversations.</p>{pinnedMessages.length?pinnedMessages.map(entry=><div className="pinned-row" key={entry.scope+entry.message.id}><Icon name="pin" size={16}/><div><strong>{entry.message.author}</strong><p>{entry.message.text||entry.message.attachment?.name||'Attachment'}</p><small>{entry.scope.startsWith('dm:')?'Direct message':entry.scope.replace(':',' / ')}</small></div><button onClick={()=>{if(entry.scope.startsWith('dm:')){setDmId(entry.scope.slice(3));setView('dm')}else{const [sid,cid]=entry.scope.split(':');setServerId(sid);setChannelId(cid);setView('channel')}}}>Open conversation</button></div>):<div className="empty-state"><Icon name="pin" size={28}/><strong>No pinned messages yet</strong><span>Open a message menu and choose Pin message.</span></div>}</div>
-     :<><div className="messages-scroll" ref={feedRef}><div className="channel-welcome"><div className="welcome-icon"><Icon name={view==='dm'?'message':'hash'} size={25}/></div><div><span className="eyebrow">{view==='dm'?'DIRECT MESSAGE':'YOU ARE IN'}</span><h1>{view==='dm'?currentDm.name:'#'+(channel?.name??'general')}</h1><p>{view==='dm'?'This is the beginning of your private conversation.':<>This is the start of <strong>#{channel?.name??'general'}</strong> in {server?.name}.</>}</p></div><div className="welcome-actions"><button onClick={()=>view==='dm'?notify('Conversation options opened.'):(setModal('invite'),setModalValue(''))}><Icon name={view==='dm'?'more':'users'} size={15}/>{view==='dm'?'Options':'Invite'}</button><button onClick={()=>setView('pinned')} title="Pinned messages"><Icon name="pin" size={15}/></button></div></div><div className="day-divider"><span>Today</span></div>{currentMessages.map(m=><article className="message" key={m.id}><Avatar user={{id:m.authorId,name:m.author,initials:m.initials,tone:m.tone,status:'online'}} size="large"/><div className="message-content"><div className="message-meta"><strong>{m.author}</strong>{m.role&&<span className="role">{m.role}</span>}<time>{m.time}{m.edited?' · edited':''}</time></div>{m.replyTo&&<button className="reply-context" onClick={()=>notify('Reply reference: '+m.replyTo)}>↳ replied to an earlier message</button>}{m.text&&<p>{m.text}</p>}{m.attachment&&<a className="attachment-preview" href={m.attachment.url} download={m.attachment.name}>{m.attachment.type.startsWith('image/')?<img src={m.attachment.url} alt={m.attachment.name}/>:<span><Icon name="paperclip"/>{m.attachment.name}</span>}</a>}{Object.entries(m.reactions).filter(([,users])=>users.length>0).length>0&&<div className="reaction-list">{Object.entries(m.reactions).filter(([,users])=>users.length>0).map(([emoji,users])=><button key={emoji} className={users.includes('self')?'reacted':''} onClick={()=>react(m.id,emoji)}>{emoji} {users.length}</button>)}<button className="reaction-add" onClick={()=>react(m.id,'✨')}>＋</button></div>}<div className="message-toolbar"><button title="React" onClick={()=>react(m.id,'✨')}><Icon name="smile" size={15}/></button><button title="Reply" onClick={()=>startReply(m)}><Icon name="reply" size={15}/></button><button title="More actions" onClick={()=>setMenuId(menuId===m.id?null:m.id)}><Icon name="more" size={15}/></button>{menuId===m.id&&<div className="message-menu"><button onClick={()=>{startReply(m);setMenuId(null)}}><Icon name="reply" size={14}/> Reply</button><button onClick={()=>togglePin(m)}><Icon name="pin" size={14}/>{(data.pins[key]??[]).includes(m.id)?'Unpin':'Pin message'}</button>{m.authorId==='self'&&<><button onClick={()=>edit(m)}><Icon name="edit" size={14}/> Edit message</button><button className="danger-text" onClick={()=>{if(window.confirm('Delete this message?'))remove(m)}}><Icon name="trash" size={14}/> Delete message</button></>}</div>}</div></div></article>)}{currentMessages.length===0&&<div className="empty-state"><Icon name="search" size={25}/><strong>No messages found</strong><span>Try a different search term.</span></div>}</div>
-      <div className="composer-wrap"><form className="composer" onSubmit={send}>{replyTo&&<div className="replying-to"><span>Replying to <strong>{replyTo.author}</strong></span><button type="button" onClick={()=>setReplyTo(null)} aria-label="Cancel reply"><Icon name="close" size={14}/></button></div>}{editingId&&<div className="replying-to"><span>Editing your message</span><button type="button" onClick={()=>{setEditingId(null);setComposer('')}}><Icon name="close" size={14}/></button></div>}{attachment&&<div className="attachment-chip"><Icon name="paperclip" size={14}/>{attachment.name}<button type="button" onClick={()=>setAttachment(null)}><Icon name="close" size={13}/></button></div>}<div className="composer-main"><button type="button" className="attach" title="Attach file" onClick={()=>fileRef.current?.click()}><Icon name="plus" size={20}/></button><input ref={messageInput} className="composer-input" aria-label="Write a message" placeholder={view==='dm'?'Message '+currentDm.name:'Message #'+(channel?.name??'general')} value={composer} onChange={e=>setComposer(e.target.value)} onKeyDown={onComposerKey}/><div className="composer-tools"><button type="button" title="Attach image" onClick={()=>fileRef.current?.click()}><Icon name="image" size={18}/></button><button type="button" title="Add emoji" onClick={()=>setComposer(v=>v+' ✨')}><Icon name="smile" size={18}/></button><button className="send" title={editingId?'Save edit':'Send message'} disabled={!composer.trim()&&!attachment}><Icon name={editingId?'save':'send'} size={17}/></button></div></div></form><input ref={fileRef} type="file" hidden onChange={e=>{selectAttachment(e.target.files?.[0]);e.target.value=''}}/><div className="composer-note"><span><kbd>ENTER</kbd> to send</span><span>Stored in this browser only</span></div></div></>}
-    </section>
-    {view==='social'&&<aside className="social-right-panel"><section className="social-aside-section social-now"><span className="social-aside-kicker">THE CONVERSATION</span><h2>Make room for good ideas.</h2><p>Follow people whose perspective makes your feed more interesting.</p><button onClick={()=>socialInput.current?.focus()}>Start a thread <Icon name="arrowUp" size={14}/></button></section><section className="social-aside-section"><div className="social-aside-heading"><strong>People to follow</strong><span>CURATED</span></div>{socialSuggestions.map(person=><div className="social-person" key={person.handle}><Avatar user={{id:person.handle,name:person.name,initials:person.initials,tone:person.tone,status:'online'}} size="small"/><div><strong>{person.name}</strong><small>@{person.handle}</small><p>{person.bio}</p></div><button className={followedHandles.includes(person.handle)?'following':''} onClick={()=>toggleSocialFollow(person.handle)}>{followedHandles.includes(person.handle)?'Following':'Follow'}</button></div>)}</section><section className="social-aside-section social-trends"><div className="social-aside-heading"><strong>Topics worth a look</strong><span>LOCAL TRENDS</span></div>{[['# productthinking','Design & build'],['# slowinternet','Culture'],['# makerspace','Community']].map((topic,index)=><button className="social-topic-row" key={topic[0]} onClick={()=>{setSocialDraft(d=>d?d+' '+topic[0]:topic[0]);socialInput.current?.focus()}}><span>0{index+1}</span><div><strong>{topic[0]}</strong><small>{topic[1]}</small></div><Icon name="arrow" size={14}/></button>)}</section><p className="social-aside-foot">A small social space inside your community preview. Posts and reactions stay in this browser.</p></aside>}
-    {membersOpen&&view!=='social'&&view!=='channels'&&view!=='people'&&view!=='settings'&&view!=='discover'&&view!=='notifications'&&view!=='pinned'&&<aside className="members-panel"><div className="members-heading"><div><strong>{view==='dm'?'Contact':'Members'}</strong><span>{view==='dm'?'1':'24'}</span></div><button onClick={()=>setModal('invite')} title="Invite"><Icon name="plus" size={15}/></button></div><div className="member-section"><div className="member-label">{view==='dm'?'CONTACT INFO':'ONLINE — 4'}</div>{(view==='dm'?[currentDm]:people.filter(p=>p.status==='online')).map(p=><button className="member" key={p.id} onClick={()=>view==='dm'?notify('You are viewing '+p.name+'.'):openDm(p.id)}><Avatar user={p}/><span><strong>{p.name}</strong><small>{p.role??'Online'}</small></span></button>)}</div>{view!=='dm'&&<div className="member-section"><div className="member-label">IDLE — 2</div>{people.filter(p=>p.status==='idle').map(p=><button className="member" key={p.id} onClick={()=>openDm(p.id)}><Avatar user={p}/><span><strong>{p.name}</strong><small>Away</small></span></button>)}</div>}<div className="member-footer"><Icon name="shield" size={14}/> Demo community members</div></aside>}
-   </div>
-   <nav className="mobile-tabs"><button className={mobileTab==='chat'?'active':''} onClick={()=>{setMobileTab('chat');setView('channel');setDrawerOpen(false)}}><Icon name="message"/><span>Chat</span></button><button className={mobileTab==='social'?'active':''} onClick={()=>{setMobileTab('social');setView('social');setSocialTab('for-you');setDrawerOpen(false)}}><span className="mobile-social-mark">＠</span><span>Social</span></button><button className={mobileTab==='channels'?'active':''} onClick={()=>{setMobileTab('channels');setView('channels');setDrawerOpen(false)}}><Icon name="hash"/><span>Channels</span></button><button className={mobileTab==='people'?'active':''} onClick={()=>{setMobileTab('people');setView('people');setDrawerOpen(false)}}><Icon name="users"/><span>People</span></button></nav>
-  </main>
 
-  {modal&&<div className="modal-backdrop" onMouseDown={()=>setModal(null)}><form className="modal" onSubmit={modal==='call'?e=>{e.preventDefault();setModal(null)}:createEntity} onMouseDown={e=>e.stopPropagation()}><button type="button" className="modal-x" onClick={()=>setModal(null)} aria-label="Close"><Icon name="close"/></button>{modal==='call'?<><div className="modal-icon"><Icon name="video" size={22}/></div><h2>Call preview</h2><p>This is a local interface simulation. No microphone, camera or network connection is started.</p><div className="call-controls"><button type="button" className={muted?'active':''} onClick={()=>setMuted(v=>!v)}><Icon name="mic"/> {muted?'Unmute':'Mute'}</button><button type="button" className={cameraOn?'active':''} onClick={()=>setCameraOn(v=>!v)}><Icon name="video"/> {cameraOn?'Camera on':'Camera off'}</button><button type="button" className={screenSharing?'active':''} onClick={()=>setScreenSharing(v=>!v)}><Icon name="screen"/> {screenSharing?'Stop share':'Share screen'}</button></div><button type="button" className="modal-primary danger-bg" onClick={()=>{setMuted(false);setCameraOn(false);setScreenSharing(false);setModal(null)}}>End preview call</button></>:<><div className="modal-icon"><Icon name={modal==='server'?'users':modal==='channel'?'hash':modal==='dm'?'message':'link'} size={22}/></div><h2>{modal==='server'?'Create a community':modal==='channel'?'Create a channel':modal==='dm'?'Start a conversation':'Invite people'}</h2><p>{modal==='server'?'Create a new space. It will be available in your server list.':modal==='channel'?'Add a text channel to this community.':modal==='dm'?'Choose someone to open a local direct message.':'Copy a demo invite link to share this preview.'}</p>{modal==='dm'?<div className="person-picker">{people.map(p=><button key={p.id} type="button" className={modalValue===p.id?'selected':''} onClick={()=>setModalValue(p.id)}><Avatar user={p} size="small"/>{p.name}{modalValue===p.id&&<Icon name="check" size={15}/>}</button>)}</div>:<><label>{modal==='server'?'COMMUNITY NAME':modal==='channel'?'CHANNEL NAME':'INVITE LINK'}</label><input autoFocus value={modal==='invite'?'community.example/invite/demo':modalValue} readOnly={modal==='invite'} onChange={e=>setModalValue(e.target.value)} placeholder={modal==='server'?'e.g. Creative Corner':'e.g. project-chat'}/></>}<button className="modal-primary" type="submit">{modal==='server'?'Create community':modal==='channel'?'Create channel':modal==='dm'?'Open conversation':'Copy invite link'}</button><small>All demo data stays in this browser.</small></>}</form></div>}
-  {toast&&<div className="toast" role="status"><Icon name="check" size={16}/><span>{toast}</span><button onClick={()=>setToast('')} aria-label="Dismiss"><Icon name="close" size={14}/></button></div>}
- </div>
+        <MobileTabs
+          activeTab={mobileTab}
+          onSelectTab={(tab) => {
+            setMobileTab(tab)
+            if (tab === 'chat') setView('channel')
+            if (tab === 'social') {
+              setView('social')
+              setSocialTab('for-you')
+            }
+            if (tab === 'channels') setView('channels')
+            if (tab === 'people') setView('people')
+            setDrawerOpen(false)
+          }}
+        />
+      </main>
+
+      {modal === 'call' && (
+        <CallModal
+          muted={muted}
+          cameraOn={cameraOn}
+          screenSharing={screenSharing}
+          onToggleMute={() => setMuted((v) => !v)}
+          onToggleCamera={() => setCameraOn((v) => !v)}
+          onToggleScreenShare={() => setScreenSharing((v) => !v)}
+          onClose={() => {
+            setMuted(false)
+            setCameraOn(false)
+            setScreenSharing(false)
+            setModal(null)
+          }}
+        />
+      )}
+
+      {modal && modal !== 'call' && (
+        <ActionModal
+          type={modal}
+          value={modalValue}
+          people={people}
+          onChangeValue={setModalValue}
+          onSubmit={createEntity}
+          onClose={() => {
+            setModal(null)
+            setModalValue('')
+          }}
+        />
+      )}
+
+      <Toast message={toast} onClose={() => setToast('')} />
+    </div>
+  )
 }
+
 export default App
