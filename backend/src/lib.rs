@@ -4,11 +4,11 @@
 use std::sync::Arc;
 
 use axum::{
-    Router,
-    routing::{get, put},
+    Router, middleware,
+    routing::{get, post, put},
 };
 
-use crate::state::AppState;
+use crate::{shared::rate_limit::rate_limit_middleware, state::AppState};
 
 pub mod auth;
 pub mod config;
@@ -19,10 +19,19 @@ pub mod state;
 
 /// Builds the main Axum `Router` wired to `AppState`.
 pub fn app_router(state: Arc<AppState>) -> Router {
+    let api = Router::new()
+        .nest("/api/v1/auth", auth::router())
+        .nest("/api/v1/bots", auth::bots_router())
+        .route("/api/v1/dev/bots/{id}/review", post(auth::bots::review_bot))
+        .route("/api/v1/devices/fcm", put(auth::devices::register_fcm))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            rate_limit_middleware,
+        ));
+
     Router::new()
         .route("/health/live", get(health::live))
         .route("/health/ready", get(health::ready))
-        .nest("/api/v1/auth", auth::router())
-        .route("/api/v1/devices/fcm", put(auth::devices::register_fcm))
+        .merge(api)
         .with_state(state)
 }

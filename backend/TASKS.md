@@ -164,7 +164,7 @@ codexinternational/
   1. **Red:** Tulis test token expired (`401`), test `Authorization: Bot <token>` ditolak bila bot masih `PENDING`/`REJECTED` (`403`, `INV-15`), test non-`dev` (termasuk `Superadmin` komunitas) dilarang meng-approve bot atau membuat/menaikkan bot ke bit `8` (`BOT_ADMIN`, `403`), test user ter-suspend ditolak (`403`, `INV-15`), dan test `test_inv16_global_rate_limit_exponential_backoff_24h_reset()`.
   2. **Green:** Implementasikan `AuthPrincipal` (`User` vs `Bot`), endpoint `POST /api/v1/bots`, `POST /api/v1/dev/bots/{id}/review` (khusus `dev`), `/api/v1/bots/{id}/tokens`, dan Valkey Lua global sliding-window + exponential backoff rate limiter layer di seluruh router API.
 - **DoD:**
-  - [ ] Global rate limiter aktif di seluruh route API dan `INV-15`/`INV-16` test lulus.
+  - [x] Global rate limiter aktif di seluruh route `/api/v1/*`, `AuthPrincipal` (User JWT + Bot `chmod`) terpasang, dan `INV-15`/`INV-16` teruji (`auth_task14_test.rs`).
 
 ### Task 1.5 — Domain Helpers: Permission Bitmask & XP Level Formula
 

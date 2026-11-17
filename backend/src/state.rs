@@ -40,6 +40,7 @@ pub struct AppState {
     pub pg: PgPool,
     pub valkey: Pool,
     pub valkey_sub: SubscriberClient,
+    pub valkey_initialized: bool,
     pub password_hasher: PasswordHasher,
     pub email_sender: Arc<dyn EmailSender>,
     pub oauth_client: Arc<dyn OAuthClient>,
@@ -49,12 +50,13 @@ impl AppState {
     /// Connects to PostgreSQL and Valkey (eagerly verifying both connections).
     /// Use this during normal server startup so misconfigured dependencies fail fast.
     pub async fn connect(config: AppConfig) -> Result<Self, StateError> {
-        let state = Self::build_pools(config)?;
+        let mut state = Self::build_pools(config)?;
 
         // Eagerly establish initial connections so startup catches bad credentials early.
         sqlx::query("SELECT 1").execute(&state.pg).await?;
         state.valkey.init().await?;
         state.valkey_sub.init().await?;
+        state.valkey_initialized = true;
 
         Ok(state)
     }
@@ -105,6 +107,7 @@ impl AppState {
             pg,
             valkey,
             valkey_sub,
+            valkey_initialized: false,
             password_hasher: PasswordHasher::default(),
             email_sender,
             oauth_client,

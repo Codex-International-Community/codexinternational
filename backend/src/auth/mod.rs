@@ -1,6 +1,7 @@
 //! Authentication module: password hashing, JWT tokens, devices/FCM, Brevo OTP,
 //! OAuth2 (GitHub/Google), extractors, and routes.
 
+pub mod bots;
 pub mod devices;
 pub mod extractor;
 pub mod handlers;
@@ -14,7 +15,7 @@ use std::sync::Arc;
 
 use axum::{
     Router,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 
 use crate::state::AppState;
@@ -30,4 +31,12 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/otp/send", post(otp::send_otp))
         .route("/otp/verify", post(otp::verify_otp))
         .route("/oauth/{provider}", post(oauth::oauth_login))
+}
+
+/// Mounts `/api/v1/bots/*` routes onto the application router.
+pub fn bots_router() -> Router<Arc<AppState>> {
+    Router::new()
+        .route("/", post(bots::create_bot).get(bots::list_bots))
+        .route("/{id}/tokens", post(bots::create_bot_token))
+        .route("/{id}/tokens/{token_id}", delete(bots::revoke_bot_token))
 }

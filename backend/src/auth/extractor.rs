@@ -1,4 +1,6 @@
-//! Axum extractor for authenticated human users (`Authorization: Bearer <jwt>`).
+//! Axum authentication extractors for human users (`AuthUser`) and unified
+//! principals (`AuthPrincipal`: `User` JWT or `Bot` opaque token with `chmod`
+//! privilege & `INV-15` suspension/approval checks).
 
 use std::sync::Arc;
 
@@ -6,11 +8,19 @@ use axum::{
     extract::FromRequestParts,
     http::{header::AUTHORIZATION, request::Parts},
 };
+use chrono::Utc;
+use fred::interfaces::KeysInterface;
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 use uuid::Uuid;
 
-use crate::{auth::jwt::decode_access_token, error::AppError, state::AppState};
+use crate::{
+    auth::jwt::{decode_access_token, hash_token},
+    error::AppError,
+    state::AppState,
+};
 
-/// Authenticated human user context extracted from a valid Bearer JWT.
+/// Authenticated human user context extracted from `Authorization: Bearer <jwt>`.
 #[derive(Debug, Clone)]
 pub struct AuthUser {
     pub user_id: Uuid,
@@ -18,7 +28,38 @@ pub struct AuthUser {
     pub platform_role: String,
 }
 
+/// Authenticated bot context extracted from `Authorization: Bot <token>`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthBot {
+    pub bot_id: Uuid,
+    pub owner_id: Option<Uuid>,
+    pub privilege_mode: i16,
+}
+
+/// Unified caller identity supporting both human JWTs and VPS Bot tokens.
+#[derive(Debug, Clone)]
+pub enum AuthPrincipal {
+    User(AuthUser),
+    Bot(AuthBot),
+}
+
 impl FromRequestParts<Arc<AppState>> for AuthUser {
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &Arc<AppState>,
+    ) -> Result<Self, Self::Rejection> {
+        match AuthPrincipal::from_request_parts(parts, state).await? {
+            AuthPrincipal::User(user) => Ok(user),
+            AuthPrincipal::Bot(_) => Err(AppError::Forbidden(
+                "this endpoint requires a human user session".to_string(),
+            )),
+        }
+    }
+}
+
+impl FromRequestParts<Arc<AppState>> for AuthPrincipal {
     type Rejection = AppError;
 
     async fn from_request_parts(
@@ -31,21 +72,118 @@ impl FromRequestParts<Arc<AppState>> for AuthUser {
             .and_then(|v| v.to_str().ok())
             .ok_or_else(|| AppError::Unauthorized("missing Authorization header".to_string()))?;
 
-        let token = auth_header
+        if let Some(jwt) = auth_header
             .strip_prefix("Bearer ")
             .or_else(|| auth_header.strip_prefix("bearer "))
             .map(str::trim)
             .filter(|t| !t.is_empty())
-            .ok_or_else(|| {
-                AppError::Unauthorized("expected Authorization: Bearer <token>".to_string())
-            })?;
+        {
+            let claims = decode_access_token(jwt, state.config.jwt_secret.expose())?;
+            check_valkey_suspension(state, claims.sub).await?;
+            return Ok(Self::User(AuthUser {
+                user_id: claims.sub,
+                device_id: claims.sid,
+                platform_role: claims.role,
+            }));
+        }
 
-        let claims = decode_access_token(token, state.config.jwt_secret.expose())?;
+        if let Some(bot_token) = auth_header
+            .strip_prefix("Bot ")
+            .or_else(|| auth_header.strip_prefix("bot "))
+            .map(str::trim)
+            .filter(|t| !t.is_empty())
+        {
+            let bot = authenticate_bot_token(state, bot_token).await?;
+            return Ok(Self::Bot(bot));
+        }
 
-        Ok(Self {
-            user_id: claims.sub,
-            device_id: claims.sid,
-            platform_role: claims.role,
-        })
+        Err(AppError::Unauthorized(
+            "expected Authorization: Bearer <jwt> or Bot <token>".to_string(),
+        ))
     }
+}
+
+async fn check_valkey_suspension(state: &AppState, user_id: Uuid) -> Result<(), AppError> {
+    if !state.valkey_initialized {
+        return Ok(());
+    }
+    let key = format!("suspend:user:{user_id}");
+    if let Ok(Ok(Some(raw_until))) = tokio::time::timeout(
+        std::time::Duration::from_millis(200),
+        state.valkey.get::<Option<String>, _>(&key),
+    )
+    .await
+        && let Ok(until_ts) = raw_until.parse::<i64>()
+        && until_ts > Utc::now().timestamp()
+    {
+        return Err(AppError::Forbidden("account suspended".to_string()));
+    }
+    Ok(())
+}
+
+#[derive(FromRow)]
+struct BotAuthRow {
+    bot_id: Uuid,
+    owner_id: Option<Uuid>,
+    privilege_mode: i16,
+    approval_status: String,
+    is_active: bool,
+}
+
+async fn authenticate_bot_token(state: &AppState, raw_token: &str) -> Result<AuthBot, AppError> {
+    let token_hash = hash_token(raw_token);
+    let cache_key = format!("bot:token:{token_hash}");
+
+    if state.valkey_initialized
+        && let Ok(Ok(Some(cached_json))) = tokio::time::timeout(
+            std::time::Duration::from_millis(200),
+            state.valkey.get::<Option<String>, _>(&cache_key),
+        )
+        .await
+        && let Ok(bot) = serde_json::from_str::<AuthBot>(&cached_json)
+    {
+        return Ok(bot);
+    }
+
+    let row = sqlx::query_as::<_, BotAuthRow>(
+        "SELECT b.id AS bot_id, b.owner_id, b.privilege_mode, b.approval_status, b.is_active
+         FROM bot_tokens bt
+         JOIN bots b ON b.id = bt.bot_id
+         WHERE bt.token_hash = $1 AND bt.revoked_at IS NULL
+         LIMIT 1",
+    )
+    .bind(&token_hash)
+    .fetch_optional(&state.pg)
+    .await?
+    .ok_or_else(|| AppError::Unauthorized("invalid or revoked bot token".to_string()))?;
+
+    if !row.is_active || row.approval_status != "APPROVED" {
+        return Err(AppError::Forbidden(
+            "bot is inactive or awaiting platform 'dev' approval".to_string(),
+        ));
+    }
+
+    let bot = AuthBot {
+        bot_id: row.bot_id,
+        owner_id: row.owner_id,
+        privilege_mode: row.privilege_mode,
+    };
+
+    if state.valkey_initialized
+        && let Ok(json) = serde_json::to_string(&bot)
+    {
+        let _ = tokio::time::timeout(
+            std::time::Duration::from_millis(200),
+            state.valkey.set::<(), _, _>(
+                &cache_key,
+                json,
+                Some(fred::types::Expiration::EX(300)),
+                None,
+                false,
+            ),
+        )
+        .await;
+    }
+
+    Ok(bot)
 }
