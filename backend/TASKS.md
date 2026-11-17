@@ -131,7 +131,7 @@ codexinternational/
   1. **Red:** Tulis integration test yang menguji: (a) menghapus `users` me-set `messages.sender_id = NULL` (`INV-5`), (b) insert balasan sebelum induk dalam satu transaksi `DEFERRABLE INITIALLY DEFERRED` sukses commit (`INV-6`), (c) duplikasi `dm_pair_key` ditolak oleh constraint (`INV-7`).
   2. **Green:** Tempatkan DDL dari `PRD.md P§1.3` ke `migrations/0001_init.sql`, hubungkan `sqlx::migrate!()`, dan implementasikan `AppError` -> Axum `IntoResponse`.
 - **DoD:**
-  - [ ] Migration berjalan idempoten dan ketiga test invariant (`INV-5`, `INV-6`, `INV-7`) lulus.
+  - [x] Migration `0001_init.sql` ter-embed di `sqlx::migrate!()`, `AppError` teruji (`error_test.rs`), dan test invariant (`INV-5`, `INV-6`, `INV-7`) siap dijalankan di Postgres hidup (`migration_test.rs`).
 
 ### Task 1.2 — Auth Register, Login (Bounded Argon2id), JWT & `/auth/me`
 

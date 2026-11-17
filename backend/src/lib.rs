@@ -8,7 +8,9 @@ use axum::{Router, routing::get};
 use crate::state::AppState;
 
 pub mod config;
+pub mod error;
 pub mod health;
+pub mod shared;
 pub mod state;
 
 /// Builds the main Axum `Router` wired to `AppState`.
