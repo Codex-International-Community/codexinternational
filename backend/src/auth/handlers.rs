@@ -195,7 +195,7 @@ pub async fn me(
     }))
 }
 
-fn ensure_not_suspended(record: &UserAuthRecord) -> Result<(), AppError> {
+pub(crate) fn ensure_not_suspended(record: &UserAuthRecord) -> Result<(), AppError> {
     if let Some(until) = record.suspended_until
         && until > Utc::now()
     {
@@ -236,7 +236,7 @@ fn validate_display_name(raw: &str) -> Result<String, AppError> {
     Ok(trimmed.to_string())
 }
 
-fn validate_email(raw: &str) -> Result<String, AppError> {
+pub(crate) fn validate_email(raw: &str) -> Result<String, AppError> {
     let trimmed = raw.trim().to_ascii_lowercase();
     let Some((local, domain)) = trimmed.split_once('@') else {
         return Err(AppError::BadRequest("invalid email address".to_string()));
@@ -256,7 +256,7 @@ fn validate_password(raw: &str) -> Result<(), AppError> {
     Ok(())
 }
 
-fn normalize_platform(raw: Option<&str>) -> Result<&'static str, AppError> {
+pub(crate) fn normalize_platform(raw: Option<&str>) -> Result<&'static str, AppError> {
     match raw.unwrap_or("web").trim() {
         "web" | "" => Ok("web"),
         "android_apk" => Ok("android_apk"),

@@ -129,6 +129,16 @@ pub struct AppConfig {
     pub jwt_secret: SecretString,
     pub jwt_access_ttl_secs: u64,
     pub jwt_refresh_ttl_days: u64,
+    pub oauth_github_client_id: String,
+    pub oauth_github_client_secret: SecretString,
+    pub oauth_google_client_id: String,
+    pub oauth_google_client_secret: SecretString,
+    pub smtp_host: String,
+    pub smtp_port: u16,
+    pub smtp_user: SecretString,
+    pub smtp_pass: SecretString,
+    pub smtp_from: String,
+    pub smtp_reply_to: String,
     pub lambda_webhook_secret: SecretString,
     pub r2_account_id: String,
     pub r2_access_key_id: SecretString,
@@ -178,6 +188,19 @@ impl AppConfig {
             }
         };
 
+        let parse_u16 = |key: &'static str, default: u16| -> Result<u16, ConfigError> {
+            match get(key).filter(|v| !v.trim().is_empty()) {
+                Some(raw) => raw
+                    .trim()
+                    .parse::<u16>()
+                    .map_err(|e| ConfigError::InvalidValue {
+                        key,
+                        reason: e.to_string(),
+                    }),
+                None => Ok(default),
+            }
+        };
+
         let env = AppEnv::parse(&get_or("APP_ENV", "development"))?;
         let worker_roles = WorkerRoles::parse(&get_or("WORKER_ROLES", "ALL"))?;
 
@@ -200,6 +223,16 @@ impl AppConfig {
             )),
             jwt_access_ttl_secs: parse_u64("JWT_ACCESS_TTL_SECS", 900)?,
             jwt_refresh_ttl_days: parse_u64("JWT_REFRESH_TTL_DAYS", 30)?,
+            oauth_github_client_id: get_or("OAUTH_GITHUB_CLIENT_ID", ""),
+            oauth_github_client_secret: SecretString::new(get_or("OAUTH_GITHUB_CLIENT_SECRET", "")),
+            oauth_google_client_id: get_or("OAUTH_GOOGLE_CLIENT_ID", ""),
+            oauth_google_client_secret: SecretString::new(get_or("OAUTH_GOOGLE_CLIENT_SECRET", "")),
+            smtp_host: get_or("SMTP_HOST", "smtp-relay.brevo.com"),
+            smtp_port: parse_u16("SMTP_PORT", 587)?,
+            smtp_user: SecretString::new(get_or("SMTP_USER", "")),
+            smtp_pass: SecretString::new(get_or("SMTP_PASS", "")),
+            smtp_from: get_or("SMTP_FROM", "noreply@yourdomain.com"),
+            smtp_reply_to: get_or("SMTP_REPLY_TO", "support@yourdomain.com"),
             lambda_webhook_secret: SecretString::new(get_or(
                 "LAMBDA_WEBHOOK_SECRET",
                 if env == AppEnv::Development {

@@ -1,8 +1,12 @@
-//! Authentication module: password hashing, JWT tokens, extractors, and routes.
+//! Authentication module: password hashing, JWT tokens, devices/FCM, Brevo OTP,
+//! OAuth2 (GitHub/Google), extractors, and routes.
 
+pub mod devices;
 pub mod extractor;
 pub mod handlers;
 pub mod jwt;
+pub mod oauth;
+pub mod otp;
 pub mod password;
 pub mod repo;
 
@@ -21,4 +25,9 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/register", post(handlers::register))
         .route("/login", post(handlers::login))
         .route("/me", get(handlers::me))
+        .route("/refresh", post(devices::refresh))
+        .route("/logout", post(devices::logout))
+        .route("/otp/send", post(otp::send_otp))
+        .route("/otp/verify", post(otp::verify_otp))
+        .route("/oauth/{provider}", post(oauth::oauth_login))
 }

@@ -153,7 +153,7 @@ codexinternational/
   1. **Red:** Tulis test rotasi refresh token, test replay token lama memicu pencabutan seluruh sesi device (`revoked_at`), mock test exchange OAuth2 GitHub/Google, serta test OTP (`send` menerapkan exponential backoff + `Retry-After`, `verify` hangus setelah 5× salah dan mengeset `email_verified_at`, `INV-16`).
   2. **Green:** Implementasikan `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`, `PUT /api/v1/devices/fcm`, `POST /api/v1/auth/oauth/{provider}`, `POST /api/v1/auth/otp/send`, dan `POST /api/v1/auth/otp/verify`.
 - **DoD:**
-  - [ ] Replay refresh token terdeteksi (`401`) dan `test_inv16_otp_exponential_backoff_and_max_attempts` lulus.
+  - [x] Replay refresh token terdeteksi (`401`), `register_fcm` & `oauth` terpasang, dan `test_inv16_otp_exponential_backoff_and_max_attempts` terverifikasi (`auth_task13_test.rs`).
 
 ### Task 1.4 — Global Exponential Backoff Rate Limiter (24h Reset) & Bot `AuthPrincipal` (`INV-15`, `INV-16`)
 

@@ -6,7 +6,7 @@
 //! - `valkey_sub`: a dedicated `fred::clients::SubscriberClient` for Pub/Sub so
 //!   subscription traffic never causes head-of-line blocking on command paths.
 
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use fred::{
     clients::{Pool, SubscriberClient},
@@ -15,7 +15,14 @@ use fred::{
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use thiserror::Error;
 
-use crate::{auth::password::PasswordHasher, config::AppConfig};
+use crate::{
+    auth::{
+        oauth::{OAuthClient, ReqwestOAuthClient},
+        otp::{BrevoEmailSender, EmailSender},
+        password::PasswordHasher,
+    },
+    config::AppConfig,
+};
 
 #[derive(Debug, Error)]
 pub enum StateError {
@@ -34,6 +41,8 @@ pub struct AppState {
     pub valkey: Pool,
     pub valkey_sub: SubscriberClient,
     pub password_hasher: PasswordHasher,
+    pub email_sender: Arc<dyn EmailSender>,
+    pub oauth_client: Arc<dyn OAuthClient>,
 }
 
 impl AppState {
@@ -88,13 +97,29 @@ impl AppState {
             })
             .build_subscriber_client()?;
 
+        let email_sender: Arc<dyn EmailSender> = Arc::new(BrevoEmailSender::from_config(&config));
+        let oauth_client: Arc<dyn OAuthClient> = Arc::new(ReqwestOAuthClient::default());
+
         Ok(Self {
             config,
             pg,
             valkey,
             valkey_sub,
             password_hasher: PasswordHasher::default(),
+            email_sender,
+            oauth_client,
         })
+    }
+
+    /// Replaces external email/OAuth clients (intended for deterministic integration tests).
+    pub fn with_auth_clients(
+        mut self,
+        email_sender: Arc<dyn EmailSender>,
+        oauth_client: Arc<dyn OAuthClient>,
+    ) -> Self {
+        self.email_sender = email_sender;
+        self.oauth_client = oauth_client;
+        self
     }
 }
 
