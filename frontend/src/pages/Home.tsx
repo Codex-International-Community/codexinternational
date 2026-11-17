@@ -341,7 +341,9 @@ export default function Home() {
 
   const react = async (messageId: string, emoji: string) => {
     try {
-      const res = await api.reactMessage(messageId, emoji)
+      const res = (await api.reactMessage(messageId, emoji)) as {
+        reactions: Message['reactions']
+      }
       const updater = (list: Message[]) =>
         list.map(m => m.id === messageId ? { ...m, reactions: res.reactions } : m)
       if (view === 'dm') {
