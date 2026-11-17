@@ -7,6 +7,7 @@ use axum::{Router, routing::get};
 
 use crate::state::AppState;
 
+pub mod auth;
 pub mod config;
 pub mod error;
 pub mod health;
@@ -18,5 +19,6 @@ pub fn app_router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/health/live", get(health::live))
         .route("/health/ready", get(health::ready))
+        .nest("/api/v1/auth", auth::router())
         .with_state(state)
 }

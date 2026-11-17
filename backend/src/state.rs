@@ -15,7 +15,7 @@ use fred::{
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use thiserror::Error;
 
-use crate::config::AppConfig;
+use crate::{auth::password::PasswordHasher, config::AppConfig};
 
 #[derive(Debug, Error)]
 pub enum StateError {
@@ -33,6 +33,7 @@ pub struct AppState {
     pub pg: PgPool,
     pub valkey: Pool,
     pub valkey_sub: SubscriberClient,
+    pub password_hasher: PasswordHasher,
 }
 
 impl AppState {
@@ -92,6 +93,7 @@ impl AppState {
             pg,
             valkey,
             valkey_sub,
+            password_hasher: PasswordHasher::default(),
         })
     }
 }

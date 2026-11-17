@@ -142,7 +142,7 @@ codexinternational/
   1. **Red:** Tulis test registrasi sukses, duplikat email/username (`409`), login sukses, login password salah (`401`), `GET /api/v1/auth/me` (`200` / `401`), dan test bounded semaphore mengembalikan `503` saat slot Argon2id penuh melewati timeout.
   2. **Green:** Implementasikan `PasswordHasher` ber-`Semaphore` (mis. `max(4, num_cpus)` slot) di `spawn_blocking`, `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, dan `GET /api/v1/auth/me`.
 - **DoD:**
-  - [ ] Dev frontend sudah bisa register, login, dan memanggil `/auth/me` dengan JWT valid.
+  - [x] Dev frontend sudah bisa register, login, dan memanggil `/auth/me` dengan JWT valid (`auth_test.rs`).
 
 ### Task 1.3 — Stateful Refresh Token, Device Registry, Brevo SMTP OTP & OAuth2 (`INV-16`)
 
