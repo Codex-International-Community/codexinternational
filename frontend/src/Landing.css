@@ -1,0 +1,349 @@
+/* Landing — Codex Internasional Community
+   Welcome screen + "Sign in or sign up" screen, dark & dotted. */
+
+.landing-shell {
+  --lp-serif: var(--lp-sans);
+  --lp-sans: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.landing-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  background: #111112;
+  color: var(--text, #ececec);
+  font-family: var(--lp-sans);
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+.landing-shell,
+.landing-shell * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.landing-shell input { user-select: text; -webkit-user-select: text; }
+.landing-shell ::selection { background: rgba(255, 255, 255, 0.18); }
+
+/* ── Dotted background ── */
+.landing-dots {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.landing-dots .dots {
+  position: absolute;
+  border-radius: 50%;
+  background-size: 14px 14px;
+  opacity: 0.75;
+  -webkit-mask-image: radial-gradient(closest-side, #000 20%, transparent 100%);
+          mask-image: radial-gradient(closest-side, #000 20%, transparent 100%);
+}
+
+.landing-dots .d1 {
+  width: 62vmax; height: 62vmax; left: -34vmax; top: 8%;
+  background-image: radial-gradient(circle, #3b82f6 1.2px, transparent 1.6px);
+}
+.landing-dots .d2 {
+  width: 50vmax; height: 50vmax; left: -22vmax; top: 38%;
+  background-image: radial-gradient(circle, #ef6a5a 1.2px, transparent 1.6px);
+}
+.landing-dots .d3 {
+  width: 46vmax; height: 46vmax; right: -24vmax; top: 34%;
+  background-image: radial-gradient(circle, #d9795b 1.2px, transparent 1.6px);
+}
+.landing-dots .d4 {
+  width: 44vmax; height: 44vmax; left: 30%; bottom: -24vmax;
+  background-image: radial-gradient(circle, #e0a53a 1.2px, transparent 1.6px);
+}
+
+/* ── Screens ── */
+.landing-screen {
+  position: relative;
+  z-index: 1;
+  width: min(460px, 100%);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0 24px calc(18px + env(safe-area-inset-bottom, 0px));
+  animation: landing-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes landing-enter {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Brand mark ── */
+.landing-brand-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 30% 30% 30% 12%;
+  background: var(--accent, #8fbe45);
+  color: #172214;
+  font-family: var(--lp-serif);
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ── Welcome ── */
+.landing-hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding-top: env(safe-area-inset-top, 0px);
+  text-align: center;
+}
+
+.landing-hero h1 {
+  margin: 0;
+  max-width: 16ch;
+  font-size: clamp(28px, 7.5vw, 34px);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: #f1f1f1;
+}
+
+.landing-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Buttons ── */
+.oauth-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 56px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 16px;
+  background: #242426;
+  color: #e6e6e6;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0;
+  cursor: pointer;
+
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  transition: background 0.2s ease, transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.oauth-btn:hover:not(:disabled) { background: #2c2c2f; }
+.oauth-btn:active:not(:disabled) { transform: scale(0.985); }
+.oauth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.oauth-icon {
+  position: absolute;
+  left: 18px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+}
+
+.oauth-text { text-align: center; }
+
+.landing-or {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #6b6b6f;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+.landing-or::before,
+.landing-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #2e2e31;
+}
+
+/* ── Legal ── */
+.landing-legal {
+  margin: 10px 0 0;
+  text-align: center;
+  color: #77777b;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.landing-legal a,
+.landing-help a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* ── Sign in or sign up ── */
+.landing-signin { padding: 0; }
+.landing-signin .landing-legal { padding: 0 24px; margin-top: auto; }
+
+.landing-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  height: 56px;
+  margin-top: env(safe-area-inset-top, 0px);
+  background: #151516;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.landing-back {
+  position: absolute;
+  left: 8px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  color: #e6e6e6;
+  cursor: pointer;
+  outline: none;
+}
+
+.landing-signin-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 22px 0;
+}
+.landing-signin-brand strong {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.landing-signin-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 26px 28px 0;
+}
+
+.landing-signin-body h2 {
+  margin: 28px 0 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: #f1f1f1;
+}
+
+.landing-sub {
+  margin: 12px 0 28px;
+  color: #8a8a8f;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.landing-input {
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid #3a3a3d;
+  border-radius: 12px;
+  background: #1c1c1e;
+  color: #f0f0f0;
+  font: inherit;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+.landing-input::placeholder { color: #6b6b6f; }
+.landing-input:focus { border-color: #6f6f75; }
+
+.landing-continue {
+  width: 100%;
+  height: 52px;
+  margin-top: 14px;
+  border: none;
+  border-radius: 12px;
+  background: #8f8f92;
+  color: #1a1a1b;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: background 0.2s ease, transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.landing-continue.is-ready { background: #f2f2f2; }
+.landing-continue:active:not(:disabled) { transform: scale(0.985); }
+.landing-continue:disabled { cursor: not-allowed; }
+
+.landing-help {
+  margin: 28px 0 0;
+  text-align: center;
+  color: #8a8a8f;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* ── Exit + app reveal ── */
+.landing-shell.is-leaving {
+  animation: landing-exit 0.55s cubic-bezier(0.55, 0, 0.75, 0.2) forwards;
+  pointer-events: none;
+}
+
+@keyframes landing-exit {
+  to {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.985);
+    filter: blur(2px);
+  }
+}
+
+.app-shell.app-revealing {
+  animation: app-reveal 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes app-reveal {
+  from { opacity: 0; transform: translateY(12px) scale(0.995); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-screen,
+  .landing-shell.is-leaving,
+  .app-shell.app-revealing,
+  .oauth-btn,
+  .landing-continue {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .oauth-btn:active:not(:disabled),
+  .landing-continue:active:not(:disabled) { transform: none; }
+}
