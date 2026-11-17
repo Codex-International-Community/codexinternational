@@ -1,0 +1,41 @@
+# Shared local infrastructure stack (PostgreSQL + Valkey 9.1).
+# Placed at the repository root so it shares `.env` and root data volumes
+# (`./postgres-data`, `./valkey-data`) independently from `backend/` app code.
+# All host port bindings are pinned to 127.0.0.1 (localhost) to prevent LAN exposure.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: codex-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-codex}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-codex_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-codexinternational}
+    ports:
+      # Bind only on loopback (127.0.0.1), never 0.0.0.0
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-codex} -d ${POSTGRES_DB:-codexinternational}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  valkey:
+    image: valkey/valkey:9.1-alpine
+    container_name: codex-valkey
+    restart: unless-stopped
+    command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
+    ports:
+      # Bind only on loopback (127.0.0.1), never 0.0.0.0
+      - "127.0.0.1:${VALKEY_PORT:-6379}:6379"
+    volumes:
+      - ./valkey-data:/data
+      - ./docker/valkey/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

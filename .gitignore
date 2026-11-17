@@ -45,6 +45,8 @@ Thumbs.db
 # BACKEND
 /backend/target/
 **/*.rs.bk
+/backend/README.md
+/backend/**/README.md
 
 # DOCKER
 /docker/data/

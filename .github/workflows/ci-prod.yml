@@ -1,0 +1,74 @@
+name: CI/CD Production Branch
+
+on:
+  push:
+    branches:
+      - prod
+  pull_request:
+    branches:
+      - prod
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  backend-ci:
+    name: Rust Format, Clippy, Test & Compose Check
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: codex
+          POSTGRES_PASSWORD: codex_dev_password
+          POSTGRES_DB: codexinternational
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U codex -d codexinternational"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+      valkey:
+        image: valkey/valkey:9.1-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose configuration
+        run: docker compose config -q
+
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo registry and target
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+
+      - name: Check formatting
+        working-directory: backend
+        run: cargo fmt --check
+
+      - name: Run Clippy
+        working-directory: backend
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Run tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://codex:codex_dev_password@127.0.0.1:5432/codexinternational
+          VALKEY_URL: valkey://127.0.0.1:6379
+        run: cargo test --all-targets
