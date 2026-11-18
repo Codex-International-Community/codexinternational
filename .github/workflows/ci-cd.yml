@@ -118,11 +118,20 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             set -euo pipefail
-            cd "${{ secrets.VPS_APP_DIR }}"
+            APP_DIR="${{ secrets.VPS_APP_DIR }}"
+            cd "$APP_DIR"
             git fetch origin prod
             git checkout prod
             git reset --hard origin/prod
+
             docker compose up -d --build
-            cd frontend
+
+            cd "$APP_DIR/backend"
+            cargo build --release
+            sudo systemctl restart codex-backend
+
+            cd "$APP_DIR/frontend"
             npm ci
             npm run build
+
+            curl -fsS http://127.0.0.1:8081/health/live > /dev/null

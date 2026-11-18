@@ -1,0 +1,27 @@
+# Caddy reverse proxy & static SPA server on port 8080 (Cloudflare Tunnel target).
+# Copy or symlink to /etc/caddy/Caddyfile on the VPS.
+{
+	auto_https off
+}
+
+:8080 {
+	encode gzip zstd
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8081
+	}
+
+	handle /health/* {
+		reverse_proxy 127.0.0.1:8081
+	}
+
+	handle /ws {
+		reverse_proxy 127.0.0.1:8081
+	}
+
+	handle {
+		root * /home/rallc/projects/codexinternational/frontend/dist
+		try_files {path} /index.html
+		file_server
+	}
+}
