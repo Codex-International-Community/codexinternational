@@ -104,7 +104,7 @@ jobs:
   deploy-prod:
     name: Deploy to VPS (prod)
     needs: [backend-ci, frontend-ci]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/prod' && vars.ENABLE_VPS_DEPLOY == 'true'
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/prod' && vars.ENABLE_VPS_DEPLOY == 'true'
     runs-on: ubuntu-latest
     environment: production
 
