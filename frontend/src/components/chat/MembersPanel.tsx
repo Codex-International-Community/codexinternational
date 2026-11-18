@@ -6,6 +6,7 @@ interface MembersPanelProps {
   isDm: boolean
   currentDmUser?: User
   people: User[]
+  mobileOpen?: boolean
   onOpenDm: (userId: string) => void
   onInvite: () => void
   onNotify: (message: string) => void
@@ -15,6 +16,7 @@ export function MembersPanel({
   isDm,
   currentDmUser,
   people,
+  mobileOpen = false,
   onOpenDm,
   onInvite,
   onNotify,
@@ -23,7 +25,7 @@ export function MembersPanel({
   const idlePeople = people.filter((p) => p.status === 'idle')
 
   return (
-    <aside className="members-panel">
+    <aside className={`members-panel ${mobileOpen ? 'mobile-members-open' : ''}`}>
       <div className="members-heading">
         <div>
           <strong>{isDm ? 'Contact' : 'Members'}</strong>

@@ -147,6 +147,7 @@ pub struct AppConfig {
     pub aws_lambda_video_fn: String,
     pub msg_flush_interval_ms: u64,
     pub counter_flush_interval_ms: u64,
+    pub cors_allowed_origins: Vec<String>,
     pub worker_roles: WorkerRoles,
 }
 
@@ -248,6 +249,18 @@ impl AppConfig {
             aws_lambda_video_fn: get_or("AWS_LAMBDA_VIDEO_FN", "codex-video-compressor"),
             msg_flush_interval_ms: parse_u64("MSG_FLUSH_INTERVAL_MS", 250)?,
             counter_flush_interval_ms: parse_u64("COUNTER_FLUSH_INTERVAL_MS", 500)?,
+            cors_allowed_origins: get_or(
+                "CORS_ALLOWED_ORIGINS",
+                if env == AppEnv::Development {
+                    "http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:4173,http://localhost:4173,https://localhost,capacitor://localhost"
+                } else {
+                    ""
+                },
+            )
+            .split(',')
+            .map(|s| s.trim().trim_end_matches('/').to_string())
+            .filter(|s| !s.is_empty())
+            .collect(),
             worker_roles,
         };
 

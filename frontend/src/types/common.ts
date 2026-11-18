@@ -62,6 +62,7 @@ export type View =
   | 'social'
   | 'channels'
   | 'people'
+  | 'bots'
 
 export type Theme = 'dark' | 'light'
 

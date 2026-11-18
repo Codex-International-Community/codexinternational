@@ -33,6 +33,8 @@ interface ChannelSidebarProps {
   onDisconnectVoice: () => void
   onNavigateSettings: () => void
   onToggleTheme: () => void
+  onOpenBots?: () => void
+  onLogout?: () => void
 }
 
 export function ChannelSidebar({
@@ -63,6 +65,8 @@ export function ChannelSidebar({
   onDisconnectVoice,
   onNavigateSettings,
   onToggleTheme,
+  onOpenBots,
+  onLogout,
 }: ChannelSidebarProps) {
   const activeVoiceChannel = channels.find((c) => c.id === voiceId)
 
@@ -317,6 +321,26 @@ export function ChannelSidebar({
           >
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} /> Switch theme
           </button>
+          {onOpenBots && (
+            <button
+              onClick={() => {
+                onOpenBots()
+                onToggleProfileMenu()
+              }}
+            >
+              <Icon name="shield" size={15} /> Bot Portal
+            </button>
+          )}
+          {onLogout && (
+            <button
+              onClick={() => {
+                onToggleProfileMenu()
+                onLogout()
+              }}
+            >
+              <Icon name="logout" size={15} /> Sign out
+            </button>
+          )}
         </div>
       )}
     </aside>

@@ -61,3 +61,52 @@ async fn test_health_ready_returns_503_when_dependencies_are_down() {
     assert_eq!(json["postgres"], "down");
     assert_eq!(json["valkey"], "down");
 }
+
+#[tokio::test]
+async fn test_cors_allowlist_permits_dev_origin_and_blocks_unknown_origin() {
+    let cfg = AppConfig::from_map(&HashMap::new()).expect("dev config");
+    let state = Arc::new(AppState::connect_lazy(cfg).expect("lazy state"));
+    let app = app_router(state);
+
+    let allowed = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("OPTIONS")
+                .uri("/api/v1/auth/login")
+                .header("Origin", "http://127.0.0.1:5173")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(allowed.status(), StatusCode::NO_CONTENT);
+    assert_eq!(
+        allowed
+            .headers()
+            .get("access-control-allow-origin")
+            .and_then(|v| v.to_str().ok()),
+        Some("http://127.0.0.1:5173")
+    );
+
+    let disallowed = app
+        .oneshot(
+            Request::builder()
+                .method("OPTIONS")
+                .uri("/api/v1/auth/login")
+                .header("Origin", "https://evil.example")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(disallowed.status(), StatusCode::NO_CONTENT);
+    assert!(
+        disallowed
+            .headers()
+            .get("access-control-allow-origin")
+            .is_none()
+    );
+}

@@ -84,6 +84,14 @@ export function ServerRail({
         <Icon name="users" />
       </button>
 
+      <button
+        className={`rail-directory ${activeView === 'bots' ? 'active' : ''}`}
+        title="Bots & Tokens"
+        onClick={() => onNavigateView('bots')}
+      >
+        <Icon name="shield" />
+      </button>
+
       <div className="rail-spacer" />
 
       <button

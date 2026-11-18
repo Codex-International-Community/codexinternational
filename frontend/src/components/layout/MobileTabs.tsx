@@ -1,6 +1,6 @@
 import { Icon } from '../common/Icon'
 
-export type MobileTab = 'chat' | 'social' | 'channels' | 'people'
+export type MobileTab = 'chat' | 'social' | 'channels' | 'people' | 'bots'
 
 interface MobileTabsProps {
   activeTab: MobileTab
@@ -9,7 +9,7 @@ interface MobileTabsProps {
 
 export function MobileTabs({ activeTab, onSelectTab }: MobileTabsProps) {
   return (
-    <nav className="mobile-tabs">
+    <nav className="mobile-tabs" aria-label="Mobile navigation">
       <button
         className={activeTab === 'chat' ? 'active' : ''}
         onClick={() => onSelectTab('chat')}
@@ -37,6 +37,13 @@ export function MobileTabs({ activeTab, onSelectTab }: MobileTabsProps) {
       >
         <Icon name="users" />
         <span>People</span>
+      </button>
+      <button
+        className={activeTab === 'bots' ? 'active' : ''}
+        onClick={() => onSelectTab('bots')}
+      >
+        <Icon name="shield" />
+        <span>Bots</span>
       </button>
     </nav>
   )

@@ -8,7 +8,10 @@ use axum::{
     routing::{get, post, put},
 };
 
-use crate::{shared::rate_limit::rate_limit_middleware, state::AppState};
+use crate::{
+    shared::{cors::cors_middleware, rate_limit::rate_limit_middleware},
+    state::AppState,
+};
 
 pub mod auth;
 pub mod config;
@@ -33,5 +36,9 @@ pub fn app_router(state: Arc<AppState>) -> Router {
         .route("/health/live", get(health::live))
         .route("/health/ready", get(health::ready))
         .merge(api)
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            cors_middleware,
+        ))
         .with_state(state)
 }

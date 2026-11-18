@@ -6,6 +6,7 @@ interface TopbarProps {
   view: View
   title: string
   channel?: Channel
+  isMobile?: boolean
   membersOpen: boolean
   searchOpen: boolean
   notificationRead: boolean
@@ -20,12 +21,14 @@ interface TopbarProps {
   onToggleSearch: () => void
   onOpenNotifications: () => void
   onOpenInbox: () => void
+  onOpenSettings?: () => void
 }
 
 export function Topbar({
   view,
   title,
   channel,
+  isMobile = false,
   membersOpen,
   searchOpen,
   notificationRead,
@@ -40,6 +43,7 @@ export function Topbar({
   onToggleSearch,
   onOpenNotifications,
   onOpenInbox,
+  onOpenSettings,
 }: TopbarProps) {
   const symbolIcon: IconName =
     view === 'social'
@@ -48,19 +52,21 @@ export function Topbar({
         ? 'hash'
         : view === 'people'
           ? 'users'
-          : view === 'dm'
-            ? 'message'
-            : view === 'discover'
-              ? 'compass'
-              : view === 'settings'
-                ? 'settings'
-                : view === 'notifications'
-                  ? 'bell'
-                  : view === 'pinned'
-                    ? 'pin'
-                    : channel?.type === 'voice'
-                      ? 'volume'
-                      : 'hash'
+          : view === 'bots'
+            ? 'shield'
+            : view === 'dm'
+              ? 'message'
+              : view === 'discover'
+                ? 'compass'
+                : view === 'settings'
+                  ? 'settings'
+                  : view === 'notifications'
+                    ? 'bell'
+                    : view === 'pinned'
+                      ? 'pin'
+                      : channel?.type === 'voice'
+                        ? 'volume'
+                        : 'hash'
 
   const topicText =
     view === 'channel'
@@ -69,31 +75,40 @@ export function Topbar({
         ? 'Your private conversation.'
         : view === 'social'
           ? 'Public thoughts and conversations from your people.'
-          : 'Your space, your way.'
+          : view === 'bots'
+            ? 'Create bots and issue one-time VPS tokens.'
+            : 'Your space, your way.'
 
   return (
-    <header className="topbar">
+    <header className={`topbar ${isMobile ? 'topbar--mobile' : 'topbar--desktop'}`}>
       <div className="topbar-title">
-        <button
-          className="mobile-menu"
-          onClick={onOpenDrawer}
-          aria-label="Open navigation"
-        >
-          <Icon name="menu" />
-        </button>
-        <button
-          className="collapse-channels"
-          onClick={onToggleSidebar}
-          title="Toggle sidebar"
-        >
-          <Icon name="menu" />
-        </button>
+        {isMobile ? (
+          <button
+            className="mobile-menu"
+            onClick={onOpenDrawer}
+            aria-label="Open navigation"
+          >
+            <Icon name="menu" />
+          </button>
+        ) : (
+          <button
+            className="collapse-channels"
+            onClick={onToggleSidebar}
+            title="Toggle sidebar"
+          >
+            <Icon name="menu" />
+          </button>
+        )}
         <span className="channel-symbol">
           <Icon name={symbolIcon} />
         </span>
         <strong>{title}</strong>
-        <i />
-        <span className="channel-topic">{topicText}</span>
+        {!isMobile && (
+          <>
+            <i />
+            <span className="channel-topic">{topicText}</span>
+          </>
+        )}
       </div>
 
       <div className="topbar-actions">
@@ -103,20 +118,24 @@ export function Topbar({
             title="Write a post"
             onClick={onFocusSocialComposer}
           >
-            <Icon name="edit" size={15} /> <span>Write a post</span>
+            <Icon name="edit" size={15} /> {!isMobile && <span>Write a post</span>}
           </button>
         ) : view === 'channel' || view === 'dm' ? (
           <>
-            <button title="Voice call" onClick={onVoiceCallModal}>
-              <Icon name="phone" />
-            </button>
-            <button title="Video call" onClick={onVideoCallModal}>
-              <Icon name="video" />
-            </button>
-            <button title="Pinned messages" onClick={onOpenPinned}>
-              <Icon name="pin" />
-            </button>
-            <span className="top-separator" />
+            {!isMobile && (
+              <>
+                <button title="Voice call" onClick={onVoiceCallModal}>
+                  <Icon name="phone" />
+                </button>
+                <button title="Video call" onClick={onVideoCallModal}>
+                  <Icon name="video" />
+                </button>
+                <button title="Pinned messages" onClick={onOpenPinned}>
+                  <Icon name="pin" />
+                </button>
+                <span className="top-separator" />
+              </>
+            )}
             <button
               title="Members"
               className={membersOpen ? 'active' : ''}
@@ -135,12 +154,19 @@ export function Topbar({
               <Icon name="bell" />
               {!notificationRead && <i className="notify-dot" />}
             </button>
-            <button title="Inbox" onClick={onOpenInbox}>
-              <Icon name="inbox" />
-              {unreadCount > 0 && <i className="notify-dot" />}
-            </button>
+            {!isMobile && (
+              <button title="Inbox" onClick={onOpenInbox}>
+                <Icon name="inbox" />
+                {unreadCount > 0 && <i className="notify-dot" />}
+              </button>
+            )}
           </>
         ) : null}
+        {isMobile && onOpenSettings && (
+          <button title="Settings" onClick={onOpenSettings}>
+            <Icon name="settings" />
+          </button>
+        )}
       </div>
     </header>
   )

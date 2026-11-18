@@ -1,0 +1,306 @@
+/* Adaptive layout overrides separating Desktop Web (multi-pane + persistent rail)
+   from Mobile (native app-like bottom 5-tab bar + bottom-sheet dialogs) + Bot Portal styles. */
+
+/* Support 5 adaptive tabs on mobile cleanly */
+@media (max-width: 767px) {
+  .workspace {
+    grid-template-rows: 56px minmax(0, 1fr) calc(62px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    height: calc(62px + env(safe-area-inset-bottom, 0px));
+    padding: 4px 4px max(6px, env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--line);
+    background: var(--side);
+  }
+
+  .mobile-tabs button {
+    min-height: 48px;
+    border-radius: 10px;
+    font-size: 9px;
+    gap: 3px;
+  }
+
+  .mobile-tabs button.active {
+    color: var(--accent);
+    background: var(--accent-bg);
+  }
+
+  /* Bottom-sheet presentation on Mobile instead of desktop centered dialog */
+  .modal-backdrop,
+  .modal-backdrop--sheet {
+    align-items: end;
+    padding: 0;
+  }
+
+  .modal,
+  .modal--sheet {
+    width: 100%;
+    max-width: 100%;
+    max-height: 88dvh;
+    overflow: auto;
+    border-radius: 20px 20px 0 0;
+    padding: 22px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Bot Portal & One-Time Reveal Modal */
+.bots-layout--split {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.bots-layout--stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bot-create-card,
+.bot-card {
+  max-width: 100%;
+  margin: 0;
+}
+
+.bot-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bot-form label {
+  margin: 4px 0 0;
+}
+
+.bot-form input {
+  width: 100%;
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--workspace);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.bot-priv-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.bot-priv-pill {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  margin: 0 !important;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  cursor: pointer;
+}
+
+.bot-priv-pill.is-locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.bot-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bot-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bot-card-head strong {
+  display: block;
+  font-size: 14px;
+}
+
+.bot-card-head small {
+  color: var(--muted);
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.bot-status-badge {
+  flex: 0 0 auto;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.bot-status-badge.approved {
+  background: rgba(0, 186, 124, 0.16);
+  color: #2dd49f;
+}
+
+.bot-status-badge.pending {
+  background: rgba(255, 173, 31, 0.16);
+  color: #ffbe4f;
+}
+
+.bot-status-badge.rejected {
+  background: rgba(244, 33, 46, 0.16);
+  color: #ff7b85;
+}
+
+.bot-bits-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.bot-bit-chip {
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.bot-dev-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bot-dev-actions .danger-button {
+  margin-top: 0;
+}
+
+.bot-token-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.bot-token-row {
+  display: flex;
+  gap: 8px;
+}
+
+.bot-token-row input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--workspace);
+  color: var(--text);
+  font-size: 11px;
+}
+
+.bot-pending-note {
+  margin-top: 12px !important;
+  color: var(--quiet) !important;
+  font-size: 11px !important;
+}
+
+/* One-time reveal credential box */
+.bot-reveal-modal {
+  width: min(460px, 100%);
+}
+
+.token-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--workspace);
+}
+
+.token-box code {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 11px;
+  color: var(--text);
+}
+
+.token-box--secret {
+  border-color: rgba(29, 155, 240, 0.45);
+}
+
+.token-box-actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.token-box button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.token-box button.accent-btn {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.ack-checkbox {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+  color: var(--text) !important;
+  cursor: pointer;
+}
+
+@media (max-width: 1023px) {
+  .bots-layout--split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.app-boot-screen {
+  display: grid;
+  place-items: center;
+  height: 100dvh;
+  background: #111112;
+  color: #e7e9ea;
+  font-size: 13px;
+}

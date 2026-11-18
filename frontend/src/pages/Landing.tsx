@@ -1,47 +1,37 @@
-import { useEffect, useRef, useState } from 'react'
-import '../Landing.css'
-import { api } from '../data/api'
+import { useEffect, useState, type FormEvent } from 'react'
+import '../styles/landing.css'
+import { ApiError } from '../api/client'
+import {
+  isOAuthConfigured,
+  loginWithPassword,
+  registerAccount,
+  sendEmailOtp,
+  startOAuthFlow,
+  verifyEmailOtp,
+  type OAuthProvider,
+} from '../api/auth'
+import { useViewport } from '../hooks/useViewport'
 
-const HOST = typeof window !== 'undefined' ? window.location.hostname : 'localhost'
-const API_BASE = (import.meta as any).env?.VITE_API_URL ?? `http://${HOST}:4000`
-const PHP_BASE = (import.meta as any).env?.VITE_PHP_URL ?? `http://${HOST}:8000`
+type AuthTab = 'otp' | 'password' | 'register'
+type MobileStep = 'welcome' | 'otp-email' | 'otp-verify' | 'password' | 'register'
+
 const BRAND = 'Codex Internasional Community'
-const isMockMode = (import.meta as any).env?.VITE_MOCK_AUTH === 'true'
 
-type ProviderId = 'google' | 'github' | 'email'
-type Step = 'welcome' | 'email' | 'verify'
-
-const OTP_KEY = 'codex-otp-pending'
-
-type PendingOtp = { email: string; code: string; expiresAt: number }
-
-function readPending(): PendingOtp | null {
-  try {
-    const raw = localStorage.getItem(OTP_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as PendingOtp
-    if (parsed.expiresAt < Date.now()) {
-      localStorage.removeItem(OTP_KEY)
-      return null
-    }
-    return parsed
-  } catch {
-    return null
-  }
-}
-
-function writePending(data: PendingOtp) {
-  localStorage.setItem(OTP_KEY, JSON.stringify(data))
-}
-
-function clearPending() {
-  localStorage.removeItem(OTP_KEY)
-}
-
-/* ── Brand SVGs (unchanged) ── */
-function GoogleMark({ size = 22 }: { size?: number }) {
+function BrandMark({ size = 52 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+    <span
+      className="landing-brand-mark"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.56) }}
+      aria-hidden="true"
+    >
+      c
+    </span>
+  )
+}
+
+function GoogleIcon() {
+  return (
+    <svg width={18} height={18} viewBox="0 0 48 48" aria-hidden="true">
       <path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z" />
       <path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.4-4.8 7.1l7.6 5.9c4.4-4.1 7-10.1 7-17.5z" />
       <path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z" />
@@ -50,163 +40,332 @@ function GoogleMark({ size = 22 }: { size?: number }) {
   )
 }
 
-function GitHubMark({ size = 22 }: { size?: number }) {
-  return (
-    <i
-      className="fa-brands fa-github"
-      style={{ fontSize: size, lineHeight: 1, color: 'var(--text)' }}
-      aria-hidden="true"
-    />
-  )
+function GitHubIcon() {
+  return <i className="fa-brands fa-github" style={{ fontSize: 18 }} aria-hidden="true" />
 }
 
-function MailMark({ size = 22 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="5" width="18" height="14" rx="2.5" />
-      <path d="m4 7 8 6 8-6" />
-    </svg>
-  )
+interface LandingProps {
+  onAuthenticated: () => void
+  initialError?: string
 }
 
-function BrandMark({ size = 56 }: { size?: number }) {
-  return (
-    <span
-      className="landing-brand-mark"
-      style={{ width: size, height: size, fontSize: size * 0.6 }}
-      aria-hidden="true"
-    >
-      c
-    </span>
-  )
-}
+/**
+ * Adaptive Auth Landing:
+ * - Desktop / Tablet Web (`!isMobile`): split two-column layout with architecture pillars & tabbed auth card.
+ * - Mobile (`isMobile`): native-style stacked welcome + step-by-step screens with thumb-friendly controls.
+ *
+ * Security: OTP codes are verified strictly on the Rust backend (Brevo + Valkey SHA-256 hash);
+ * no OTP code or mock auth bypass is ever stored on the client.
+ */
+export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
+  const { isMobile } = useViewport()
+  const [desktopTab, setDesktopTab] = useState<AuthTab>('otp')
+  const [mobileStep, setMobileStep] = useState<MobileStep>('welcome')
+  const [otpSent, setOtpSent] = useState(false)
 
-export default function Landing({ onEnter }: { onEnter: () => void }) {
-  const [step, setStep] = useState<Step>('welcome')
-  const [busy, setBusy] = useState<ProviderId | null>(null)
-  const [leaving, setLeaving] = useState(false)
   const [email, setEmail] = useState('')
-  const [code, setCode] = useState('')
-  const [error, setError] = useState('')
-  const codeInput = useRef<HTMLInputElement>(null)
+  const [otpCode, setOtpCode] = useState('')
+  const [identifier, setIdentifier] = useState('')
+  const [password, setPassword] = useState('')
+  const [username, setUsername] = useState('')
+  const [displayName, setDisplayName] = useState('')
 
-  // Kalau ada OTP pending & belum expired, langsung ke step verify
+  const [cooldownSecs, setCooldownSecs] = useState(0)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(initialError)
+  const [info, setInfo] = useState('')
+
   useEffect(() => {
-    const pending = readPending()
-    if (pending) {
-      setEmail(pending.email)
-      setStep('verify')
-      setTimeout(() => codeInput.current?.focus(), 50)
-    }
-  }, [])
-
-  const redirectTo = (provider: ProviderId, emailValue?: string) => {
-    setBusy(provider)
-    const q = emailValue ? `?email=${encodeURIComponent(emailValue)}` : ''
-    window.location.href = `${API_BASE}/auth/${provider}${q}`
-  }
-
-  const mockLogin = async (provider: ProviderId) => {
-    setBusy(provider)
-    try {
-      await api.mockLogin('Guest')
-      setLeaving(true)
-      setTimeout(() => onEnter(), 520)
-    } catch (e) {
-      setBusy(null)
-      alert('Login failed: ' + e)
-    }
-  }
-
-  /* ── Step 1: kirim OTP ── */
-  const submitEmail = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    const value = email.trim()
-    if (!validEmail) return
-
-    setBusy('email')
-    try {
-      if (isMockMode) {
-        // Mode mock: skip PHP, langsung login
-        await mockLogin('email')
-        return
-      }
-
-      // Panggil PHP kirim OTP
-      const res = await fetch(`${PHP_BASE}/send-code.php`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: value }),
-      }).catch(() => {
-        throw new Error(`Server email tidak terjangkau (${PHP_BASE}).`)
-      })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error ?? 'Failed to send code')
-      }
-      const data = await res.json()
-
-      // Simpan OTP di localStorage (sementara — nanti diganti backend)
-      const pending: PendingOtp = {
-        email: value,
-        code: data.dev_code,   // ⚠️ dev only; di prod kode ga boleh dikirim balik
-        expiresAt: Date.now() + (data.expiresIn ?? 600) * 1000,
-      }
-      writePending(pending)
-      setStep('verify')
-      setBusy(null)
-      setTimeout(() => codeInput.current?.focus(), 50)
-    } catch (err: any) {
-      setError(err.message ?? 'Gagal mengirim kode. Coba lagi.')
-      setBusy(null)
-    }
-  }
-
-  /* ── Step 2: verifikasi OTP ── */
-  const submitCode = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    const pending = readPending()
-    if (!pending) {
-      setError('Kode sudah kedaluwarsa. Minta kode baru.')
-      setStep('email')
-      return
-    }
-    if (code.trim() !== pending.code) {
-      setError('Kode salah. Coba lagi.')
-      return
-    }
-
-    setBusy('email')
-    try {
-      // OTP valid → login ke backend Rust
-      await api.mockLogin(pending.email.split('@')[0])
-      // pastikan session cookie benar-benar tersimpan sebelum masuk dashboard
-      await api.me()
-      clearPending()
-      setLeaving(true)
-      setTimeout(() => onEnter(), 520)
-    } catch (err: any) {
-      setError(
-        err instanceof TypeError
-          ? `Server login tidak terjangkau (${API_BASE}). Pastikan backend jalan & CORS diizinkan.`
-          : err.message ?? 'Login gagal.',
-      )
-      setBusy(null)
-    }
-  }
-
-  const resend = async () => {
-    clearPending()
-    setCode('')
-    setStep('email')
-  }
+    if (cooldownSecs <= 0) return
+    const timer = window.setInterval(() => {
+      setCooldownSecs((prev) => (prev > 1 ? prev - 1 : 0))
+    }, 1000)
+    return () => window.clearInterval(timer)
+  }, [cooldownSecs])
 
   const validEmail = /^\S+@\S+\.\S+$/.test(email.trim())
 
+  const handleApiFailure = (err: unknown) => {
+    if (err instanceof ApiError) {
+      if (err.retryAfterSecs && err.retryAfterSecs > 0) {
+        setCooldownSecs(err.retryAfterSecs)
+      }
+      setError(err.message)
+      return
+    }
+    setError(err instanceof Error ? err.message : 'Authentication request failed.')
+  }
+
+  const handleSendOtp = async (e?: FormEvent) => {
+    e?.preventDefault()
+    if (!validEmail || busy || cooldownSecs > 0) return
+    setError('')
+    setInfo('')
+    setBusy(true)
+    try {
+      const res = await sendEmailOtp(email.trim(), 'login')
+      setOtpSent(true)
+      setCooldownSecs(res.next_retry_after_secs > 0 ? res.next_retry_after_secs : 60)
+      setInfo(`6-digit OTP sent to ${email.trim()}. Expires in ${Math.round(res.expires_in_secs / 60)} min.`)
+      if (isMobile) {
+        setMobileStep('otp-verify')
+      }
+    } catch (err) {
+      handleApiFailure(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleVerifyOtp = async (e: FormEvent) => {
+    e.preventDefault()
+    if (otpCode.trim().length !== 6 || busy) return
+    setError('')
+    setBusy(true)
+    try {
+      await verifyEmailOtp(email.trim(), otpCode.trim())
+      onAuthenticated()
+    } catch (err) {
+      handleApiFailure(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handlePasswordLogin = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!identifier.trim() || !password || busy) return
+    setError('')
+    setBusy(true)
+    try {
+      await loginWithPassword({ identifier: identifier.trim(), password })
+      onAuthenticated()
+    } catch (err) {
+      handleApiFailure(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleRegister = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!username.trim() || !displayName.trim() || !validEmail || password.length < 8 || busy) {
+      setError('Fill username, display name, valid email, and password (min 8 chars).')
+      return
+    }
+    setError('')
+    setBusy(true)
+    try {
+      await registerAccount({
+        username: username.trim(),
+        display_name: displayName.trim(),
+        email: email.trim(),
+        password,
+      })
+      onAuthenticated()
+    } catch (err) {
+      handleApiFailure(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleOAuth = (provider: OAuthProvider) => {
+    setError('')
+    setInfo('')
+    if (!isOAuthConfigured(provider)) {
+      const envKey =
+        provider === 'github' ? 'VITE_OAUTH_GITHUB_CLIENT_ID' : 'VITE_OAUTH_GOOGLE_CLIENT_ID'
+      setInfo(`${provider} OAuth is not configured yet (${envKey}). Use Email OTP or Password login.`)
+      return
+    }
+    const url = startOAuthFlow(provider)
+    if (url) {
+      window.location.href = url
+    }
+  }
+
+  const renderOAuthButtons = () => (
+    <div className="landing-oauth-row">
+      <button
+        type="button"
+        className="oauth-btn"
+        disabled={busy}
+        onClick={() => handleOAuth('google')}
+      >
+        <span className="oauth-icon"><GoogleIcon /></span>
+        <span>Google</span>
+      </button>
+      <button
+        type="button"
+        className="oauth-btn"
+        disabled={busy}
+        onClick={() => handleOAuth('github')}
+      >
+        <span className="oauth-icon"><GitHubIcon /></span>
+        <span>GitHub</span>
+      </button>
+    </div>
+  )
+
+  const renderOtpSection = (showEmailField: boolean, showCodeField: boolean) => (
+    <>
+      {showEmailField && (
+        <form className="landing-form" onSubmit={handleSendOtp} noValidate>
+          <label className="landing-field-label" htmlFor="otp-email">EMAIL ADDRESS</label>
+          <input
+            id="otp-email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            className="landing-input"
+            placeholder="you@domain.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            disabled={busy}
+          />
+          <button
+            type="submit"
+            className={`landing-continue ${validEmail && !busy && cooldownSecs === 0 ? 'is-ready' : ''}`}
+            disabled={!validEmail || busy || cooldownSecs > 0}
+          >
+            {busy
+              ? 'Sending OTP…'
+              : cooldownSecs > 0
+                ? `Wait ${cooldownSecs}s to resend`
+                : otpSent
+                  ? 'Resend 6-digit code'
+                  : 'Send login code'}
+          </button>
+        </form>
+      )}
+
+      {showCodeField && (
+        <form className="landing-form" onSubmit={handleVerifyOtp} noValidate>
+          <label className="landing-field-label" htmlFor="otp-code">6-DIGIT CODE FOR {email.trim()}</label>
+          <input
+            id="otp-code"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            className="landing-input landing-otp-input"
+            placeholder="000000"
+            value={otpCode}
+            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+            disabled={busy}
+          />
+          <button
+            type="submit"
+            className={`landing-continue ${otpCode.length === 6 && !busy ? 'is-ready' : ''}`}
+            disabled={otpCode.length !== 6 || busy}
+          >
+            {busy ? 'Verifying…' : 'Verify & sign in'}
+          </button>
+          <p className="landing-help">
+            Need another code?{' '}
+            <button type="button" disabled={busy || cooldownSecs > 0} onClick={() => void handleSendOtp()}>
+              {cooldownSecs > 0 ? `Resend in ${cooldownSecs}s` : 'Resend'}
+            </button>
+          </p>
+        </form>
+      )}
+    </>
+  )
+
+  const renderPasswordSection = () => (
+    <form className="landing-form" onSubmit={handlePasswordLogin} noValidate>
+      <label className="landing-field-label" htmlFor="login-id">USERNAME OR EMAIL</label>
+      <input
+        id="login-id"
+        type="text"
+        autoComplete="username"
+        className="landing-input"
+        placeholder="username or email"
+        value={identifier}
+        onChange={(e) => setIdentifier(e.target.value)}
+        disabled={busy}
+      />
+      <label className="landing-field-label" htmlFor="login-pass">PASSWORD</label>
+      <input
+        id="login-pass"
+        type="password"
+        autoComplete="current-password"
+        className="landing-input"
+        placeholder="••••••••"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        disabled={busy}
+      />
+      <button
+        type="submit"
+        className={`landing-continue ${identifier.trim() && password && !busy ? 'is-ready' : ''}`}
+        disabled={!identifier.trim() || !password || busy}
+      >
+        {busy ? 'Signing in…' : 'Sign in'}
+      </button>
+    </form>
+  )
+
+  const renderRegisterSection = () => (
+    <form className="landing-form" onSubmit={handleRegister} noValidate>
+      <label className="landing-field-label" htmlFor="reg-user">USERNAME</label>
+      <input
+        id="reg-user"
+        type="text"
+        autoComplete="username"
+        className="landing-input"
+        placeholder="codex_builder"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        disabled={busy}
+      />
+      <label className="landing-field-label" htmlFor="reg-display">DISPLAY NAME</label>
+      <input
+        id="reg-display"
+        type="text"
+        autoComplete="name"
+        className="landing-input"
+        placeholder="Codex Builder"
+        value={displayName}
+        onChange={(e) => setDisplayName(e.target.value)}
+        disabled={busy}
+      />
+      <label className="landing-field-label" htmlFor="reg-email">EMAIL ADDRESS</label>
+      <input
+        id="reg-email"
+        type="email"
+        inputMode="email"
+        autoComplete="email"
+        className="landing-input"
+        placeholder="you@domain.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        disabled={busy}
+      />
+      <label className="landing-field-label" htmlFor="reg-pass">PASSWORD (MIN 8 CHARS)</label>
+      <input
+        id="reg-pass"
+        type="password"
+        autoComplete="new-password"
+        className="landing-input"
+        placeholder="At least 8 characters"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        disabled={busy}
+      />
+      <button
+        type="submit"
+        className={`landing-continue ${username.trim() && displayName.trim() && validEmail && password.length >= 8 && !busy ? 'is-ready' : ''}`}
+        disabled={busy}
+      >
+        {busy ? 'Creating account…' : 'Create account'}
+      </button>
+    </form>
+  )
+
   return (
-    <div className={'landing-shell' + (leaving ? ' is-leaving' : '')}>
+    <div className="landing-shell">
       <div className="landing-dots" aria-hidden="true">
         <span className="dots d1" />
         <span className="dots d2" />
@@ -214,157 +373,201 @@ export default function Landing({ onEnter }: { onEnter: () => void }) {
         <span className="dots d4" />
       </div>
 
-      {step === 'welcome' && (
-        <div className="landing-screen landing-welcome" key="welcome">
-          <div className="landing-hero">
-            <BrandMark size={64} />
+      {!isMobile ? (
+        /* ── Desktop & Tablet Web Split View ── */
+        <main className="landing-desktop-frame">
+          <section className="landing-showcase">
+            <div className="landing-badge-row">
+              <BrandMark size={48} />
+              <span className="landing-badge-pill">RUST AXUM · VALKEY · BREVO OTP</span>
+            </div>
             <h1>Welcome to {BRAND}</h1>
-          </div>
+            <p className="landing-showcase-lead">
+              A high-throughput IT community hub uniting channels, DMs, public social posts, and isolated bot runtimes.
+            </p>
+            <div className="landing-pillars">
+              <div className="landing-pillar">
+                <strong>Server-Verified Brevo OTP</strong>
+                <span>6-digit codes are SHA-256 hashed in Valkey with exponential 24h backoff — never stored on your browser.</span>
+              </div>
+              <div className="landing-pillar">
+                <strong>Rotating Device Sessions</strong>
+                <span>Short-lived Bearer JWTs paired with per-device refresh tokens and replay reuse detection.</span>
+              </div>
+              <div className="landing-pillar">
+                <strong>Isolated Bot Portal &amp; One-Time Tokens</strong>
+                <span>Register chmod-scoped bots and copy one-time credentials straight to your VPS secret manager.</span>
+              </div>
+            </div>
+          </section>
 
-          <div className="landing-actions">
-            <button
-              type="button"
-              className="oauth-btn"
-              onClick={() => setStep('email')}
-              disabled={busy !== null}
-            >
-              <span className="oauth-icon"><GoogleMark /></span>
-              <span className="oauth-text">Continue with Google</span>
-            </button>
+          <section className="landing-card">
+            <div className="landing-card-head">
+              <h2>Sign in or create account</h2>
+              <p>Authenticate directly against the Codex Rust backend.</p>
+            </div>
 
-            <button
-              type="button"
-              className="oauth-btn"
-              onClick={() => (isMockMode ? mockLogin('github') : redirectTo('github'))}
-              disabled={busy !== null}
-            >
-              <span className="oauth-icon"><GitHubMark /></span>
-              <span className="oauth-text">
-                {busy === 'github' ? 'Connecting…' : 'Continue with GitHub'}
+            <div className="landing-mode-tabs" role="tablist" aria-label="Authentication methods">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={desktopTab === 'otp'}
+                className={desktopTab === 'otp' ? 'active' : ''}
+                onClick={() => {
+                  setDesktopTab('otp')
+                  setError('')
+                }}
+              >
+                Email OTP
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={desktopTab === 'password'}
+                className={desktopTab === 'password' ? 'active' : ''}
+                onClick={() => {
+                  setDesktopTab('password')
+                  setError('')
+                }}
+              >
+                Password
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={desktopTab === 'register'}
+                className={desktopTab === 'register' ? 'active' : ''}
+                onClick={() => {
+                  setDesktopTab('register')
+                  setError('')
+                }}
+              >
+                Register
+              </button>
+            </div>
+
+            {error && <p className="landing-error">{error}</p>}
+            {info && <p className="landing-info">{info}</p>}
+
+            {desktopTab === 'otp' && renderOtpSection(true, otpSent)}
+            {desktopTab === 'password' && renderPasswordSection()}
+            {desktopTab === 'register' && renderRegisterSection()}
+
+            <div className="landing-or"><span>OR CONTINUE WITH</span></div>
+            {renderOAuthButtons()}
+          </section>
+        </main>
+      ) : (
+        /* ── Mobile Step-by-Step Native App Flow ── */
+        <div className="landing-screen">
+          {mobileStep !== 'welcome' && (
+            <header className="landing-topbar">
+              <button
+                type="button"
+                className="landing-back"
+                aria-label="Back"
+                onClick={() => {
+                  setError('')
+                  setInfo('')
+                  setMobileStep(mobileStep === 'otp-verify' ? 'otp-email' : 'welcome')
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                  <path d="m15 5-7 7 7 7" />
+                </svg>
+              </button>
+              <span>
+                {mobileStep === 'otp-email'
+                  ? 'Email OTP'
+                  : mobileStep === 'otp-verify'
+                    ? 'Verify code'
+                    : mobileStep === 'register'
+                      ? 'Create account'
+                      : 'Sign in'}
               </span>
-            </button>
+            </header>
+          )}
 
-            <div className="landing-or"><span>OR</span></div>
+          {mobileStep === 'welcome' && (
+            <>
+              <div className="landing-hero">
+                <BrandMark size={64} />
+                <h1>Welcome to {BRAND}</h1>
+                <p className="landing-hero-sub">
+                  Sign in with server-verified Email OTP, password, or OAuth2.
+                </p>
+              </div>
+              <div className="landing-actions">
+                {error && <p className="landing-error">{error}</p>}
+                {info && <p className="landing-info">{info}</p>}
+                <button
+                  type="button"
+                  className="oauth-btn"
+                  onClick={() => {
+                    setError('')
+                    setInfo('')
+                    setMobileStep('otp-email')
+                  }}
+                >
+                  Continue with Email OTP
+                </button>
+                <button
+                  type="button"
+                  className="oauth-btn"
+                  onClick={() => {
+                    setError('')
+                    setInfo('')
+                    setMobileStep('password')
+                  }}
+                >
+                  Sign in with Password
+                </button>
+                <button
+                  type="button"
+                  className="oauth-btn"
+                  onClick={() => {
+                    setError('')
+                    setInfo('')
+                    setMobileStep('register')
+                  }}
+                >
+                  Create new account
+                </button>
+                <div className="landing-or"><span>OR</span></div>
+                {renderOAuthButtons()}
+              </div>
+            </>
+          )}
 
-            <button
-              type="button"
-              className="oauth-btn"
-              onClick={() => setStep('email')}
-              disabled={busy !== null}
-            >
-              <span className="oauth-icon"><MailMark /></span>
-              <span className="oauth-text">Continue with Email</span>
-            </button>
-          </div>
-        </div>
-      )}
+          {mobileStep === 'otp-email' && (
+            <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {error && <p className="landing-error">{error}</p>}
+              {info && <p className="landing-info">{info}</p>}
+              {renderOtpSection(true, false)}
+            </div>
+          )}
 
-      {step === 'email' && (
-        <div className="landing-screen landing-signin" key="email">
-          <header className="landing-topbar">
-            <button
-              type="button"
-              className="landing-back"
-              onClick={() => { setStep('welcome'); setError('') }}
-              aria-label="Back"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m15 5-7 7 7 7" />
-              </svg>
-            </button>
-            <span>Login</span>
-          </header>
+          {mobileStep === 'otp-verify' && (
+            <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {error && <p className="landing-error">{error}</p>}
+              {info && <p className="landing-info">{info}</p>}
+              {renderOtpSection(false, true)}
+            </div>
+          )}
 
-          <div className="landing-signin-brand">
-            <BrandMark size={22} />
-            <strong>codex</strong>
-          </div>
+          {mobileStep === 'password' && (
+            <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {error && <p className="landing-error">{error}</p>}
+              {renderPasswordSection()}
+            </div>
+          )}
 
-          <form className="landing-signin-body" onSubmit={submitEmail} noValidate>
-            <BrandMark size={64} />
-            <h2>Sign in or sign up</h2>
-            <p className="landing-sub">Start creating with {BRAND}</p>
-
-            <input
-              type="email"
-              inputMode="email"
-              autoComplete="email"
-              autoFocus
-              className="landing-input"
-              placeholder="Enter your email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={busy !== null}
-            />
-
-            {error && <p className="landing-error">{error}</p>}
-
-            <button
-              type="submit"
-              className={'landing-continue' + (validEmail && !busy ? ' is-ready' : '')}
-              disabled={!validEmail || busy !== null}
-            >
-              {busy === 'email' ? 'Mengirim kode…' : 'Continue'}
-            </button>
-
-            <p className="landing-help">
-              Can't find your sign-in method? <a href="#support">Contact support</a>
-            </p>
-          </form>
-        </div>
-      )}
-
-      {step === 'verify' && (
-        <div className="landing-screen landing-signin" key="verify">
-          <header className="landing-topbar">
-            <button
-              type="button"
-              className="landing-back"
-              onClick={() => { setStep('email'); setCode(''); setError('') }}
-              aria-label="Back"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m15 5-7 7 7 7" />
-              </svg>
-            </button>
-            <span>Verify code</span>
-          </header>
-
-          <div className="landing-signin-brand">
-            <BrandMark size={22} />
-            <strong>codex</strong>
-          </div>
-
-          <form className="landing-signin-body" onSubmit={submitCode} noValidate>
-            <BrandMark size={64} />
-            <h2>Check your email</h2>
-            <input
-              ref={codeInput}
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              className="landing-input landing-otp-input"
-              placeholder="000000"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-              disabled={busy !== null}
-            />
-
-            {error && <p className="landing-error">{error}</p>}
-
-            <button
-              type="submit"
-              className={'landing-continue' + (code.length === 6 && !busy ? ' is-ready' : '')}
-              disabled={code.length !== 6 || busy !== null}
-            >
-              {busy === 'email' ? 'Memverifikasi…' : 'Verify & continue'}
-            </button>
-
-            <p className="landing-help">
-              Tidak terima kode? <a href="#resend" onClick={(e) => { e.preventDefault(); resend() }}>Kirim ulang</a>
-            </p>
-          </form>
+          {mobileStep === 'register' && (
+            <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {error && <p className="landing-error">{error}</p>}
+              {renderRegisterSection()}
+            </div>
+          )}
         </div>
       )}
     </div>
