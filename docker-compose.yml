@@ -2,6 +2,7 @@
 # Placed at the repository root so it shares `.env` and root data volumes
 # (`./postgres-data`, `./valkey-data`) independently from `backend/` app code.
 # All host port bindings are pinned to 127.0.0.1 (localhost) to prevent LAN exposure.
+# Note: on VPS deploys run `docker compose pull` regularly (postgres >= 17.12, valkey >= 9.1.1).
 
 services:
   postgres:

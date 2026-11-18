@@ -6,7 +6,10 @@
 //! to `acquire_timeout` and then fast-fail with `503 Service Unavailable` +
 //! `Retry-After` so chat WebSockets never suffer CPU starvation or OOM.
 
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{Arc, OnceLock},
+    time::Duration,
+};
 
 use argon2::{
     Argon2,
@@ -15,6 +18,19 @@ use argon2::{
 use tokio::sync::Semaphore;
 
 use crate::error::AppError;
+
+static DUMMY_PHC_HASH: OnceLock<String> = OnceLock::new();
+
+fn dummy_phc_hash() -> &'static str {
+    DUMMY_PHC_HASH
+        .get_or_init(|| {
+            Argon2::default()
+                .hash_password(b"codexter-dummy-timing-guard")
+                .expect("argon2 dummy hash generation must succeed")
+                .to_string()
+        })
+        .as_str()
+}
 
 #[derive(Clone)]
 pub struct PasswordHasher {
@@ -70,6 +86,31 @@ impl PasswordHasher {
         })
         .await
         .map_err(|e| AppError::Internal(anyhow::anyhow!("verify task join failed: {e}")))?
+    }
+
+    /// Constant-time-style login verifier that runs Argon2id against a dummy PHC
+    /// hash when `maybe_phc` is `None` (unknown user or OAuth/OTP-only account),
+    /// preventing timing-based user enumeration on `POST /api/v1/auth/login`.
+    pub async fn verify_password_or_dummy(
+        &self,
+        password: String,
+        maybe_phc: Option<String>,
+    ) -> Result<bool, AppError> {
+        match maybe_phc {
+            Some(phc) => self.verify_password(password, phc).await,
+            None => {
+                let _permit = self.acquire_permit().await?;
+                tokio::task::spawn_blocking(move || {
+                    let parsed = PasswordHash::new(dummy_phc_hash()).map_err(|e| {
+                        AppError::Internal(anyhow::anyhow!("dummy hash invalid: {e}"))
+                    })?;
+                    let _ = Argon2::default().verify_password(password.as_bytes(), &parsed);
+                    Ok(false)
+                })
+                .await
+                .map_err(|e| AppError::Internal(anyhow::anyhow!("verify task join failed: {e}")))?
+            }
+        }
     }
 
     async fn acquire_permit(&self) -> Result<tokio::sync::OwnedSemaphorePermit, AppError> {

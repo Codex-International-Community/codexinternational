@@ -1,10 +1,15 @@
 //! Library root exposing backend modules and the Axum router constructor so
 //! both `src/main.rs` and `tests/*` integration tests share identical wiring.
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use axum::{
-    Router, middleware,
+    Json, Router,
+    body::Body,
+    extract::DefaultBodyLimit,
+    http::{Request, StatusCode},
+    middleware::{self, Next},
+    response::{IntoResponse, Response},
     routing::{get, post, put},
 };
 
@@ -20,6 +25,35 @@ pub mod health;
 pub mod shared;
 pub mod state;
 
+pub const REST_BODY_LIMIT_BYTES: usize = 64 * 1024;
+pub const REST_REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// Applies a bounded HTTP request timeout to REST `/api/v1/*` routes while
+/// leaving `/ws` WebSocket upgrades exempt (`INV-14`).
+pub async fn timeout_middleware_with(
+    duration: Duration,
+    req: Request<Body>,
+    next: Next,
+) -> Response {
+    match tokio::time::timeout(duration, next.run(req)).await {
+        Ok(resp) => resp,
+        Err(_) => (
+            StatusCode::REQUEST_TIMEOUT,
+            Json(serde_json::json!({
+                "error": {
+                    "code": "REQUEST_TIMEOUT",
+                    "message": "request timed out"
+                }
+            })),
+        )
+            .into_response(),
+    }
+}
+
+async fn rest_timeout_middleware(req: Request<Body>, next: Next) -> Response {
+    timeout_middleware_with(REST_REQUEST_TIMEOUT, req, next).await
+}
+
 /// Builds the main Axum `Router` wired to `AppState`.
 pub fn app_router(state: Arc<AppState>) -> Router {
     let api = Router::new()
@@ -27,6 +61,8 @@ pub fn app_router(state: Arc<AppState>) -> Router {
         .nest("/api/v1/bots", auth::bots_router())
         .route("/api/v1/dev/bots/{id}/review", post(auth::bots::review_bot))
         .route("/api/v1/devices/fcm", put(auth::devices::register_fcm))
+        .layer(DefaultBodyLimit::max(REST_BODY_LIMIT_BYTES))
+        .layer(middleware::from_fn(rest_timeout_middleware))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             rate_limit_middleware,

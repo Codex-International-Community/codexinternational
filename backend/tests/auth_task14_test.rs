@@ -19,6 +19,7 @@ use backend::{
         db::run_migrations,
         rate_limit::{
             BACKOFF_RESET_WINDOW_SECS, RateLimitPolicy, check_rate_limit, policy_for_request,
+            resolve_caller_bucket,
         },
     },
     state::AppState,
@@ -327,4 +328,39 @@ async fn test_inv15_bot_approval_and_token_auth_lifecycle() {
         .execute(&pg)
         .await
         .unwrap();
+}
+
+#[tokio::test]
+async fn test_fake_bot_header_cannot_bypass_public_auth_or_api_ip_rate_limit() {
+    let cfg = AppConfig::from_map(&HashMap::new()).expect("dev config");
+    let state = AppState::connect_lazy(cfg).expect("lazy state");
+
+    for path in [
+        "/api/v1/auth/login",
+        "/api/v1/auth/register",
+        "/api/v1/auth/otp/send",
+        "/api/v1/auth/otp/verify",
+        "/api/v1/auth/oauth/github",
+        "/api/v1/auth/refresh",
+    ] {
+        let (policy, key) =
+            resolve_caller_bucket(&state, path, "Bot attacker-random-token-123", "203.0.113.9")
+                .await;
+        assert_eq!(policy.scope, "auth", "path {path} must stay in auth scope");
+        assert_eq!(
+            key, "203.0.113.9",
+            "path {path} must key by client IP, never bot:<hash>"
+        );
+    }
+
+    // Unverified Bot token on non-auth routes also falls back to client IP when not cached.
+    let (api_policy, api_key) = resolve_caller_bucket(
+        &state,
+        "/api/v1/bots",
+        "Bot unverified-random-token",
+        "203.0.113.9",
+    )
+    .await;
+    assert_eq!(api_policy.scope, "api");
+    assert_eq!(api_key, "203.0.113.9");
 }
