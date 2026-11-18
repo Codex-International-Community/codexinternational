@@ -1,7 +1,7 @@
-# Systemd unit for the Codex Rust Axum backend.
-# Copy to /etc/systemd/system/codex-backend.service on the VPS.
+# Systemd unit for the Codexter Rust Axum backend.
+# Copy to /etc/systemd/system/codexter-backend.service on the VPS.
 [Unit]
-Description=CodexInternational Rust Backend
+Description=Codexter Rust Backend
 After=network.target docker.service
 
 [Service]

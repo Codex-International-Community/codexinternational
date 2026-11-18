@@ -128,7 +128,7 @@ jobs:
 
             cd "$APP_DIR/backend"
             cargo build --release
-            sudo systemctl restart codex-backend
+            sudo systemctl restart codexter-backend
 
             cd "$APP_DIR/frontend"
             npm ci
