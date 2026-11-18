@@ -213,7 +213,7 @@ impl AppConfig {
             bind_addr: get_or("BIND_ADDR", "127.0.0.1:8080"),
             database_url: SecretString::new(get_or(
                 "DATABASE_URL",
-                "postgres://codex:codex_dev_password@127.0.0.1:5432/codexinternational",
+                "postgres://codexter:codex_dev_password@127.0.0.1:5432/codexinternational",
             )),
             valkey_url: SecretString::new(get_or("VALKEY_URL", "valkey://127.0.0.1:6379")),
             jwt_secret: SecretString::new(get_or(
@@ -247,8 +247,8 @@ impl AppConfig {
             r2_account_id: get_or("R2_ACCOUNT_ID", ""),
             r2_access_key_id: SecretString::new(get_or("R2_ACCESS_KEY_ID", "")),
             r2_secret_access_key: SecretString::new(get_or("R2_SECRET_ACCESS_KEY", "")),
-            r2_bucket_name: get_or("R2_BUCKET_NAME", "codex-media"),
-            aws_lambda_video_fn: get_or("AWS_LAMBDA_VIDEO_FN", "codex-video-compressor"),
+            r2_bucket_name: get_or("R2_BUCKET_NAME", "codexter-media"),
+            aws_lambda_video_fn: get_or("AWS_LAMBDA_VIDEO_FN", "codexter-video-compressor"),
             msg_flush_interval_ms: parse_u64("MSG_FLUSH_INTERVAL_MS", 250)?,
             counter_flush_interval_ms: parse_u64("COUNTER_FLUSH_INTERVAL_MS", 500)?,
             cors_allowed_origins: get_or(

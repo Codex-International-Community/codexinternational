@@ -6,10 +6,10 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: codex-postgres
+    container_name: codexter-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-codex}
+      POSTGRES_USER: ${POSTGRES_USER:-codexter}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-codex_dev_password}
       POSTGRES_DB: ${POSTGRES_DB:-codexinternational}
     ports:
@@ -25,7 +25,7 @@ services:
 
   valkey:
     image: valkey/valkey:9.1-alpine
-    container_name: codex-valkey
+    container_name: codexter-valkey
     restart: unless-stopped
     command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
     ports:

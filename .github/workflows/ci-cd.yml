@@ -21,13 +21,13 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_USER: codex
+          POSTGRES_USER: codexter
           POSTGRES_PASSWORD: codex_dev_password
           POSTGRES_DB: codexinternational
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U codex -d codexinternational"
+          --health-cmd "pg_isready -U codexter -d codexinternational"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -70,7 +70,7 @@ jobs:
       - name: Run tests
         working-directory: backend
         env:
-          DATABASE_URL: postgres://codex:codex_dev_password@127.0.0.1:5432/codexinternational
+          DATABASE_URL: postgres://codexter:codex_dev_password@127.0.0.1:5432/codexinternational
           VALKEY_URL: valkey://127.0.0.1:6379
         run: cargo test --all-targets -- --include-ignored
 

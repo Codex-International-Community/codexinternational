@@ -128,13 +128,13 @@ impl EmailSender for BrevoEmailSender {
         }
 
         let subject = match purpose {
-            "login" => "Your Codex login code",
-            "verify_email" => "Verify your Codex email address",
-            _ => "Your Codex verification code",
+            "login" => "Your Codexter login code",
+            "verify_email" => "Verify your Codexter email address",
+            _ => "Your Codexter verification code",
         };
 
         let body = format!(
-            "Your Codex verification code is: {code}\n\nThis code expires in 5 minutes. If you did not request this, you can safely ignore this email."
+            "Your Codexter verification code is: {code}\n\nThis code expires in 5 minutes. If you did not request this, you can safely ignore this email."
         );
 
         let email =

@@ -46,7 +46,7 @@ export class ApiError extends Error {
   }
 }
 
-const SESSION_KEY = 'codex_session_v1'
+const SESSION_KEY = 'codexter_session_v1'
 const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/+$/, '')
 
 let memorySession: AuthSession | null = readStoredSession()
@@ -110,7 +110,7 @@ export function detectClientPlatform(): 'web' | 'android_apk' {
 }
 
 export function detectDeviceName(): string {
-  if (typeof navigator === 'undefined') return 'Codex Client'
+  if (typeof navigator === 'undefined') return 'Codexter Client'
   const ua = navigator.userAgent
   if (/Android/i.test(ua)) return 'Android Browser'
   if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS Browser'

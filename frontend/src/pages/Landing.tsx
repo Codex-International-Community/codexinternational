@@ -315,7 +315,7 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
         type="text"
         autoComplete="username"
         className="landing-input"
-        placeholder="codex_builder"
+        placeholder="codexter_builder"
         value={username}
         onChange={(e) => setUsername(e.target.value)}
         disabled={busy}
@@ -326,7 +326,7 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
         type="text"
         autoComplete="name"
         className="landing-input"
-        placeholder="Codex Builder"
+        placeholder="Codexter Builder"
         value={displayName}
         onChange={(e) => setDisplayName(e.target.value)}
         disabled={busy}
@@ -404,7 +404,7 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
           <section className="landing-card">
             <div className="landing-card-head">
               <h2>Sign in or create account</h2>
-              <p>Authenticate directly against the Codex Rust backend.</p>
+              <p>Authenticate directly against the Codexter Rust backend.</p>
             </div>
 
             <div className="landing-mode-tabs" role="tablist" aria-label="Authentication methods">

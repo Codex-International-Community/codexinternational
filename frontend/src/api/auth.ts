@@ -29,7 +29,7 @@ export interface LoginPayload {
   password: string
 }
 
-const OAUTH_STATE_KEY = 'codex_oauth_state_v1'
+const OAUTH_STATE_KEY = 'codexter_oauth_state_v1'
 
 interface PendingOAuthState {
   provider: OAuthProvider
