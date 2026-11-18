@@ -118,7 +118,9 @@ jobs:
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
             set -euo pipefail
+            [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
             APP_DIR="${{ secrets.VPS_APP_DIR }}"
+            APP_DIR="${APP_DIR/#\~/$HOME}"
             cd "$APP_DIR"
             git fetch origin prod
             git checkout prod
