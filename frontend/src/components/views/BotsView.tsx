@@ -215,42 +215,51 @@ export function BotsView({ currentUser, isMobile, onNotify }: BotsViewProps) {
               maxLength={180}
             />
 
-            <label>CHMOD PRIVILEGE BITS (MODE {privMask})</label>
-            <div className="bot-priv-grid">
-              <label className="bot-priv-pill">
-                <input
-                  type="checkbox"
-                  checked={(privMask & BOT_READ) === BOT_READ}
-                  onChange={() => togglePrivilegeBit(BOT_READ)}
-                />
-                <span>READ (1)</span>
-              </label>
-              <label className="bot-priv-pill">
-                <input
-                  type="checkbox"
-                  checked={(privMask & BOT_WRITE) === BOT_WRITE}
-                  onChange={() => togglePrivilegeBit(BOT_WRITE)}
-                />
-                <span>WRITE (2)</span>
-              </label>
-              <label className="bot-priv-pill">
-                <input
-                  type="checkbox"
-                  checked={(privMask & BOT_MOD) === BOT_MOD}
-                  onChange={() => togglePrivilegeBit(BOT_MOD)}
-                />
-                <span>MOD (4)</span>
-              </label>
-              <label className={`bot-priv-pill ${!isDev ? 'is-locked' : ''}`}>
-                <input
-                  type="checkbox"
-                  disabled={!isDev}
-                  checked={(privMask & BOT_ADMIN) === BOT_ADMIN}
-                  onChange={() => togglePrivilegeBit(BOT_ADMIN)}
-                />
-                <span>ADMIN (8){!isDev ? ' · dev only' : ''}</span>
-              </label>
-            </div>
+            <fieldset className="bot-priv-fieldset">
+              <legend>CHMOD PRIVILEGE BITS (MODE {privMask})</legend>
+              <div className="bot-priv-grid">
+                <label htmlFor="bot-priv-read" className="bot-priv-pill">
+                  <input
+                    id="bot-priv-read"
+                    type="checkbox"
+                    checked={(privMask & BOT_READ) === BOT_READ}
+                    onChange={() => togglePrivilegeBit(BOT_READ)}
+                  />
+                  <span>READ (1)</span>
+                </label>
+                <label htmlFor="bot-priv-write" className="bot-priv-pill">
+                  <input
+                    id="bot-priv-write"
+                    type="checkbox"
+                    checked={(privMask & BOT_WRITE) === BOT_WRITE}
+                    onChange={() => togglePrivilegeBit(BOT_WRITE)}
+                  />
+                  <span>WRITE (2)</span>
+                </label>
+                <label htmlFor="bot-priv-mod" className="bot-priv-pill">
+                  <input
+                    id="bot-priv-mod"
+                    type="checkbox"
+                    checked={(privMask & BOT_MOD) === BOT_MOD}
+                    onChange={() => togglePrivilegeBit(BOT_MOD)}
+                  />
+                  <span>MOD (4)</span>
+                </label>
+                <label
+                  htmlFor="bot-priv-admin"
+                  className={`bot-priv-pill ${!isDev ? 'is-locked' : ''}`}
+                >
+                  <input
+                    id="bot-priv-admin"
+                    type="checkbox"
+                    disabled={!isDev}
+                    checked={(privMask & BOT_ADMIN) === BOT_ADMIN}
+                    onChange={() => togglePrivilegeBit(BOT_ADMIN)}
+                  />
+                  <span>ADMIN (8){!isDev ? ' · dev only' : ''}</span>
+                </label>
+              </div>
+            </fieldset>
 
             <button type="submit" className="primary-action" disabled={creating}>
               <Icon name="plus" size={15} />
@@ -333,7 +342,11 @@ export function BotsView({ currentUser, isMobile, onNotify }: BotsViewProps) {
                     {canIssue ? (
                       <div className="bot-token-controls">
                         <div className="bot-token-row">
+                          <label htmlFor={`token-label-${bot.id}`} className="visually-hidden">
+                            Token label for {bot.display_name}
+                          </label>
                           <input
+                            id={`token-label-${bot.id}`}
                             value={tokenLabels[bot.id] ?? ''}
                             onChange={(e) =>
                               setTokenLabels((prev) => ({ ...prev, [bot.id]: e.target.value }))
@@ -350,7 +363,11 @@ export function BotsView({ currentUser, isMobile, onNotify }: BotsViewProps) {
                           </button>
                         </div>
                         <div className="bot-token-row">
+                          <label htmlFor={`revoke-token-${bot.id}`} className="visually-hidden">
+                            Token UUID to revoke for {bot.display_name}
+                          </label>
                           <input
+                            id={`revoke-token-${bot.id}`}
                             value={revokeTokenIds[bot.id] ?? ''}
                             onChange={(e) =>
                               setRevokeTokenIds((prev) => ({ ...prev, [bot.id]: e.target.value }))

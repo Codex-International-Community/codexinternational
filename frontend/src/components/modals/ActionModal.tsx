@@ -1,6 +1,7 @@
-import type { FormEvent } from 'react'
+import { useId, type FormEvent } from 'react'
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
+import { useModalDialog } from '../../hooks/useModalDialog'
 import type { User } from '../../types/chat'
 
 export type ActionModalType = 'server' | 'channel' | 'dm' | 'invite'
@@ -22,6 +23,10 @@ export function ActionModal({
   onSubmit,
   onClose,
 }: ActionModalProps) {
+  const titleId = useId()
+  const inputId = useId()
+  const dialogRef = useModalDialog({ onClose, dismissible: true })
+
   const iconName =
     type === 'server'
       ? 'users'
@@ -69,37 +74,53 @@ export function ActionModal({
           : 'Copy invite link'
 
   return (
-    <div className="modal-backdrop" onMouseDown={onClose}>
-      <form className="modal" onSubmit={onSubmit} onMouseDown={(e) => e.stopPropagation()}>
-        <button type="button" className="modal-x" onClick={onClose} aria-label="Close">
+    <dialog
+      ref={dialogRef}
+      className="modal"
+      aria-labelledby={titleId}
+      {...({ closedby: 'any' } as Record<string, string>)}
+    >
+      <form className="modal-form" onSubmit={onSubmit}>
+        <button
+          type="button"
+          className="modal-x"
+          onClick={() => dialogRef.current?.close()}
+          aria-label="Close"
+        >
           <Icon name="close" />
         </button>
 
         <div className="modal-icon">
           <Icon name={iconName} size={22} />
         </div>
-        <h2>{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         <p>{description}</p>
 
         {type === 'dm' ? (
-          <div className="person-picker">
-            {people.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className={value === p.id ? 'selected' : ''}
-                onClick={() => onChangeValue(p.id)}
-              >
-                <Avatar user={p} size="small" />
-                {p.name}
-                {value === p.id && <Icon name="check" size={15} />}
-              </button>
-            ))}
-          </div>
+          <fieldset className="person-picker-fieldset">
+            <legend className="modal-field-label">CHOOSE PERSON</legend>
+            <div className="person-picker">
+              {people.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  aria-pressed={value === p.id}
+                  className={value === p.id ? 'selected' : ''}
+                  onClick={() => onChangeValue(p.id)}
+                >
+                  <Avatar user={p} size="small" />
+                  {p.name}
+                  {value === p.id && <Icon name="check" size={15} />}
+                </button>
+              ))}
+            </div>
+          </fieldset>
         ) : (
           <>
-            <label>{label}</label>
+            <label htmlFor={inputId}>{label}</label>
             <input
+              id={inputId}
+              className="modal-input"
               autoFocus
               value={type === 'invite' ? 'community.example/invite/demo' : value}
               readOnly={type === 'invite'}
@@ -112,8 +133,8 @@ export function ActionModal({
         <button className="modal-primary" type="submit">
           {buttonText}
         </button>
-        <small>All demo data stays in this browser.</small>
+        <small className="modal-note">All demo data stays in this browser.</small>
       </form>
-    </div>
+    </dialog>
   )
 }

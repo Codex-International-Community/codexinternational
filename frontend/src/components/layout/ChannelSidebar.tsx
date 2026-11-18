@@ -1,11 +1,11 @@
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
-import { me } from '../../constants/seedData'
 import type { Channel, Conversation, Server, User } from '../../types/chat'
 import type { View, Theme } from '../../types/common'
 import type { SocialTab } from '../../types/social'
 
 interface ChannelSidebarProps {
+  currentUser: User
   view: View
   server?: Server
   channels: Channel[]
@@ -38,6 +38,7 @@ interface ChannelSidebarProps {
 }
 
 export function ChannelSidebar({
+  currentUser,
   view,
   server,
   channels,
@@ -94,7 +95,12 @@ export function ChannelSidebar({
 
   return (
     <aside className="channel-sidebar">
-      <button className="server-title" onClick={onToggleProfileMenu}>
+      <button
+        type="button"
+        className="server-title"
+        aria-expanded={profileMenuOpen}
+        onClick={onToggleProfileMenu}
+      >
         <span>
           <small>{serverHeaderSub}</small>
           <strong>{serverHeaderTitle}</strong>
@@ -106,24 +112,28 @@ export function ChannelSidebar({
         <div className="social-side-nav">
           <span className="side-nav-label">YOUR TIMELINE</span>
           <button
+            type="button"
             className={socialTab === 'for-you' ? 'selected' : ''}
             onClick={() => onSelectSocialTab('for-you')}
           >
-            <span>◉</span> For you
+            <span aria-hidden="true">◉</span> For you
           </button>
           <button
+            type="button"
             className={socialTab === 'following' ? 'selected' : ''}
             onClick={() => onSelectSocialTab('following')}
           >
             <Icon name="users" size={16} /> Following
           </button>
           <button
+            type="button"
             className={socialTab === 'latest' ? 'selected' : ''}
             onClick={() => onSelectSocialTab('latest')}
           >
             <Icon name="calendar" size={16} /> Latest
           </button>
           <button
+            type="button"
             className={socialTab === 'saved' ? 'selected' : ''}
             onClick={() => onSelectSocialTab('saved')}
           >
@@ -136,7 +146,7 @@ export function ChannelSidebar({
       )}
 
       <div className="channel-list">
-        <button className="quick-search" onClick={onOpenQuickSearch}>
+        <button type="button" className="quick-search" onClick={onOpenQuickSearch}>
           <Icon name="search" size={15} />
           <span>Search</span>
           <kbd>⌘ K</kbd>
@@ -146,7 +156,12 @@ export function ChannelSidebar({
           <>
             <div className="section-label">
               <span>DIRECT MESSAGES</span>
-              <button onClick={onNewDmModal}>
+              <button
+                type="button"
+                aria-label="New direct message"
+                title="New direct message"
+                onClick={onNewDmModal}
+              >
                 <Icon name="plus" size={14} />
               </button>
             </div>
@@ -155,6 +170,7 @@ export function ChannelSidebar({
               if (!p) return null
               return (
                 <button
+                  type="button"
                   key={c.userId}
                   className={`dm-row ${dmId === p.id ? 'chosen' : ''}`}
                   onClick={() => onOpenDm(p.id)}
@@ -173,7 +189,12 @@ export function ChannelSidebar({
           <>
             <div className="section-label">
               <span>TEXT CHANNELS</span>
-              <button onClick={onCreateChannelModal} title="Create channel">
+              <button
+                type="button"
+                aria-label="Create channel"
+                title="Create channel"
+                onClick={onCreateChannelModal}
+              >
                 <Icon name="plus" size={14} />
               </button>
             </div>
@@ -181,6 +202,7 @@ export function ChannelSidebar({
               .filter((c) => c.type === 'text')
               .map((c) => (
                 <button
+                  type="button"
                   key={c.id}
                   className={`channel-item ${
                     channelId === c.id && view === 'channel' ? 'chosen' : ''
@@ -194,7 +216,12 @@ export function ChannelSidebar({
 
             <div className="section-label voice-label">
               <span>VOICE CHANNELS</span>
-              <button onClick={onVoiceChannelNotice}>
+              <button
+                type="button"
+                aria-label="Voice channel info"
+                title="Voice channel info"
+                onClick={onVoiceChannelNotice}
+              >
                 <Icon name="plus" size={14} />
               </button>
             </div>
@@ -202,6 +229,7 @@ export function ChannelSidebar({
               .filter((c) => c.type === 'voice')
               .map((c) => (
                 <button
+                  type="button"
                   key={c.id}
                   className="channel-item"
                   onClick={() => onSelectChannel(c)}
@@ -211,13 +239,18 @@ export function ChannelSidebar({
                 </button>
               ))}
 
-            <button className="create-channel" onClick={onCreateChannelModal}>
+            <button type="button" className="create-channel" onClick={onCreateChannelModal}>
               <Icon name="plus" size={15} /> Create channel
             </button>
 
             <div className="section-label dm-label">
               <span>DIRECT MESSAGES</span>
-              <button onClick={onNewDmModal} title="New direct message">
+              <button
+                type="button"
+                aria-label="New direct message"
+                title="New direct message"
+                onClick={onNewDmModal}
+              >
                 <Icon name="plus" size={14} />
               </button>
             </div>
@@ -226,6 +259,7 @@ export function ChannelSidebar({
               if (!p) return null
               return (
                 <button
+                  type="button"
                   key={p.id}
                   className="dm-row"
                   onClick={() => onOpenDm(p.id)}
@@ -253,18 +287,29 @@ export function ChannelSidebar({
           <span>Local demo session</span>
           <div className="voice-actions">
             <button
+              type="button"
+              aria-label={muted ? 'Unmute microphone' : 'Mute microphone'}
+              aria-pressed={muted}
               onClick={onToggleMute}
               className={muted ? 'active' : ''}
             >
               <Icon name="mic" size={14} />
             </button>
             <button
+              type="button"
+              aria-label={deafened ? 'Undeafen audio' : 'Deafen audio'}
+              aria-pressed={deafened}
               onClick={onToggleDeafen}
               className={deafened ? 'active' : ''}
             >
               <Icon name="headphones" size={14} />
             </button>
-            <button onClick={onDisconnectVoice} title="Disconnect">
+            <button
+              type="button"
+              aria-label="Disconnect voice"
+              title="Disconnect"
+              onClick={onDisconnectVoice}
+            >
               <Icon name="logout" size={14} />
             </button>
           </div>
@@ -272,8 +317,13 @@ export function ChannelSidebar({
       )}
 
       <div className="account-panel">
-        <button className="account-main" onClick={onToggleProfileMenu}>
-          <Avatar user={me} />
+        <button
+          type="button"
+          className="account-main"
+          aria-expanded={profileMenuOpen}
+          onClick={onToggleProfileMenu}
+        >
+          <Avatar user={currentUser} />
           <span>
             <strong>{displayName}</strong>
             <small>Online</small>
@@ -282,6 +332,9 @@ export function ChannelSidebar({
         </button>
         <div className="account-actions">
           <button
+            type="button"
+            aria-label={muted ? 'Unmute mic' : 'Mute mic'}
+            aria-pressed={muted}
             title="Mute mic"
             className={muted ? 'active' : ''}
             onClick={onToggleMute}
@@ -289,13 +342,21 @@ export function ChannelSidebar({
             <Icon name="mic" size={16} />
           </button>
           <button
+            type="button"
+            aria-label={deafened ? 'Undeafen' : 'Deafen'}
+            aria-pressed={deafened}
             title="Deafen"
             className={deafened ? 'active' : ''}
             onClick={onToggleDeafen}
           >
             <Icon name="headphones" size={16} />
           </button>
-          <button title="Settings" onClick={onNavigateSettings}>
+          <button
+            type="button"
+            aria-label="Settings"
+            title="Settings"
+            onClick={onNavigateSettings}
+          >
             <Icon name="settings" size={16} />
           </button>
         </div>
@@ -306,6 +367,7 @@ export function ChannelSidebar({
           <strong>{displayName}</strong>
           <span>Online · Available</span>
           <button
+            type="button"
             onClick={() => {
               onNavigateSettings()
               onToggleProfileMenu()
@@ -314,6 +376,7 @@ export function ChannelSidebar({
             <Icon name="user" size={15} /> Edit profile
           </button>
           <button
+            type="button"
             onClick={() => {
               onToggleTheme()
               onToggleProfileMenu()
@@ -323,6 +386,7 @@ export function ChannelSidebar({
           </button>
           {onOpenBots && (
             <button
+              type="button"
               onClick={() => {
                 onOpenBots()
                 onToggleProfileMenu()
@@ -333,6 +397,7 @@ export function ChannelSidebar({
           )}
           {onLogout && (
             <button
+              type="button"
               onClick={() => {
                 onToggleProfileMenu()
                 onLogout()

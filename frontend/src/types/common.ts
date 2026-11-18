@@ -51,6 +51,8 @@ export type IconName =
   | 'arrowUp'
   | 'heart'
   | 'share'
+  | 'eye'
+  | 'eyeOff'
 
 export type View =
   | 'channel'

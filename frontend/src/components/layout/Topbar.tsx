@@ -84,6 +84,7 @@ export function Topbar({
       <div className="topbar-title">
         {isMobile ? (
           <button
+            type="button"
             className="mobile-menu"
             onClick={onOpenDrawer}
             aria-label="Open navigation"
@@ -92,8 +93,10 @@ export function Topbar({
           </button>
         ) : (
           <button
+            type="button"
             className="collapse-channels"
             onClick={onToggleSidebar}
+            aria-label="Toggle sidebar"
             title="Toggle sidebar"
           >
             <Icon name="menu" />
@@ -114,7 +117,9 @@ export function Topbar({
       <div className="topbar-actions">
         {view === 'social' ? (
           <button
+            type="button"
             className="topbar-compose"
+            aria-label="Write a post"
             title="Write a post"
             onClick={onFocusSocialComposer}
           >
@@ -124,19 +129,37 @@ export function Topbar({
           <>
             {!isMobile && (
               <>
-                <button title="Voice call" onClick={onVoiceCallModal}>
+                <button
+                  type="button"
+                  aria-label="Voice call"
+                  title="Voice call"
+                  onClick={onVoiceCallModal}
+                >
                   <Icon name="phone" />
                 </button>
-                <button title="Video call" onClick={onVideoCallModal}>
+                <button
+                  type="button"
+                  aria-label="Video call"
+                  title="Video call"
+                  onClick={onVideoCallModal}
+                >
                   <Icon name="video" />
                 </button>
-                <button title="Pinned messages" onClick={onOpenPinned}>
+                <button
+                  type="button"
+                  aria-label="Pinned messages"
+                  title="Pinned messages"
+                  onClick={onOpenPinned}
+                >
                   <Icon name="pin" />
                 </button>
                 <span className="top-separator" />
               </>
             )}
             <button
+              type="button"
+              aria-label="Members"
+              aria-pressed={membersOpen}
               title="Members"
               className={membersOpen ? 'active' : ''}
               onClick={onToggleMembers}
@@ -144,18 +167,31 @@ export function Topbar({
               <Icon name="users" />
             </button>
             <button
+              type="button"
+              aria-label="Search"
+              aria-pressed={searchOpen}
               title="Search"
               className={searchOpen ? 'active' : ''}
               onClick={onToggleSearch}
             >
               <Icon name="search" />
             </button>
-            <button title="Notifications" onClick={onOpenNotifications}>
+            <button
+              type="button"
+              aria-label="Notifications"
+              title="Notifications"
+              onClick={onOpenNotifications}
+            >
               <Icon name="bell" />
               {!notificationRead && <i className="notify-dot" />}
             </button>
             {!isMobile && (
-              <button title="Inbox" onClick={onOpenInbox}>
+              <button
+                type="button"
+                aria-label="Inbox"
+                title="Inbox"
+                onClick={onOpenInbox}
+              >
                 <Icon name="inbox" />
                 {unreadCount > 0 && <i className="notify-dot" />}
               </button>
@@ -163,7 +199,12 @@ export function Topbar({
           </>
         ) : null}
         {isMobile && onOpenSettings && (
-          <button title="Settings" onClick={onOpenSettings}>
+          <button
+            type="button"
+            aria-label="Settings"
+            title="Settings"
+            onClick={onOpenSettings}
+          >
             <Icon name="settings" />
           </button>
         )}

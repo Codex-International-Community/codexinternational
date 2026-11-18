@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { Icon } from '../common/Icon'
 import type { AuthUserProfile } from '../../api/client'
 import type { Theme } from '../../types/common'
@@ -23,6 +24,8 @@ export function SettingsView({
   onLogout,
   onResetData,
 }: SettingsViewProps) {
+  const displayNameId = useId()
+
   return (
     <div className="page-scroll">
       <h1>Settings</h1>
@@ -62,8 +65,9 @@ export function SettingsView({
 
       <section className="settings-card">
         <h2>Profile</h2>
-        <label>Display name</label>
+        <label htmlFor={displayNameId}>Display name</label>
         <input
+          id={displayNameId}
           value={displayName}
           onChange={(e) => onDisplayNameChange(e.target.value || 'your account')}
         />
@@ -77,7 +81,7 @@ export function SettingsView({
             <strong>Color theme</strong>
             <small>Choose your workspace appearance.</small>
           </div>
-          <button className="setting-action" onClick={onToggleTheme}>
+          <button type="button" className="setting-action" onClick={onToggleTheme}>
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
             {theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
           </button>
@@ -87,7 +91,7 @@ export function SettingsView({
       <section className="settings-card">
         <h2>Local preview cache</h2>
         <p>Demo community channels and social drafts cached locally can be cleared here without logging out.</p>
-        <button className="danger-button" onClick={onResetData}>
+        <button type="button" className="danger-button" onClick={onResetData}>
           Reset demo cache
         </button>
       </section>

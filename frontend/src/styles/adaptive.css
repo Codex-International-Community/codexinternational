@@ -8,7 +8,7 @@
   }
 
   .mobile-tabs {
-    display: grid !important;
+    display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     height: calc(62px + env(safe-area-inset-bottom, 0px));
     padding: 4px 4px max(6px, env(safe-area-inset-bottom, 0px));
@@ -19,7 +19,7 @@
   .mobile-tabs button {
     min-height: 48px;
     border-radius: 10px;
-    font-size: 9px;
+    font-size: 0.75rem;
     gap: 3px;
   }
 
@@ -29,20 +29,15 @@
   }
 
   /* Bottom-sheet presentation on Mobile instead of desktop centered dialog */
-  .modal-backdrop,
-  .modal-backdrop--sheet {
-    align-items: end;
-    padding: 0;
-  }
-
-  .modal,
-  .modal--sheet {
+  dialog.modal,
+  dialog.modal--sheet {
+    margin: auto 0 0;
     width: 100%;
     max-width: 100%;
     max-height: 88dvh;
     overflow: auto;
     border-radius: 20px 20px 0 0;
-    padding: 22px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+    padding: 1.375rem 1.125rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -78,13 +73,27 @@
 
 .bot-form input {
   width: 100%;
-  height: 38px;
+  height: 40px;
   padding: 0 11px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--workspace);
   color: var(--text);
-  font-size: 12px;
+  font-size: max(1rem, 1em);
+}
+
+.bot-priv-fieldset {
+  border: 0;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+.bot-priv-fieldset legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .bot-priv-grid {
@@ -94,18 +103,25 @@
 }
 
 .bot-priv-pill {
-  display: flex !important;
+  display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 !important;
+  margin: 0;
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
-  color: var(--text) !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-weight: 600;
   cursor: pointer;
+}
+
+.bot-priv-pill input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
 }
 
 .bot-priv-pill.is-locked {
@@ -128,12 +144,12 @@
 
 .bot-card-head strong {
   display: block;
-  font-size: 14px;
+  font-size: 0.9375rem;
 }
 
 .bot-card-head small {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 0.75rem;
   word-break: break-all;
 }
 
@@ -141,7 +157,7 @@
   flex: 0 0 auto;
   padding: 4px 9px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.04em;
 }
@@ -174,7 +190,7 @@
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--muted);
-  font-size: 10px;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -205,24 +221,24 @@
 .bot-token-row input {
   flex: 1;
   min-width: 0;
-  height: 36px;
+  height: 38px;
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--workspace);
   color: var(--text);
-  font-size: 11px;
+  font-size: max(1rem, 1em);
 }
 
 .bot-pending-note {
-  margin-top: 12px !important;
-  color: var(--quiet) !important;
-  font-size: 11px !important;
+  margin-top: 12px;
+  color: var(--quiet);
+  font-size: 0.8125rem;
 }
 
 /* One-time reveal credential box */
-.bot-reveal-modal {
-  width: min(460px, 100%);
+dialog.bot-reveal-modal {
+  width: min(460px, calc(100vw - 2rem));
 }
 
 .token-box {
@@ -243,7 +259,7 @@
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-all;
-  font-size: 11px;
+  font-size: 0.8125rem;
   color: var(--text);
 }
 
@@ -261,13 +277,13 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 30px;
+  height: 32px;
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--surface);
   color: var(--text);
-  font-size: 10px;
+  font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -278,16 +294,23 @@
   color: #fff;
 }
 
-.ack-checkbox {
-  display: flex !important;
+.modal label.ack-checkbox {
+  display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 6px !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  letter-spacing: 0 !important;
-  color: var(--text) !important;
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text);
   cursor: pointer;
+}
+
+.ack-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
 }
 
 @media (max-width: 1023px) {
@@ -302,5 +325,5 @@
   height: 100dvh;
   background: #111112;
   color: #e7e9ea;
-  font-size: 13px;
+  font-size: 0.875rem;
 }

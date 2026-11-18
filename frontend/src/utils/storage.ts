@@ -1,7 +1,19 @@
 import { STORAGE_KEYS } from '../constants/storageKeys'
 import { defaultData, socialSeed } from '../constants/seedData'
-import type { Data } from '../types/chat'
+import type { Data, Message } from '../types/chat'
 import type { SocialPost } from '../types/social'
+
+function sanitizeMessages(record: Record<string, Message[]>): Record<string, Message[]> {
+  const result: Record<string, Message[]> = {}
+  for (const [scope, list] of Object.entries(record)) {
+    result[scope] = list.map((msg) =>
+      msg.attachment && msg.attachment.url.startsWith('blob:')
+        ? { ...msg, attachment: { ...msg.attachment, url: '' } }
+        : msg,
+    )
+  }
+  return result
+}
 
 export function loadData(): Data {
   try {
@@ -13,8 +25,8 @@ export function loadData(): Data {
       ...parsed,
       servers: Array.isArray(parsed.servers) ? parsed.servers : defaultData.servers,
       channels: parsed.channels ?? defaultData.channels,
-      messages: parsed.messages ?? defaultData.messages,
-      dmMessages: parsed.dmMessages ?? defaultData.dmMessages,
+      messages: sanitizeMessages(parsed.messages ?? defaultData.messages),
+      dmMessages: sanitizeMessages(parsed.dmMessages ?? defaultData.dmMessages),
       conversations: parsed.conversations ?? defaultData.conversations,
       pins: parsed.pins ?? {},
     }
@@ -25,7 +37,12 @@ export function loadData(): Data {
 
 export function saveData(data: Data): boolean {
   try {
-    localStorage.setItem(STORAGE_KEYS.STATE, JSON.stringify(data))
+    const sanitized: Data = {
+      ...data,
+      messages: sanitizeMessages(data.messages),
+      dmMessages: sanitizeMessages(data.dmMessages),
+    }
+    localStorage.setItem(STORAGE_KEYS.STATE, JSON.stringify(sanitized))
     return true
   } catch {
     return false

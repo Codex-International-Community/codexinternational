@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import '../styles/landing.css'
 import { ApiError } from '../api/client'
 import {
@@ -10,10 +10,17 @@ import {
   verifyEmailOtp,
   type OAuthProvider,
 } from '../api/auth'
+import { Icon } from '../components/common/Icon'
 import { useViewport } from '../hooks/useViewport'
 
 type AuthTab = 'otp' | 'password' | 'register'
 type MobileStep = 'welcome' | 'otp-email' | 'otp-verify' | 'password' | 'register'
+
+const AUTH_TABS: { id: AuthTab; label: string }[] = [
+  { id: 'otp', label: 'Email OTP' },
+  { id: 'password', label: 'Password' },
+  { id: 'register', label: 'Register' },
+]
 
 const BRAND = 'Codex Internasional Community'
 
@@ -41,7 +48,11 @@ function GoogleIcon() {
 }
 
 function GitHubIcon() {
-  return <i className="fa-brands fa-github" style={{ fontSize: 18 }} aria-hidden="true" />
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 0.5C5.37 0.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.05-.02-2.06-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.81 1.1.81 2.22 0 1.61-.01 2.9-.01 3.29 0 .32.22.7.83.58A12 12 0 0 0 24 12.5C24 5.87 18.63.5 12 .5Z" />
+    </svg>
+  )
 }
 
 interface LandingProps {
@@ -67,6 +78,7 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
   const [otpCode, setOtpCode] = useState('')
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
 
@@ -74,6 +86,20 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(initialError)
   const [info, setInfo] = useState('')
+
+  const tabRefs = useRef<Record<AuthTab, HTMLButtonElement | null>>({
+    otp: null,
+    password: null,
+    register: null,
+  })
+
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="color-scheme"]')
+    meta?.setAttribute('content', 'dark')
+    return () => {
+      meta?.setAttribute('content', 'light dark')
+    }
+  }, [])
 
   useEffect(() => {
     if (cooldownSecs <= 0) return
@@ -84,6 +110,26 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
   }, [cooldownSecs])
 
   const validEmail = /^\S+@\S+\.\S+$/.test(email.trim())
+
+  const selectTab = (tab: AuthTab) => {
+    setDesktopTab(tab)
+    setError('')
+  }
+
+  const handleTabKeyDown = (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    let nextIndex: number | null = null
+    if (e.key === 'ArrowRight') nextIndex = (index + 1) % AUTH_TABS.length
+    else if (e.key === 'ArrowLeft') nextIndex = (index - 1 + AUTH_TABS.length) % AUTH_TABS.length
+    else if (e.key === 'Home') nextIndex = 0
+    else if (e.key === 'End') nextIndex = AUTH_TABS.length - 1
+
+    if (nextIndex !== null) {
+      e.preventDefault()
+      const targetTab = AUTH_TABS[nextIndex].id
+      selectTab(targetTab)
+      tabRefs.current[targetTab]?.focus()
+    }
+  }
 
   const handleApiFailure = (err: unknown) => {
     if (err instanceof ApiError) {
@@ -273,6 +319,31 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
     </>
   )
 
+  const renderPasswordInput = (id: string, autoComplete: string, placeholder: string) => (
+    <div className="landing-input-wrap">
+      <input
+        id={id}
+        type={showPassword ? 'text' : 'password'}
+        autoComplete={autoComplete}
+        className="landing-input landing-input--with-toggle"
+        placeholder={placeholder}
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        disabled={busy}
+      />
+      <button
+        type="button"
+        className="password-toggle"
+        aria-pressed={showPassword}
+        aria-label={showPassword ? 'Hide password' : 'Show password'}
+        onClick={() => setShowPassword((v) => !v)}
+        disabled={busy}
+      >
+        <Icon name={showPassword ? 'eyeOff' : 'eye'} size={18} />
+      </button>
+    </div>
+  )
+
   const renderPasswordSection = () => (
     <form className="landing-form" onSubmit={handlePasswordLogin} noValidate>
       <label className="landing-field-label" htmlFor="login-id">USERNAME OR EMAIL</label>
@@ -287,16 +358,7 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
         disabled={busy}
       />
       <label className="landing-field-label" htmlFor="login-pass">PASSWORD</label>
-      <input
-        id="login-pass"
-        type="password"
-        autoComplete="current-password"
-        className="landing-input"
-        placeholder="••••••••"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        disabled={busy}
-      />
+      {renderPasswordInput('login-pass', 'current-password', '••••••••')}
       <button
         type="submit"
         className={`landing-continue ${identifier.trim() && password && !busy ? 'is-ready' : ''}`}
@@ -344,16 +406,7 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
         disabled={busy}
       />
       <label className="landing-field-label" htmlFor="reg-pass">PASSWORD (MIN 8 CHARS)</label>
-      <input
-        id="reg-pass"
-        type="password"
-        autoComplete="new-password"
-        className="landing-input"
-        placeholder="At least 8 characters"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        disabled={busy}
-      />
+      {renderPasswordInput('reg-pass', 'new-password', 'At least 8 characters')}
       <button
         type="submit"
         className={`landing-continue ${username.trim() && displayName.trim() && validEmail && password.length >= 8 && !busy ? 'is-ready' : ''}`}
@@ -408,50 +461,51 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
             </div>
 
             <div className="landing-mode-tabs" role="tablist" aria-label="Authentication methods">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={desktopTab === 'otp'}
-                className={desktopTab === 'otp' ? 'active' : ''}
-                onClick={() => {
-                  setDesktopTab('otp')
-                  setError('')
-                }}
-              >
-                Email OTP
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={desktopTab === 'password'}
-                className={desktopTab === 'password' ? 'active' : ''}
-                onClick={() => {
-                  setDesktopTab('password')
-                  setError('')
-                }}
-              >
-                Password
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={desktopTab === 'register'}
-                className={desktopTab === 'register' ? 'active' : ''}
-                onClick={() => {
-                  setDesktopTab('register')
-                  setError('')
-                }}
-              >
-                Register
-              </button>
+              {AUTH_TABS.map((tab, index) => {
+                const isSelected = desktopTab === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    ref={(el) => {
+                      tabRefs.current[tab.id] = el
+                    }}
+                    id={`auth-tab-${tab.id}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={isSelected}
+                    aria-controls={`auth-panel-${tab.id}`}
+                    tabIndex={isSelected ? 0 : -1}
+                    className={isSelected ? 'active' : ''}
+                    onClick={() => selectTab(tab.id)}
+                    onKeyDown={(e) => handleTabKeyDown(e, index)}
+                  >
+                    {tab.label}
+                  </button>
+                )
+              })}
             </div>
 
-            {error && <p className="landing-error">{error}</p>}
-            {info && <p className="landing-info">{info}</p>}
+            {error && (
+              <p className="landing-error" role="alert">
+                {error}
+              </p>
+            )}
+            {info && (
+              <p className="landing-info" role="status" aria-live="polite">
+                {info}
+              </p>
+            )}
 
-            {desktopTab === 'otp' && renderOtpSection(true, otpSent)}
-            {desktopTab === 'password' && renderPasswordSection()}
-            {desktopTab === 'register' && renderRegisterSection()}
+            <div
+              id={`auth-panel-${desktopTab}`}
+              role="tabpanel"
+              aria-labelledby={`auth-tab-${desktopTab}`}
+              className="landing-tabpanel"
+            >
+              {desktopTab === 'otp' && renderOtpSection(true, otpSent)}
+              {desktopTab === 'password' && renderPasswordSection()}
+              {desktopTab === 'register' && renderRegisterSection()}
+            </div>
 
             <div className="landing-or"><span>OR CONTINUE WITH</span></div>
             {renderOAuthButtons()}
@@ -459,7 +513,7 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
         </main>
       ) : (
         /* ── Mobile Step-by-Step Native App Flow ── */
-        <div className="landing-screen">
+        <main className="landing-screen">
           {mobileStep !== 'welcome' && (
             <header className="landing-topbar">
               <button
@@ -472,7 +526,7 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
                   setMobileStep(mobileStep === 'otp-verify' ? 'otp-email' : 'welcome')
                 }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
                   <path d="m15 5-7 7 7 7" />
                 </svg>
               </button>
@@ -498,8 +552,8 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
                 </p>
               </div>
               <div className="landing-actions">
-                {error && <p className="landing-error">{error}</p>}
-                {info && <p className="landing-info">{info}</p>}
+                {error && <p className="landing-error" role="alert">{error}</p>}
+                {info && <p className="landing-info" role="status" aria-live="polite">{info}</p>}
                 <button
                   type="button"
                   className="oauth-btn"
@@ -540,35 +594,35 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
           )}
 
           {mobileStep === 'otp-email' && (
-            <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {error && <p className="landing-error">{error}</p>}
-              {info && <p className="landing-info">{info}</p>}
+            <div className="landing-mobile-step">
+              {error && <p className="landing-error" role="alert">{error}</p>}
+              {info && <p className="landing-info" role="status" aria-live="polite">{info}</p>}
               {renderOtpSection(true, false)}
             </div>
           )}
 
           {mobileStep === 'otp-verify' && (
-            <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {error && <p className="landing-error">{error}</p>}
-              {info && <p className="landing-info">{info}</p>}
+            <div className="landing-mobile-step">
+              {error && <p className="landing-error" role="alert">{error}</p>}
+              {info && <p className="landing-info" role="status" aria-live="polite">{info}</p>}
               {renderOtpSection(false, true)}
             </div>
           )}
 
           {mobileStep === 'password' && (
-            <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {error && <p className="landing-error">{error}</p>}
+            <div className="landing-mobile-step">
+              {error && <p className="landing-error" role="alert">{error}</p>}
               {renderPasswordSection()}
             </div>
           )}
 
           {mobileStep === 'register' && (
-            <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {error && <p className="landing-error">{error}</p>}
+            <div className="landing-mobile-step">
+              {error && <p className="landing-error" role="alert">{error}</p>}
               {renderRegisterSection()}
             </div>
           )}
-        </div>
+        </main>
       )}
     </div>
   )

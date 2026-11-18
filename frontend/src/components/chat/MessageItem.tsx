@@ -64,6 +64,7 @@ export function MessageItem({
 
         {message.replyTo && (
           <button
+            type="button"
             className="reply-context"
             onClick={() => onReplyReferenceClick(message.replyTo!)}
           >
@@ -74,47 +75,76 @@ export function MessageItem({
         {message.text && <p>{message.text}</p>}
 
         {message.attachment && (
-          <a
-            className="attachment-preview"
-            href={message.attachment.url}
-            download={message.attachment.name}
-          >
-            {message.attachment.type.startsWith('image/') ? (
-              <img src={message.attachment.url} alt={message.attachment.name} />
-            ) : (
+          message.attachment.url ? (
+            <a
+              className="attachment-preview"
+              href={message.attachment.url}
+              download={message.attachment.name}
+            >
+              {message.attachment.type.startsWith('image/') ? (
+                <img src={message.attachment.url} alt={message.attachment.name} />
+              ) : (
+                <span>
+                  <Icon name="paperclip" />
+                  {message.attachment.name}
+                </span>
+              )}
+            </a>
+          ) : (
+            <div className="attachment-preview attachment-preview--expired">
               <span>
                 <Icon name="paperclip" />
-                {message.attachment.name}
+                {message.attachment.name} (expired after reload)
               </span>
-            )}
-          </a>
+            </div>
+          )
         )}
 
         {activeReactions.length > 0 && (
           <div className="reaction-list">
             {activeReactions.map(([emoji, users]) => (
               <button
+                type="button"
                 key={emoji}
+                aria-pressed={users.includes('self')}
                 className={users.includes('self') ? 'reacted' : ''}
                 onClick={() => onReact(message.id, emoji)}
               >
                 {emoji} {users.length}
               </button>
             ))}
-            <button className="reaction-add" onClick={() => onReact(message.id, '✨')}>
+            <button
+              type="button"
+              className="reaction-add"
+              aria-label="Add reaction"
+              onClick={() => onReact(message.id, '✨')}
+            >
               ＋
             </button>
           </div>
         )}
 
         <div className="message-toolbar">
-          <button title="React" onClick={() => onReact(message.id, '✨')}>
+          <button
+            type="button"
+            aria-label="React"
+            title="React"
+            onClick={() => onReact(message.id, '✨')}
+          >
             <Icon name="smile" size={15} />
           </button>
-          <button title="Reply" onClick={() => onReply(message)}>
+          <button
+            type="button"
+            aria-label="Reply"
+            title="Reply"
+            onClick={() => onReply(message)}
+          >
             <Icon name="reply" size={15} />
           </button>
           <button
+            type="button"
+            aria-label="More actions"
+            aria-expanded={isMenuOpen}
             title="More actions"
             onClick={() => onToggleMenu(message.id)}
           >
@@ -124,6 +154,7 @@ export function MessageItem({
           {isMenuOpen && (
             <div className="message-menu">
               <button
+                type="button"
                 onClick={() => {
                   onReply(message)
                   onToggleMenu(message.id)
@@ -131,16 +162,16 @@ export function MessageItem({
               >
                 <Icon name="reply" size={14} /> Reply
               </button>
-              <button onClick={() => onTogglePin(message)}>
+              <button type="button" onClick={() => onTogglePin(message)}>
                 <Icon name="pin" size={14} />
                 {isPinned ? 'Unpin' : 'Pin message'}
               </button>
               {isSelf && (
                 <>
-                  <button onClick={() => onEdit(message)}>
+                  <button type="button" onClick={() => onEdit(message)}>
                     <Icon name="edit" size={14} /> Edit message
                   </button>
-                  <button className="danger-text" onClick={handleDelete}>
+                  <button type="button" className="danger-text" onClick={handleDelete}>
                     <Icon name="trash" size={14} /> Delete message
                   </button>
                 </>
