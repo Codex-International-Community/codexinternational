@@ -152,10 +152,12 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-    /// Loads `.env` (if present) and parses configuration from OS environment variables.
+    /// Loads `.env` (or `../.env` when invoked from `backend/`) and parses
+    /// configuration from OS environment variables.
     pub fn from_env() -> Result<Self, ConfigError> {
         // Ignore missing `.env` so container deployments using real env vars work cleanly.
         let _ = dotenvy::dotenv();
+        let _ = dotenvy::from_filename("../.env");
         Self::from_lookup(|key| env::var(key).ok())
     }
 
