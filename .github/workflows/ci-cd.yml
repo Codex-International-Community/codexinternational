@@ -72,3 +72,56 @@ jobs:
           DATABASE_URL: postgres://codex:codex_dev_password@127.0.0.1:5432/codexinternational
           VALKEY_URL: valkey://127.0.0.1:6379
         run: cargo test --all-targets -- --include-ignored
+
+  frontend-ci:
+    name: Frontend Lint & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run oxlint
+        run: npm run lint
+
+      - name: Build production bundle
+        run: npm run build
+
+  deploy-prod:
+    name: Deploy to VPS (prod)
+    needs: [backend-ci, frontend-ci]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/prod' && vars.ENABLE_VPS_DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Deploy latest prod branch to VPS via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            cd "${{ secrets.VPS_APP_DIR }}"
+            git fetch origin prod
+            git checkout prod
+            git reset --hard origin/prod
+            docker compose up -d --build
+            cd frontend
+            npm ci
+            npm run build
