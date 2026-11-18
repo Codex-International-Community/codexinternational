@@ -23,3 +23,129 @@
 @media(max-width:760px){.app-shell{display:block}.server-rail{position:fixed;z-index:52;top:0;bottom:0;left:0;width:64px;transform:translateX(-110%);transition:transform .16s}.channel-sidebar{position:fixed;z-index:51;top:0;bottom:0;left:64px;width:min(270px,calc(100vw - 64px));transform:translateX(-125%);transition:transform .16s;box-shadow:12px 0 35px #0005}.drawer-open .server-rail,.drawer-open .channel-sidebar{transform:translateX(0)}.drawer-scrim{position:fixed;z-index:50;inset:0;display:block;border:0;background:#0009;opacity:0;pointer-events:none;transition:opacity .16s}.drawer-open .drawer-scrim{opacity:1;pointer-events:auto}.workspace{height:100dvh;grid-template-rows:56px minmax(0,1fr) 54px}.topbar{height:56px}.mobile-menu{display:grid!important;place-items:center;width:29px;height:29px;border:0;border-radius:5px;background:transparent;color:var(--muted);cursor:pointer}.collapse-channels{display:none!important}.workspace-body{min-height:0;grid-template-columns:minmax(0,1fr)}.members-panel{display:none!important}.members-panel.mobile-members-open{position:fixed;z-index:45;top:56px;right:0;bottom:54px;display:flex!important;width:min(280px,88vw);padding:15px 12px;background:var(--side);box-shadow:-12px 0 35px #0006}.channel-welcome{gap:10px;margin:0 13px 15px;padding-bottom:15px}.welcome-icon{width:39px;height:39px;flex-basis:39px}.channel-welcome h1{font-size:16px}.channel-welcome p{font-size:9px}.welcome-actions button:first-child{width:32px;overflow:hidden;padding:0;justify-content:center;font-size:0}.message{gap:9px;padding:8px 13px}.messages-scroll{padding-top:13px}.composer-wrap{padding:7px 11px 8px}.composer-main{min-height:45px}.composer-tools button:not(.send){display:none}.composer-tools .send{display:grid}.composer-note{display:none}.mobile-tabs{display:grid;grid-template-columns:repeat(3,1fr);height:54px;border-top:1px solid var(--line);background:var(--side)}.mobile-tabs button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;background:transparent;color:var(--quiet);font-size:8px;cursor:pointer}.mobile-tabs button.active{color:#bcb3ff}.mobile-tabs svg{width:17px;height:17px}.search-strip{top:60px;right:10px}.page-scroll{padding:22px 15px}}
 @media(max-width:420px){.topbar-actions button:nth-child(1),.topbar-actions button:nth-child(2),.topbar-actions button:nth-child(3){display:none}.channel-welcome .welcome-actions button:nth-child(2){display:none}.message-toolbar{display:none}.message{gap:8px}.avatar.large{width:31px;height:31px}.channel-welcome h1{font-size:15px}.discover-heading{align-items:flex-start;flex-direction:column}.setting-row{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;scroll-behavior:auto!important}}
+/* ─── Font Awesome alignment ─── */
+/* Icon FA secara default baseline-nya suka turun; ini bikin sejajar dengan text */
+.fa-solid,
+.fa-regular,
+.fa-brands {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  flex-shrink: 0;
+  transition: color 0.18s ease;
+}
+
+/* Pastikan button yang isinya cuma icon tetap center */
+button > .fa-solid,
+button > .fa-regular {
+  pointer-events: none;
+}
+
+/* Spesifik: brand mark "c" di server rail tetap pakai font serif, bukan icon */
+.brand-mark {
+  font-family: var(--serif);
+  font-style: italic;
+}
+
+/* Chevron di server title — rotate 90° tetap works */
+.server-title > .fa-chevron-right {
+  transform: rotate(90deg);
+  transition: transform 0.18s ease;
+}
+
+/* More options toggle chevron di landing */
+.landing-more-toggle.is-open > .fa-chevron-right {
+  transform: rotate(90deg);
+}
+
+/* Social rail mark "＠" tetap pakai text, bukan icon */
+.rail-social > span {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Mobile social mark */
+.mobile-social-mark {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+/* ═══════════════════════════════════════════
+   Font Awesome — alignment & fixes
+   ═══════════════════════════════════════════ */
+
+/* FA icon default suka turun baseline; ini bikin sejajar */
+.fa-solid,
+.fa-regular,
+.fa-brands {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: color 0.18s ease;
+}
+
+/* Icon di dalam button ga boleh nangkep click */
+button > .fa-solid,
+button > .fa-regular {
+  pointer-events: none;
+}
+
+/* Chevron di server title — rotasi 90° (default FA chevron-right → jadi chevron-down) */
+.server-title > .fa-chevron-right {
+  transform: rotate(90deg);
+  transition: transform 0.18s ease;
+}
+
+/* Chevron "More options" di landing — buka → rotate 90° */
+.landing-more-toggle.is-open > .fa-chevron-right {
+  transform: rotate(90deg);
+}
+
+/* Brand mark "c" tetap pakai font serif, bukan ikon */
+.brand-mark {
+  font-family: var(--serif);
+  font-style: italic;
+}
+
+/* Rail social "@" tetap pakai text, jangan jadi icon */
+.rail-social > span {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.mobile-social-mark {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Tombol yang isinya cuma icon — pastiin center */
+.composer-tools .send,
+.message-toolbar > button,
+.topbar-actions button,
+.account-actions button,
+.voice-actions button,
+.members-heading button,
+.section-label button,
+.modal-x,
+.rail-add,
+.rail-bottom,
+.rail-discover,
+.rail-social,
+.rail-directory,
+.mobile-menu,
+.collapse-channels {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
