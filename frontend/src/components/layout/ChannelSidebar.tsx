@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
 import type { Channel, Conversation, Server, User } from '../../types/chat'
@@ -82,6 +82,9 @@ export function ChannelSidebar({
   const activeVoiceChannel = channels.find((c) => c.id === voiceId)
   const [expandedServers, setExpandedServers] = useState<string[]>(activeServerId ? [activeServerId] : [])
   const toggleServerExpanded = (id: string) => setExpandedServers((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
+  useEffect(() => {
+    if (activeServerId) setExpandedServers((current) => current.includes(activeServerId) ? current : [...current, activeServerId])
+  }, [activeServerId])
 
   const serverHeaderSub =
     view === 'social'
