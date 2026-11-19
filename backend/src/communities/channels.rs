@@ -42,6 +42,15 @@ pub struct CreateChannelResponse {
     pub channel: ChannelSummary,
 }
 
+#[derive(Debug, Serialize, FromRow)]
+pub struct CommunityMemberSummary {
+    pub id: Uuid,
+    pub username: String,
+    pub display_name: String,
+    pub role_name: String,
+    pub online: bool,
+}
+
 #[derive(Debug, Serialize)]
 pub struct DirectMessageResponse {
     pub channel_id: Uuid,
@@ -203,6 +212,42 @@ pub async fn create_channel(
             },
         }),
     ))
+}
+
+pub async fn list_members(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    Path(community_id): Path<Uuid>,
+) -> Result<Json<Vec<CommunityMemberSummary>>, AppError> {
+    let (is_owner, permissions) = member_permissions(&state, community_id, auth.user_id).await?;
+    if !is_owner
+        && !has_permission(
+            permissions,
+            crate::communities::permissions::PERM_VIEW_CHANNEL,
+        )
+    {
+        return Err(AppError::Forbidden("missing VIEW_CHANNEL permission".to_string()));
+    }
+
+    let members = sqlx::query_as::<_, CommunityMemberSummary>(
+        "SELECT u.id, u.username,
+                COALESCE(m.nickname, u.display_name) AS display_name,
+                COALESCE(r.name, '@everyone') AS role_name,
+                (u.last_seen_at > NOW() - INTERVAL '90 seconds') AS online
+         FROM community_members m
+         JOIN users u ON u.id = m.user_id
+         LEFT JOIN community_roles r ON r.id = m.role_id
+         WHERE m.community_id = $1
+         ORDER BY
+           CASE WHEN m.user_id = $2 THEN 0 ELSE 1 END,
+           lower(COALESCE(m.nickname, u.display_name)) ASC",
+    )
+    .bind(community_id)
+    .bind(auth.user_id)
+    .fetch_all(&state.pg)
+    .await?;
+
+    Ok(Json(members))
 }
 
 pub async fn create_or_get_dm(

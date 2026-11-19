@@ -18,6 +18,10 @@ pub fn router() -> Router<Arc<AppState>> {
             "/{community_id}/channels",
             get(channels::list_channels).post(channels::create_channel),
         )
+        .route(
+            "/{community_id}/members",
+            get(channels::list_members),
+        )
 }
 
 /// REST route for idempotent 1:1 DM channel creation.
