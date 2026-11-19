@@ -536,24 +536,26 @@ export function WorkspacePage({
         onClick={() => setDrawerOpen(false)}
       />
 
-      <ServerRail
-        servers={data.servers}
-        activeServerId={serverId}
-        activeView={view}
-        onSelectHome={() => {
-          setView('home')
-          setMobileTab('home')
-          setDrawerOpen(false)
-        }}
-        onSelectServer={pickServer}
-        onCreateServer={() => {
-          setModal('server')
-          setModalValue('')
-        }}
-        onNavigateView={navigateView}
-      />
+      {view !== 'channels' && view !== 'people' && (
+        <>
+          <ServerRail
+            servers={data.servers}
+            activeServerId={serverId}
+            activeView={view}
+            onSelectHome={() => {
+              setView('home')
+              setMobileTab('home')
+              setDrawerOpen(false)
+            }}
+            onSelectServer={pickServer}
+            onCreateServer={() => {
+              setModal('server')
+              setModalValue('')
+            }}
+            onNavigateView={navigateView}
+          />
 
-      <ChannelSidebar
+          <ChannelSidebar
         currentUser={currentUser}
         view={view}
         server={server}
@@ -591,9 +593,11 @@ export function WorkspacePage({
         onToggleTheme={() =>
           setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))
         }
-        onOpenBots={() => navigateView('bots')}
-        onLogout={() => void onLogout()}
-      />
+            onOpenBots={() => navigateView('bots')}
+            onLogout={() => void onLogout()}
+          />
+        </>
+      )}
 
       <main className="workspace">
         <Topbar
