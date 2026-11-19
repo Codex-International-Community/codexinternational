@@ -756,7 +756,6 @@ button:disabled {
   background: var(--line);
 }
 
-.collapse-channels,
 .mobile-menu {
   display: none;
 }
@@ -1981,17 +1980,6 @@ dialog.modal {
   .topbar {
     padding-inline: 11px;
   }
-  .collapse-channels {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    border: 0;
-    border-radius: 4px;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-  }
   .channel-topic,
   .topbar-actions button:first-child,
   .topbar-actions button:nth-child(2) {
@@ -2012,14 +2000,6 @@ dialog.modal {
   .members-panel {
     display: none;
   }
-}
-
-.app-shell.channels-hidden {
-  grid-template-columns: 68px 0 minmax(0, 1fr);
-}
-
-.app-shell.channels-hidden .channel-sidebar {
-  display: none;
 }
 
 @media (max-width: 767px) {
@@ -2083,9 +2063,6 @@ dialog.modal {
     background: transparent;
     color: var(--muted);
     cursor: pointer;
-  }
-  .collapse-channels {
-    display: none;
   }
   .workspace-body {
     min-height: 0;
@@ -2246,11 +2223,4 @@ dialog.modal {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-
-/* The desktop sidebar stays visible; its collapse control is tablet-only. */
-@media (min-width: 1024px) {
-  .collapse-channels {
-    display: none;
-  }
 }

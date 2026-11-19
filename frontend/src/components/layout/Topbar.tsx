@@ -12,7 +12,6 @@ interface TopbarProps {
   notificationRead: boolean
   unreadCount: number
   onOpenDrawer: () => void
-  onToggleSidebar: () => void
   onFocusSocialComposer: () => void
   onVoiceCallModal: () => void
   onVideoCallModal: () => void
@@ -34,7 +33,6 @@ export function Topbar({
   notificationRead,
   unreadCount,
   onOpenDrawer,
-  onToggleSidebar,
   onFocusSocialComposer,
   onVoiceCallModal,
   onVideoCallModal,
@@ -86,22 +84,12 @@ export function Topbar({
   return (
     <header className={`topbar ${isMobile ? 'topbar--mobile' : 'topbar--desktop'}`}>
       <div className="topbar-title">
-        {isMobile ? (
+        {isMobile && (
           <button
             type="button"
             className="mobile-menu"
             onClick={onOpenDrawer}
             aria-label="Open navigation"
-          >
-            <Icon name="menu" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="collapse-channels"
-            onClick={onToggleSidebar}
-            aria-label="Toggle sidebar"
-            title="Toggle sidebar"
           >
             <Icon name="menu" />
           </button>

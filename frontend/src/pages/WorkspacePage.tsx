@@ -71,7 +71,6 @@ export function WorkspacePage({
   const [channelId, setChannelId] = useState('general')
   const [dmId, setDmId] = useState('mika')
   const [membersOpen, setMembersOpen] = useState(isDesktop)
-  const [channelSidebarOpen, setChannelSidebarOpen] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [mobileTab, setMobileTab] = useState<MobileTab>('chat')
   const [composer, setComposer] = useState('')
@@ -355,7 +354,7 @@ export function WorkspacePage({
     <div
       className={`app-shell theme-${data.theme} ${isMobile ? 'viewport-mobile' : 'viewport-desktop'} ${
         drawerOpen ? 'drawer-open' : ''
-      } ${!channelSidebarOpen ? 'channels-hidden' : ''} view-${view}`}
+      } view-${view}`}
     >
       <button
         className="drawer-scrim"
@@ -370,7 +369,6 @@ export function WorkspacePage({
         onSelectHome={() => {
           setView('home')
           setMobileTab('home')
-          setChannelSidebarOpen(true)
           setDrawerOpen(false)
         }}
         onSelectServer={pickServer}
@@ -434,7 +432,6 @@ export function WorkspacePage({
           notificationRead={notificationRead}
           unreadCount={data.conversations.reduce((acc, c) => acc + c.unread, 0)}
           onOpenDrawer={() => setDrawerOpen(true)}
-          onToggleSidebar={() => setChannelSidebarOpen((v) => !v)}
           onFocusSocialComposer={() => socialInputRef.current?.focus()}
           onVoiceCallModal={() => setModal('call')}
           onVideoCallModal={() => setModal('call')}
