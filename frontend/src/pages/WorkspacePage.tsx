@@ -253,7 +253,7 @@ export function WorkspacePage({
       animations.forEach((animation) => animation.cancel())
       cover.classList.remove('run')
     }
-  }, [pageTransition, title])
+  }, [pageTransition, view])
   const [serverId, setServerId] = useState(initialRoute.serverId)
   const [channelId, setChannelId] = useState(initialRoute.channelId)
   const [dmId, setDmId] = useState(initialRoute.dmId)
