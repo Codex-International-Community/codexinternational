@@ -54,7 +54,9 @@ export function Topbar({
           ? 'users'
           : view === 'bots'
             ? 'shield'
-            : view === 'dm'
+            : view === 'home'
+              ? 'home'
+              : view === 'dm'
               ? 'message'
               : view === 'discover'
                 ? 'compass'
@@ -69,7 +71,9 @@ export function Topbar({
                         : 'hash'
 
   const topicText =
-    view === 'channel'
+    view === 'home'
+      ? 'Your direct messages and recent conversations.'
+      : view === 'channel'
       ? 'A place to share ideas and catch up.'
       : view === 'dm'
         ? 'Your private conversation.'
