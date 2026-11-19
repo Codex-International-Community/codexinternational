@@ -21,7 +21,6 @@ import {
 
 import { Toast } from '../components/common/Toast'
 import { ServerRail } from '../components/layout/ServerRail'
-import { ChannelSidebar } from '../components/layout/ChannelSidebar'
 import { Topbar } from '../components/layout/Topbar'
 import { SearchStrip } from '../components/layout/SearchStrip'
 import { MobileTabs, type MobileTab } from '../components/layout/MobileTabs'
@@ -644,62 +643,6 @@ export function WorkspacePage({
           void onLogout()
         }}
       />
-
-      {view !== 'discover' && view !== 'channels' && view !== 'people' && (
-        <ChannelSidebar
-          currentUser={currentUser}
-          view={view}
-          server={server}
-          servers={data.servers}
-          allChannels={data.channels}
-          activeServerId={serverId}
-          channels={channels}
-          channelId={channel?.id ?? ''}
-          dmId={dmId}
-          conversations={data.conversations}
-          people={people}
-          displayName={data.displayName}
-          theme={data.theme}
-          socialTab={socialTab}
-          voiceId={null}
-          muted={muted}
-          deafened={false}
-          profileMenuOpen={profileMenu}
-          onToggleProfileMenu={() => setProfileMenu((open) => !open)}
-          onSelectSocialTab={setSocialTab}
-          onOpenQuickSearch={() => setSearchOpen(true)}
-          onSelectChannel={pickChannel}
-          onSelectServer={pickServer}
-          onSelectServerChannel={(joinedServerId, joinedChannel) => {
-            setServerId(joinedServerId)
-            if (joinedChannel.type === 'voice') {
-              notify(`Voice channel “${joinedChannel.name}” is not connected yet.`)
-              return
-            }
-            setChannelId(joinedChannel.id)
-            setView('channel')
-            setMobileTab('chat')
-          }}
-          onOpenDm={openDm}
-          onCreateChannelModal={() => {
-            setModal('channel')
-            setModalValue('')
-          }}
-          onNewDmModal={() => {
-            setModal('dm')
-            setModalValue('')
-          }}
-          onVoiceChannelNotice={() => notify('Voice is not connected yet.')}
-          onToggleMute={() => setMuted((value) => !value)}
-          onToggleDeafen={() => notify('Deafen will be available when voice is connected.')}
-          onDisconnectVoice={() => notify('No active voice connection.')}
-          onNavigateSettings={() => navigateView('settings')}
-          onNavigateDiscover={() => navigateView('discover')}
-          onToggleTheme={() => setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))}
-          onOpenBots={() => navigateView('bots')}
-          onLogout={() => void onLogout()}
-        />
-      )}
 
       <main className="workspace">
         <Topbar
