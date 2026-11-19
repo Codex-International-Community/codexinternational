@@ -1772,3 +1772,15 @@ dialog.bot-reveal-modal {
   }
 }
 
+/* Directory pages do not use the channel sidebar; give the content its space. */
+.app-shell.view-channels > .channel-sidebar,
+.app-shell.view-people > .channel-sidebar {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .app-shell.view-channels,
+  .app-shell.view-people {
+    grid-template-columns: 68px minmax(0, 1fr);
+  }
+}
