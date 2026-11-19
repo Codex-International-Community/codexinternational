@@ -261,7 +261,6 @@ export function WorkspacePage({
   const [dmId, setDmId] = useState(initialRoute.dmId)
   const [notFoundPath, setNotFoundPath] = useState(initialRoute.path ?? '')
   const [membersOpen, setMembersOpen] = useState(isDesktop)
-  const [drawerOpen, setDrawerOpen] = useState(false)
 
   const [mobileTab, setMobileTab] = useState<MobileTab>(() =>
     mobileTabForView(initialRoute.view),
@@ -291,7 +290,6 @@ export function WorkspacePage({
   const socialInputRef = useRef<HTMLTextAreaElement>(null)
   const blobUrlsRef = useRef<Set<string>>(new Set())
   const routeSyncReadyRef = useRef(false)
-  const lastDrawerTapRef = useRef(0)
 
   const revokeBlobUrl = useCallback((url?: string) => {
     if (url && url.startsWith('blob:')) {
@@ -606,18 +604,8 @@ export function WorkspacePage({
 
   return (
     <div
-      onPointerUp={(event) => {
-        if (!isMobile || !drawerOpen || (event.target as HTMLElement).closest('.server-rail, .mobile-menu')) return
-        const now = Date.now()
-        if (now - lastDrawerTapRef.current < 320) {
-          setDrawerOpen(false)
-          lastDrawerTapRef.current = 0
-        } else {
-          lastDrawerTapRef.current = now
-        }
-      }}
       className={`app-shell theme-${data.theme} ${isMobile ? 'viewport-mobile' : 'viewport-desktop'} ${
-        drawerOpen ? 'drawer-open' : ''
+        'sidebar-persistent'
       } ${pageTransition ? `page-transition-${pageTransition}` : ''} view-${view} ${view === 'discover' ? 'has-no-channel-sidebar' : ''}`}
     >
       {pageTransition === 'rocket' && (
@@ -627,12 +615,6 @@ export function WorkspacePage({
           <div className="route-transition-label" ref={rocketLabelRef}>Memuat…</div>
         </div>
       )}
-      <button
-        className="drawer-scrim"
-        aria-label="Double tap to close navigation"
-        type="button"
-      />
-
       <ServerRail
         servers={data.servers}
         activeServerId={serverId}
@@ -672,7 +654,6 @@ export function WorkspacePage({
           searchOpen={searchOpen}
           notificationRead={notificationRead}
           unreadCount={data.conversations.reduce((acc, c) => acc + c.unread, 0)}
-          onOpenDrawer={() => setDrawerOpen(true)}
           onBack={() => {
             const previous = discoverReturnRouteRef.current
             if (previous) {
