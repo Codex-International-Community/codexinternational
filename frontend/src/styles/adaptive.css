@@ -2640,3 +2640,37 @@ dialog.bot-reveal-modal {
     font-size: 14px;
   }
 }
+
+/* -- X1 navbar sizing polish: slightly roomier navigation tabs -- */
+@media (max-width: 767px) {
+  .workspace {
+    grid-template-rows: 56px minmax(0, 1fr) calc(68px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .mobile-tabs {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    height: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 5px 7px max(7px, env(safe-area-inset-bottom, 0px)) !important;
+    column-gap: 3px;
+  }
+
+  .mobile-tabs button {
+    min-width: 0;
+    min-height: 54px;
+    padding: 4px 3px;
+    border-radius: 12px;
+    gap: 4px;
+    font-size: .8rem;
+    font-weight: 600;
+  }
+
+  .mobile-tabs button svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .mobile-tabs button .mobile-social-mark {
+    font-size: 21px;
+    line-height: 19px;
+  }
+}
