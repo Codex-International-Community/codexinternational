@@ -2298,3 +2298,29 @@ dialog.modal {
 .route-not-found-back:hover {
   background: var(--surface2);
 }
+
+
+/* Clean pointer and touch interaction across the workspace.
+   Keep a visible focus ring for keyboard navigation. */
+.app-shell button,
+.app-shell [role="button"],
+.app-shell a {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+.app-shell button,
+.app-shell [role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.app-shell button:focus:not(:focus-visible),
+.app-shell [role="button"]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.app-shell button:active,
+.app-shell [role="button"]:active {
+  transform: none;
+}
