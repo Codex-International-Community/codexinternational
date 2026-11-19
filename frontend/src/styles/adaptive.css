@@ -4476,3 +4476,36 @@ dialog.modal--discord-server {
     box-shadow: -16px 0 38px rgba(0, 0, 0, .28);
   }
 }
+
+
+/* Message actions (including Create Thread) remain reachable on touch screens. */
+@media (max-width: 767px) {
+  .message-toolbar {
+    position: static !important;
+    display: flex !important;
+    align-self: flex-end;
+    width: fit-content;
+    margin: 5px 0 0 auto;
+    padding: 2px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  .message-toolbar > button {
+    width: 32px;
+    height: 30px;
+    border-radius: 7px;
+  }
+
+  .thread-reply-link {
+    min-height: 30px;
+    margin-top: 8px;
+  }
+
+  .thread-panel {
+    left: 58px;
+  }
+}
