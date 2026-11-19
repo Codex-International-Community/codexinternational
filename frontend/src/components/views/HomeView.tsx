@@ -103,7 +103,7 @@ export function HomeView({ conversations, people, onOpenDm, onBrowsePeople }: Ho
           ) : (
             <div className="friends-empty">
               <div className="friends-empty-illustration" aria-hidden="true">
-                <Icon name={activeTab === 'pending' ? 'user-plus' : 'users'} size={34} />
+                <Icon name={'users'} size={34} />
               </div>
               <strong>{emptyTitle}</strong>
               <p>{emptyDescription}</p>
