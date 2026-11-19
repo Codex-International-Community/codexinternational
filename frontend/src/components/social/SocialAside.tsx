@@ -15,7 +15,7 @@ export function SocialAside({ onFocusComposer }: SocialAsideProps) {
         <h2>Join the conversation.</h2>
         <p>Write a thread or join a conversation in your feed.</p>
         <button onClick={onFocusComposer}>
-          Write a post <Icon name="arrowUp" size={14} />
+          Write a thread <Icon name="arrowUp" size={14} />
         </button>
       </section>
       <section className="social-aside-section">
