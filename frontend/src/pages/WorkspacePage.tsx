@@ -524,7 +524,7 @@ export function WorkspacePage({
     () => data.channels[server?.id ?? ''] ?? [],
     [data.channels, server?.id],
   )
-  const channel = channels.find((c) => c.id === channelId && c.type === 'text') ?? channels[0]
+  const channel = channels.find((c) => c.id === channelId && c.type !== 'voice') ?? channels.find((c) => c.type !== 'voice')
   const currentDm = people.find((p) => p.id === dmId)
   const dmChannelId = data.conversations.find((conversation) => conversation.userId === dmId)?.id ?? dmId
   const key = view === 'dm' ? `dm:${dmChannelId}` : roomKey(server?.id ?? 'studio', channel?.id ?? 'general')
@@ -611,13 +611,9 @@ export function WorkspacePage({
 
         if (frame.type === 'READY') {
           chatSocketReadyRef.current = true
-          const existing = view === 'dm'
-            ? data.dmMessages[activeChatChannelId] ?? []
-            : data.messages[scopeKey] ?? []
-          const lastSeenSeq = existing.reduce((max, item) => Math.max(max, item.seqId ?? 0), 0)
           socket?.send(JSON.stringify({
             type: 'SUBSCRIBE_CHANNELS',
-            channels: [{ channel_id: activeChatChannelId, last_seen_seq_id: lastSeenSeq }],
+            channels: [{ channel_id: activeChatChannelId, last_seen_seq_id: 0 }],
           }))
           socket?.send(JSON.stringify({ type: 'FOCUS_CHANNEL', channel_id: activeChatChannelId }))
           heartbeatTimer = window.setInterval(() => {

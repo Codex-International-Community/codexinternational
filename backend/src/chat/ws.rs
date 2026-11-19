@@ -1,7 +1,7 @@
 use std::{collections::HashSet,sync::Arc,time::Duration};
 use axum::extract::{State,WebSocketUpgrade,ws::{Message,WebSocket}};
 use chrono::Utc;
-use fred::interfaces::PubsubInterface;
+use fred::interfaces::{KeysInterface, PubsubInterface};
 use serde::{Deserialize,Serialize};
 use tokio::{sync::mpsc,time::{interval,timeout}};
 use uuid::Uuid;

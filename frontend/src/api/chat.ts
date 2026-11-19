@@ -1,4 +1,4 @@
-import { apiRequest } from './client'
+import { apiRequest, getSession } from './client'
 import type { Message } from '../types/chat'
 
 export interface ChatMessageWire {
@@ -66,7 +66,7 @@ export async function listMessages(
   const result = await apiRequest<{ messages: ChatMessageWire[] }>(
     `/api/v1/channels/${encodeURIComponent(channelId)}/messages?${query.toString()}`,
   )
-  const currentUserId = (await import('./client')).getSession()?.user.id ?? ''
+  const currentUserId = getSession()?.user.id ?? ''
   return result.messages.map((message) => mapChatMessage(message, currentUserId))
 }
 
