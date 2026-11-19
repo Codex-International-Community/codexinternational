@@ -77,7 +77,7 @@ export function ChannelSidebar({
 }: ChannelSidebarProps) {
   const activeVoiceChannel = channels.find((channel) => channel.id === voiceId)
   const isDirectMessageHome = view === 'home' || view === 'dm'
-  const textChannels = channels.filter((channel) => channel.type === 'text')
+  const textChannels = channels.filter((channel) => channel.type !== 'voice')
   const voiceChannels = channels.filter((channel) => channel.type === 'voice')
 
   const serverHeaderSub =
