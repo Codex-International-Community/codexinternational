@@ -615,12 +615,12 @@ export function WorkspacePage({
     <div
       className={`app-shell theme-${data.theme} ${isMobile ? 'viewport-mobile' : 'viewport-desktop'} ${
         drawerOpen ? 'drawer-open' : ''
-      } ${pageTransition ? `page-transition-${pageTransition}` : ''} view-${view}`}
+      } ${pageTransition ? `page-transition-${pageTransition}` : ''} view-${view} ${view === 'discover' ? 'has-no-channel-sidebar' : ''}`}
     >
       {pageTransition === 'rocket' && (
         <div className="route-transition-overlay" aria-hidden="true" ref={rocketCoverRef}>
           <div className="route-transition-stars" ref={rocketStarsRef} />
-          <span className="route-transition-rocket" ref={rocketRef}><Icon name="rocket" size={32} /></span>
+          <span className="route-transition-rocket" ref={rocketRef}><i className="fa-solid fa-rocket" aria-hidden="true" /></span>
           <div className="route-transition-label" ref={rocketLabelRef}>Memuat…</div>
         </div>
       )}
@@ -648,7 +648,7 @@ export function WorkspacePage({
             onNavigateView={navigateView}
           />
 
-          {view !== 'channels' && view !== 'people' && <ChannelSidebar
+          {view !== 'discover' && view !== 'channels' && view !== 'people' && <ChannelSidebar
         currentUser={currentUser}
         view={view}
         servers={data.servers}
