@@ -11,7 +11,10 @@ pub async fn run_message_flusher(state:Arc<AppState>){
  loop{
   let pending:Result<XReadResponse<String,String,String,String>,_>=state.valkey.xreadgroup_map(MESSAGE_GROUP,CONSUMER,Some(1000),None,false,MESSAGE_STREAM,"0").await;
   if let Ok(res)=pending{let batch=flatten(res);if !batch.is_empty()&&let Err(e)=flush(&state,batch).await{tracing::warn!(error=%e,"pending flush failed");sleep(Duration::from_millis(250)).await;continue;}}
-  let fresh:Result<XReadResponse<String,String,String,String>,_>=state.valkey.xreadgroup_map(MESSAGE_GROUP,CONSUMER,Some(1000),Some(250),false,MESSAGE_STREAM,">").await;
+  // Redis/Valkey returns a null reply when a finite BLOCK timeout expires without
+  // new entries. fred's map helper cannot decode that null as XReadResponse, so
+  // BLOCK 0 waits for the next entry and avoids spurious "Cannot convert to map" errors.
+  let fresh:Result<XReadResponse<String,String,String,String>,_>=state.valkey.xreadgroup_map(MESSAGE_GROUP,CONSUMER,Some(1000),Some(0),false,MESSAGE_STREAM,">").await;
   match fresh{Ok(res)=>{let batch=flatten(res);if !batch.is_empty()&&let Err(e)=flush(&state,batch).await{tracing::warn!(error=%e,"message flush failed");sleep(Duration::from_millis(250)).await;}},Err(e)=>{tracing::error!(error=%e,"stream read failed");sleep(Duration::from_secs(1)).await;}}
  }
 }
