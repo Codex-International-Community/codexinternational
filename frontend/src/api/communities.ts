@@ -67,3 +67,24 @@ export async function createChannel(
     { method: 'POST', body: payload },
   )
 }
+
+export interface CommunityMemberSummary {
+  id: string
+  username: string
+  display_name: string
+  role_name: string
+  online: boolean
+}
+
+export async function listCommunityMembers(communityId: string): Promise<CommunityMemberSummary[]> {
+  return apiRequest<CommunityMemberSummary[]>(
+    `/api/v1/communities/${encodeURIComponent(communityId)}/members`,
+  )
+}
+
+export async function createOrGetDm(userId: string): Promise<{ channel_id: string; created: boolean }> {
+  return apiRequest<{ channel_id: string; created: boolean }>(
+    `/api/v1/dms/${encodeURIComponent(userId)}`,
+    { method: 'POST' },
+  )
+}

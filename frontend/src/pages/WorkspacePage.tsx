@@ -5,13 +5,13 @@ import '../styles/adaptive.css'
 
 import type { AuthSession } from '../api/client'
 import { ApiError } from '../api/client'
-import { createChannel as createChannelApi, createCommunity, joinCommunity, listChannels, listCommunities } from '../api/communities'
+import { createChannel as createChannelApi, createCommunity, createOrGetDm, joinCommunity, listChannels, listCommunities, listCommunityMembers } from '../api/communities'
 import type { ViewportInfo } from '../hooks/useViewport'
 import type { Attachment, View } from '../types/common'
-import type { Channel, Data, Message } from '../types/chat'
+import type { Channel, Data, Message, User } from '../types/chat'
 import type { SocialPost, SocialTab } from '../types/social'
 
-import { people, roomKey } from '../constants/seedData'
+import { roomKey } from '../constants/seedData'
 import {
   loadData,
   loadFollowedHandles,
@@ -179,6 +179,7 @@ export function WorkspacePage({
       displayName: session.user.display_name || session.user.username || initial.displayName,
     }
   })
+  const [people, setPeople] = useState<User[]>([])
   const [initialRoute] = useState<WorkspaceRoute>(() =>
     parseWorkspaceRoute(window.location.pathname),
   )
@@ -352,20 +353,42 @@ export function WorkspacePage({
             .toUpperCase(),
           tone: 'community',
         }))
-        const channelEntries = await Promise.all(
-          communities.map(async (community) => {
-            const channelRows = await listChannels(community.id)
-            return [
-              community.id,
-              channelRows.map((item) => ({
-                id: item.id,
-                name: item.name ?? 'unnamed',
-                type: item.channel_type === 'announcement' ? 'announcement' as const : 'text' as const,
-              })),
-            ] as const
-          }),
-        )
+        const [channelEntries, memberGroups] = await Promise.all([
+          Promise.all(
+            communities.map(async (community) => {
+              const channelRows = await listChannels(community.id)
+              return [
+                community.id,
+                channelRows.map((item) => ({
+                  id: item.id,
+                  name: item.name ?? 'unnamed',
+                  type: item.channel_type === 'announcement' ? 'announcement' as const : 'text' as const,
+                })),
+              ] as const
+            }),
+          ),
+          Promise.all(communities.map((community) => listCommunityMembers(community.id))),
+        ])
         if (cancelled) return
+        const memberMap = new Map<string, User>()
+        for (const member of memberGroups.flat()) {
+          if (member.id === session.user.id) continue
+          const initials = member.display_name
+            .split(/\s+/)
+            .map((part) => part[0] ?? '')
+            .join('')
+            .slice(0, 2)
+            .toUpperCase()
+          memberMap.set(member.id, {
+            id: member.id,
+            name: member.display_name,
+            initials,
+            tone: 'member',
+            status: member.online ? 'online' : 'idle',
+            role: member.role_name,
+          })
+        }
+        setPeople([...memberMap.values()])
         setData((previous) => ({
           ...previous,
           servers: mappedServers,
@@ -416,6 +439,30 @@ export function WorkspacePage({
   useEffect(() => {
     saveFollowedHandles(followedHandles)
   }, [followedHandles])
+  useEffect(() => {
+    if (view !== 'dm' || !people.some((person) => person.id === dmId)) return
+    if (data.conversations.some((conversation) => conversation.userId === dmId)) return
+
+    let cancelled = false
+    void createOrGetDm(dmId)
+      .then((dm) => {
+        if (cancelled) return
+        setData((previous) => ({
+          ...previous,
+          conversations: [
+            ...previous.conversations.filter((item) => item.userId !== dmId),
+            { id: dm.channel_id, userId: dmId, lastMessage: '', unread: 0 },
+          ],
+        }))
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) notify(error instanceof Error ? error.message : 'Could not load direct message.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [view, dmId, people, data.conversations, notify])
+
   useEffect(() => {
     const nextPath = buildWorkspacePath({ view, serverId, channelId, dmId, path: notFoundPath })
     if (window.location.pathname !== nextPath) {
@@ -474,15 +521,16 @@ export function WorkspacePage({
     [data.channels, server?.id],
   )
   const channel = channels.find((c) => c.id === channelId && c.type === 'text') ?? channels[0]
-  const currentDm = people.find((p) => p.id === dmId) ?? people[0]
-  const key = view === 'dm' ? `dm:${dmId}` : roomKey(server?.id ?? 'studio', channel?.id ?? 'general')
+  const currentDm = people.find((p) => p.id === dmId)
+  const dmChannelId = data.conversations.find((conversation) => conversation.userId === dmId)?.id ?? dmId
+  const key = view === 'dm' ? `dm:${dmChannelId}` : roomKey(server?.id ?? 'studio', channel?.id ?? 'general')
   const currentMessages = useMemo(() => {
-    const allMessages = view === 'dm' ? (data.dmMessages[dmId] ?? []) : (data.messages[key] ?? [])
+    const allMessages = view === 'dm' ? (data.dmMessages[dmChannelId] ?? []) : (data.messages[key] ?? [])
     const query = search.trim().toLowerCase()
     return allMessages.filter(
       (m) => !query || `${m.text} ${m.author}`.toLowerCase().includes(query),
     )
-  }, [data.dmMessages, data.messages, dmId, key, search, view])
+  }, [data.dmMessages, data.messages, dmChannelId, key, search, view])
 
   const pinnedMessages = useMemo(
     () =>
@@ -640,12 +688,12 @@ export function WorkspacePage({
 
     if (editingId) {
       setData((prev) => {
-        const list = view === 'dm' ? (prev.dmMessages[dmId] ?? []) : (prev.messages[key] ?? [])
+        const list = view === 'dm' ? (prev.dmMessages[dmChannelId] ?? []) : (prev.messages[key] ?? [])
         const nextList = list.map((m) =>
           m.id === editingId ? { ...m, text: clean, edited: true } : m,
         )
         return view === 'dm'
-          ? { ...prev, dmMessages: { ...prev.dmMessages, [dmId]: nextList } }
+          ? { ...prev, dmMessages: { ...prev.dmMessages, [dmChannelId]: nextList } }
           : { ...prev, messages: { ...prev.messages, [key]: nextList } }
       })
       setEditingId(null)
@@ -675,11 +723,11 @@ export function WorkspacePage({
           ? prev.conversations.map((c) =>
               c.userId === dmId ? { ...c, lastMessage: nextMessage.text, unread: 0 } : c,
             )
-          : [...prev.conversations, { id: `c${dmId}`, userId: dmId, lastMessage: nextMessage.text, unread: 0 }]
+          : [...prev.conversations, { id: dmChannelId, userId: dmId, lastMessage: nextMessage.text, unread: 0 }]
         return {
           ...prev,
           conversations: nextConvs,
-          dmMessages: { ...prev.dmMessages, [dmId]: [...(prev.dmMessages[dmId] ?? []), nextMessage] },
+          dmMessages: { ...prev.dmMessages, [dmChannelId]: [...(prev.dmMessages[dmChannelId] ?? []), nextMessage] },
         }
       }
       return {
@@ -716,16 +764,43 @@ export function WorkspacePage({
     
   }
 
-  const openDm = (uid: string) => {
-    setActiveThread(null)
-    setDmId(uid)
-    setView('dm')
-    setMobileTab('chat')
-    
-    setData((prev) => ({
-      ...prev,
-      conversations: prev.conversations.map((c) => (c.userId === uid ? { ...c, unread: 0 } : c)),
-    }))
+  const openDm = async (target: string) => {
+    const existing = data.conversations.find((conversation) =>
+      conversation.userId === target || conversation.id === target,
+    )
+    const recipientId = existing?.userId ?? target
+    const person = people.find((user) => user.id === recipientId)
+    if (!person) {
+      notify('That member is no longer available in your shared communities.')
+      return
+    }
+
+    try {
+      const dm = existing?.id
+        ? { channel_id: existing.id }
+        : await createOrGetDm(recipientId)
+      setData((previous) => {
+        const withoutDuplicate = previous.conversations.filter((item) => item.userId !== recipientId)
+        return {
+          ...previous,
+          conversations: [
+            ...withoutDuplicate,
+            {
+              id: dm.channel_id,
+              userId: recipientId,
+              lastMessage: existing?.lastMessage ?? '',
+              unread: 0,
+            },
+          ],
+        }
+      })
+      setActiveThread(null)
+      setDmId(recipientId)
+      setView('dm')
+      setMobileTab('chat')
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not open direct message.')
+    }
   }
 
   const discoverReturnRouteRef = useRef<WorkspaceRoute | null>(null)
@@ -1105,7 +1180,7 @@ export function WorkspacePage({
                 onAddEmoji={(emoji) => setComposer((v) => `${v} ${emoji}`)}
                 onReact={(id, emoji) => {
                   setData((prev) => {
-                    const list = view === 'dm' ? (prev.dmMessages[dmId] ?? []) : (prev.messages[key] ?? [])
+                    const list = view === 'dm' ? (prev.dmMessages[dmChannelId] ?? []) : (prev.messages[key] ?? [])
                     const nextList = list.map((m) => {
                       if (m.id !== id) return m
                       const users = m.reactions[emoji] ?? []
@@ -1117,7 +1192,7 @@ export function WorkspacePage({
                       return { ...m, reactions: nextReactions }
                     })
                     return view === 'dm'
-                      ? { ...prev, dmMessages: { ...prev.dmMessages, [dmId]: nextList } }
+                      ? { ...prev, dmMessages: { ...prev.dmMessages, [dmChannelId]: nextList } }
                       : { ...prev, messages: { ...prev.messages, [key]: nextList } }
                   })
                 }}
@@ -1130,10 +1205,10 @@ export function WorkspacePage({
                 onRemove={(m) => {
                   revokeBlobUrl(m.attachment?.url)
                   setData((prev) => {
-                    const list = view === 'dm' ? (prev.dmMessages[dmId] ?? []) : (prev.messages[key] ?? [])
+                    const list = view === 'dm' ? (prev.dmMessages[dmChannelId] ?? []) : (prev.messages[key] ?? [])
                     const nextList = list.filter((x) => x.id !== m.id)
                     return view === 'dm'
-                      ? { ...prev, dmMessages: { ...prev.dmMessages, [dmId]: nextList } }
+                      ? { ...prev, dmMessages: { ...prev.dmMessages, [dmChannelId]: nextList } }
                       : { ...prev, messages: { ...prev.messages, [key]: nextList } }
                   })
                 }}
