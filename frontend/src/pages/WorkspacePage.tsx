@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import '../App.css'
 import '../Redesign.css'
 import '../styles/adaptive.css'
@@ -180,12 +180,90 @@ export function WorkspacePage({
     parseWorkspaceRoute(window.location.pathname),
   )
   const [view, setView] = useState<View>(initialRoute.view)
+  const [pageTransition, setPageTransition] = useState<'rocket' | 'slide-forward' | 'slide-backward' | null>(null)
+  const previousViewRef = useRef<View>(initialRoute.view)
+  const rocketCoverRef = useRef<HTMLDivElement>(null)
+  const rocketRef = useRef<HTMLSpanElement>(null)
+  const rocketStarsRef = useRef<HTMLDivElement>(null)
+  const rocketLabelRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const previousView = previousViewRef.current
+    previousViewRef.current = view
+    if (previousView === view) return
+    const navbarOrder: View[] = ['home', 'channel', 'dm', 'social', 'channels', 'people']
+    const previousIndex = navbarOrder.indexOf(previousView)
+    const nextIndex = navbarOrder.indexOf(view)
+    if (previousIndex >= 0 && nextIndex >= 0) {
+      setPageTransition(nextIndex >= previousIndex ? 'slide-forward' : 'slide-backward')
+    } else {
+      setPageTransition('rocket')
+    }
+  }, [view])
+
+  useLayoutEffect(() => {
+    if (pageTransition !== 'rocket') return
+    const cover = rocketCoverRef.current
+    const rocket = rocketRef.current
+    const stars = rocketStarsRef.current
+    const label = rocketLabelRef.current
+    if (!cover || !rocket || !stars || !label) return
+    let cancelled = false
+    const animations: Animation[] = []
+    const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
+    const animate = async (element: Element, frames: Keyframe[], duration: number, easing: string) => {
+      const animation = element.animate(frames, { duration, easing, fill: 'forwards' })
+      animations.push(animation)
+      await animation.finished.catch(() => undefined)
+    }
+    stars.replaceChildren()
+    for (let index = 0; index < 36; index += 1) {
+      const star = document.createElement('i')
+      const size = 2 + Math.random() * 3
+      star.style.cssText = `top:${Math.random() * 100}%;width:${size}px;height:${size}px`
+      stars.appendChild(star)
+      const starAnimation = star.animate(
+        [{ transform: 'translateX(-20px)' }, { transform: 'translateX(110vw)' }],
+        { duration: 700 + Math.random() * 900, iterations: Infinity, delay: -Math.random() * 1500, easing: 'linear' },
+      )
+      animations.push(starAnimation)
+    }
+    label.textContent = `Memuat ${view}…`
+    cover.classList.add('run')
+    void (async () => {
+      await animate(cover, [{ transform: 'translateX(100%)' }, { transform: 'translateX(0)' }], 550, 'cubic-bezier(.65,0,.35,1)')
+      if (cancelled) return
+      await animate(rocket, [
+        { transform: 'translate(110vw,-50%) rotate(-135deg)' },
+        { transform: 'translate(calc(50vw - 32px),-50%) rotate(-135deg)' },
+      ], 650, 'cubic-bezier(.22,1,.36,1)')
+      if (cancelled) return
+      await wait(450)
+      if (cancelled) return
+      await animate(rocket, [
+        { transform: 'translate(calc(50vw - 32px),-50%) rotate(-135deg)' },
+        { transform: 'translate(-20vw,-50%) rotate(-135deg)' },
+      ], 600, 'cubic-bezier(.55,0,1,.45)')
+      if (cancelled) return
+      await animate(cover, [{ transform: 'translateX(0)' }, { transform: 'translateX(-100%)' }], 550, 'cubic-bezier(.65,0,.35,1)')
+      if (!cancelled) setPageTransition(null)
+    })()
+    return () => {
+      cancelled = true
+      animations.forEach((animation) => animation.cancel())
+      cover.classList.remove('run')
+    }
+  }, [pageTransition, view])
   const [serverId, setServerId] = useState(initialRoute.serverId)
   const [channelId, setChannelId] = useState(initialRoute.channelId)
   const [dmId, setDmId] = useState(initialRoute.dmId)
   const [notFoundPath, setNotFoundPath] = useState(initialRoute.path ?? '')
   const [membersOpen, setMembersOpen] = useState(isDesktop)
   const [drawerOpen, setDrawerOpen] = useState(false)
+
+  useEffect(() => {
+    setDrawerOpen(false)
+  }, [view])
   const [mobileTab, setMobileTab] = useState<MobileTab>(() =>
     mobileTabForView(initialRoute.view),
   )
@@ -514,7 +592,12 @@ export function WorkspacePage({
     }))
   }
 
+  const discoverReturnRouteRef = useRef<WorkspaceRoute | null>(null)
+
   const navigateView = (nextView: View) => {
+    if (nextView === 'discover') {
+      discoverReturnRouteRef.current = { view, serverId, channelId, dmId, path: notFoundPath }
+    }
     setView(nextView)
     if (nextView === 'social') setMobileTab('social')
     else if (nextView === 'channels') setMobileTab('channels')
@@ -528,32 +611,41 @@ export function WorkspacePage({
     <div
       className={`app-shell theme-${data.theme} ${isMobile ? 'viewport-mobile' : 'viewport-desktop'} ${
         drawerOpen ? 'drawer-open' : ''
-      } view-${view}`}
+      } ${pageTransition ? `page-transition-${pageTransition}` : ''} view-${view}`}
     >
+      {pageTransition === 'rocket' && (
+        <div className="route-transition-overlay" aria-hidden="true" ref={rocketCoverRef}>
+          <div className="route-transition-stars" ref={rocketStarsRef} />
+          <span className="route-transition-rocket" ref={rocketRef}><i className="fa-solid fa-rocket" /></span>
+          <div className="route-transition-label" ref={rocketLabelRef}>Memuat…</div>
+        </div>
+      )}
       <button
         className="drawer-scrim"
         aria-label="Close navigation"
         onClick={() => setDrawerOpen(false)}
       />
 
-      <ServerRail
-        servers={data.servers}
-        activeServerId={serverId}
-        activeView={view}
-        onSelectHome={() => {
-          setView('home')
-          setMobileTab('home')
-          setDrawerOpen(false)
-        }}
-        onSelectServer={pickServer}
-        onCreateServer={() => {
-          setModal('server')
-          setModalValue('')
-        }}
-        onNavigateView={navigateView}
-      />
+      {(!isMobile || (view !== 'channels' && view !== 'people')) && (
+        <>
+          <ServerRail
+            servers={data.servers}
+            activeServerId={serverId}
+            activeView={view}
+            onSelectHome={() => {
+              setView('home')
+              setMobileTab('home')
+              setDrawerOpen(false)
+            }}
+            onSelectServer={pickServer}
+            onCreateServer={() => {
+              setModal('server')
+              setModalValue('')
+            }}
+            onNavigateView={navigateView}
+          />
 
-      <ChannelSidebar
+          <ChannelSidebar
         currentUser={currentUser}
         view={view}
         server={server}
@@ -591,9 +683,11 @@ export function WorkspacePage({
         onToggleTheme={() =>
           setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))
         }
-        onOpenBots={() => navigateView('bots')}
-        onLogout={() => void onLogout()}
-      />
+            onOpenBots={() => navigateView('bots')}
+            onLogout={() => void onLogout()}
+          />
+        </>
+      )}
 
       <main className="workspace">
         <Topbar
@@ -606,6 +700,21 @@ export function WorkspacePage({
           notificationRead={notificationRead}
           unreadCount={data.conversations.reduce((acc, c) => acc + c.unread, 0)}
           onOpenDrawer={() => setDrawerOpen(true)}
+          onBack={() => {
+            const previous = discoverReturnRouteRef.current
+            if (previous) {
+              setView(previous.view)
+              setServerId(previous.serverId)
+              setChannelId(previous.channelId)
+              setDmId(previous.dmId)
+              setNotFoundPath(previous.path ?? '')
+              setMobileTab(mobileTabForView(previous.view))
+            } else {
+              setView('home')
+              setMobileTab('home')
+            }
+            setDrawerOpen(false)
+          }}
           onFocusSocialComposer={() => socialInputRef.current?.focus()}
           onVoiceCallModal={() => setModal('call')}
           onVideoCallModal={() => setModal('call')}
@@ -946,7 +1055,7 @@ export function WorkspacePage({
           )}
         </div>
 
-        {isMobile && (
+        {isMobile && view !== 'discover' && (
           <MobileTabs
             activeTab={mobileTab}
             onSelectTab={(tab) => {

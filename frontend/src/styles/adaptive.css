@@ -380,11 +380,12 @@ dialog.bot-reveal-modal {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: center;
-  width: min(100%, 600px);
+  justify-content: flex-start;
+  box-sizing: border-box;
+  width: min(100%, 856px);
   min-height: 100%;
   margin: 0 auto;
-  padding: clamp(32px, 6vw, 72px);
+  padding: clamp(24px, 4vw, 48px) clamp(18px, 4vw, 48px) 56px;
 }
 
 .workspace-empty-mark {
@@ -392,7 +393,7 @@ dialog.bot-reveal-modal {
   place-items: center;
   width: 52px;
   height: 52px;
-  margin-bottom: 26px;
+  margin-bottom: 22px;
   border: 1px solid var(--accent-border);
   border-radius: 17px 17px 17px 6px;
   background: var(--accent-bg);
@@ -402,18 +403,18 @@ dialog.bot-reveal-modal {
 .workspace-empty h1 {
   margin: 10px 0 8px;
   color: var(--text);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(2rem, 4vw, 3rem);
+  font-family: var(--serif);
+  font-size: clamp(1.9rem, 3.5vw, 2.5rem);
   font-weight: 500;
   letter-spacing: -.04em;
   line-height: 1.08;
 }
 
 .workspace-empty p {
-  max-width: 440px;
+  max-width: 680px;
   margin: 0 0 22px;
   color: var(--muted);
-  font-size: .9375rem;
+  font-size: .9rem;
   line-height: 1.7;
 }
 
@@ -430,7 +431,7 @@ dialog.bot-reveal-modal {
 }
 
 .workspace-empty-note {
-  max-width: 420px;
+  max-width: 640px;
   margin-top: 16px;
   color: var(--quiet);
   font-size: .75rem;
@@ -556,10 +557,9 @@ dialog.bot-reveal-modal {
   }
 
   .workspace-empty {
-    justify-content: flex-start;
     width: 100%;
     min-height: 100%;
-    padding: clamp(30px, 8vh, 58px) 22px;
+    padding: 22px 16px 36px;
   }
 
   .workspace-empty h1 {
@@ -597,4 +597,1873 @@ dialog.bot-reveal-modal {
 :where(button, input, textarea, a):focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+
+/* Chat empty state: use the same typography, surfaces and action shape as Home.
+   This is presentation-only; ChatPanel behavior and callbacks remain unchanged. */
+.workspace-empty {
+  width: min(100%, 1060px);
+  min-height: 100%;
+  justify-content: center;
+  padding: clamp(28px, 5vw, 58px) clamp(18px, 4vw, 54px);
+  color: var(--text);
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+}
+
+.workspace-empty-mark {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 24px;
+  border: 1px solid var(--accent-border);
+  border-radius: 16px 16px 16px 4px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .12);
+}
+
+.workspace-empty > .eyebrow {
+  color: var(--accent);
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+}
+
+.workspace-empty h1 {
+  max-width: 16ch;
+  margin: 12px 0 12px;
+  color: var(--text);
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+  font-size: clamp(2.1rem, 4.5vw, 3.35rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -.035em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.workspace-empty p {
+  max-width: 48ch;
+  margin: 0 0 25px;
+  color: var(--muted);
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .9375rem;
+  line-height: 1.75;
+}
+
+.workspace-empty .primary-action {
+  min-height: 46px;
+  gap: 9px;
+  padding: 0 19px;
+  border: 1px solid var(--accent-border);
+  border-radius: 12px 12px 12px 3px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .8125rem;
+  font-weight: 700;
+  letter-spacing: .005em;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .12);
+  transition: background .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.workspace-empty .primary-action:hover {
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
+  color: #fff;
+  box-shadow: 0 10px 26px rgba(20, 88, 173, .22);
+  transform: translateY(-1px);
+}
+
+.workspace-empty .primary-action:active {
+  transform: translateY(0);
+}
+
+.workspace-empty .primary-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.workspace-empty-note {
+  max-width: 52ch;
+  margin-top: 19px;
+  color: var(--quiet);
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .68rem;
+  line-height: 1.7;
+}
+
+@media (max-width: 767px) {
+  .workspace-empty {
+    justify-content: center;
+    padding: 28px 18px max(30px, env(safe-area-inset-bottom));
+  }
+
+  .workspace-empty-mark {
+    width: 52px;
+    height: 52px;
+    margin-bottom: 20px;
+  }
+
+  .workspace-empty h1 {
+    max-width: 13ch;
+    margin-top: 10px;
+    font-size: clamp(1.9rem, 8vw, 2.55rem);
+  }
+
+  .workspace-empty p {
+    max-width: 36ch;
+    margin-bottom: 22px;
+    font-size: .875rem;
+    line-height: 1.7;
+  }
+
+  .workspace-empty .primary-action {
+    width: 100%;
+    min-height: 48px;
+    padding-inline: 14px;
+  }
+
+  .workspace-empty-note {
+    font-size: .64rem;
+  }
+}
+
+/* Final, explicitly scoped Chat tab landing styles.
+   Keep this selector more specific than legacy workspace and global action rules. */
+.app-shell .workspace .chat-panel > .workspace-empty {
+  align-items: flex-start;
+  justify-content: flex-start;
+  width: min(100%, 1060px);
+  padding: clamp(26px, 4vw, 52px) clamp(18px, 4vw, 54px) 56px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-shell .workspace .chat-panel > .workspace-empty > .eyebrow {
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+}
+
+.app-shell .workspace .chat-panel > .workspace-empty h1 {
+  max-width: 13ch;
+  margin: 12px 0;
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+  font-size: clamp(1.85rem, 8vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -.025em;
+  text-transform: uppercase;
+}
+
+.app-shell .workspace .chat-panel > .workspace-empty p {
+  max-width: 38ch;
+  margin: 0 0 22px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .875rem;
+  line-height: 1.7;
+}
+
+.app-shell .workspace .chat-panel > .workspace-empty .primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  width: auto;
+  padding: 0 17px;
+  border: 1px solid var(--accent-border);
+  border-radius: 12px 12px 12px 3px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .8125rem;
+  font-weight: 700;
+  letter-spacing: .005em;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .12);
+}
+
+.app-shell .workspace .chat-panel > .workspace-empty .primary-action:hover {
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
+  color: #fff;
+}
+
+.app-shell .workspace .chat-panel > .workspace-empty .workspace-empty-note {
+  max-width: 52ch;
+  margin-top: 17px;
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .66rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 767px) {
+  .app-shell .workspace .chat-panel > .workspace-empty {
+    width: 100%;
+    padding: 25px 16px 36px;
+  }
+
+  .app-shell .workspace .chat-panel > .workspace-empty .primary-action {
+    width: 100%;
+    min-height: 46px;
+  }
+}
+
+/* Social feed page: align the complete timeline UI with the Home / Chat visual system. */
+.app-shell.view-social .social-layout,
+.app-shell.view-social .social-layout button,
+.app-shell.view-social .social-layout textarea,
+.app-shell.view-social .social-right-panel {
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-shell.view-social .social-feed-column {
+  width: min(100%, 780px);
+  padding: clamp(24px, 4vw, 44px) clamp(18px, 3.3vw, 38px) 64px;
+}
+
+.app-shell.view-social .social-heading {
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.app-shell.view-social .social-kicker,
+.app-shell.view-social .social-aside-kicker {
+  color: var(--accent);
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .13em;
+}
+
+.app-shell.view-social .social-heading h1 {
+  margin: 10px 0 9px;
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+  font-size: clamp(2rem, 4vw, 2.65rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -.035em;
+  text-transform: uppercase;
+}
+
+.app-shell.view-social .social-heading p {
+  max-width: 48ch;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .9rem;
+  line-height: 1.7;
+}
+
+.app-shell.view-social .social-state {
+  border-radius: 10px 10px 10px 3px;
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .62rem;
+  letter-spacing: .04em;
+}
+
+.app-shell.view-social .social-composer {
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 14px 4px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .1);
+}
+
+.app-shell.view-social .social-compose-body textarea {
+  min-height: 68px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size:  .9rem;
+  line-height: 1.7;
+}
+
+.app-shell.view-social .social-compose-footer > span,
+.app-shell.view-social .social-compose-status {
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .64rem;
+}
+
+.app-shell.view-social .social-compose-footer button,
+.app-shell.view-social .social-reply-form button {
+  min-height: 38px;
+  height: 38px;
+  padding: 0 15px;
+  border: 1px solid var(--accent-border);
+  border-radius: 11px 11px 11px 3px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .78rem;
+  font-weight: 700;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, .08);
+}
+
+.app-shell.view-social .social-compose-footer button:not(:disabled):hover,
+.app-shell.view-social .social-reply-form button:not(:disabled):hover {
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
+  color: #fff;
+}
+
+.app-shell.view-social .social-feed-tabs {
+  gap: clamp(14px, 2.5vw, 24px);
+  margin-top: 22px;
+  background: var(--workspace);
+}
+
+.app-shell.view-social .social-feed-tabs button {
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.app-shell.view-social .social-post {
+  gap: 13px;
+  padding: 20px 2px;
+}
+
+.app-shell.view-social .social-post-meta strong {
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .86rem;
+  font-weight: 800;
+}
+
+.app-shell.view-social .social-post-meta > div > span:not(.social-verified),
+.app-shell.view-social .social-post-meta time,
+.app-shell.view-social .social-post-meta i {
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .65rem;
+}
+
+.app-shell.view-social .social-follow-inline,
+.app-shell.view-social .social-person > button {
+  padding: 7px 11px;
+  border-radius: 10px 10px 10px 3px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .7rem;
+  font-weight: 700;
+}
+
+.app-shell.view-social .social-post-copy {
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .9rem;
+  line-height: 1.75;
+}
+
+.app-shell.view-social .social-post-media {
+  border-radius: 13px 13px 13px 4px;
+}
+
+.app-shell.view-social .social-post-actions button {
+  min-height: 34px;
+  border-radius: 8px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .73rem;
+}
+
+.app-shell.view-social .social-reply-form {
+  border-radius: 12px 12px 12px 4px;
+  padding: 7px 9px;
+}
+
+.app-shell.view-social .social-reply-form input {
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: 16px;
+}
+
+.app-shell.view-social .social-reply strong,
+.app-shell.view-social .social-reply p,
+.app-shell.view-social .social-empty p {
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+}
+
+.app-shell.view-social .social-empty > span,
+.app-shell.view-social .social-empty strong,
+.app-shell.view-social .social-now h2,
+.app-shell.view-social .social-aside-heading strong {
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+  font-weight: 650;
+}
+
+.app-shell.view-social .social-empty strong {
+  font-size: 1.1rem;
+}
+
+.app-shell.view-social .social-empty button,
+.app-shell.view-social .social-now > button {
+  border-radius: 11px 11px 11px 3px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.app-shell.view-social .social-now {
+  border-radius: 14px 14px 14px 4px;
+  padding: 17px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .08);
+}
+
+.app-shell.view-social .social-now h2 {
+  font-size: 1.25rem;
+  line-height: 1.15;
+}
+
+.app-shell.view-social .social-now p,
+.app-shell.view-social .social-aside-foot {
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .76rem;
+  line-height: 1.7;
+}
+
+@media (max-width: 767px) {
+  .app-shell.view-social .social-feed-column {
+    padding: 23px 16px max(38px, env(safe-area-inset-bottom));
+  }
+
+  .app-shell.view-social .social-heading {
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .app-shell.view-social .social-heading h1 {
+    font-size: clamp(1.8rem, 8vw, 2.2rem);
+  }
+
+  .app-shell.view-social .social-heading p {
+    max-width: 34ch;
+    font-size: .84rem;
+  }
+
+  .app-shell.view-social .social-state {
+    margin-top: 15px;
+    padding: 6px 7px;
+    font-size: .56rem;
+  }
+
+  .app-shell.view-social .social-composer {
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .app-shell.view-social .social-compose-body textarea {
+    min-height: 60px;
+    font-size: 16px;
+  }
+
+  .app-shell.view-social .social-feed-tabs {
+    gap: clamp(10px, 3vw, 17px);
+  }
+
+  .app-shell.view-social .social-feed-tabs button {
+    height: 42px;
+    font-size: .73rem;
+  }
+
+  .app-shell.view-social .social-post {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 9px;
+    padding: 17px 0;
+  }
+
+  .app-shell.view-social .social-post-copy {
+    font-size: .85rem;
+    line-height: 1.7;
+  }
+
+  .app-shell.view-social .social-post-actions {
+    gap: clamp(7px, 2.8vw, 15px);
+  }
+
+  .app-shell.view-social .social-post-actions button {
+    min-height: 34px;
+    gap: 4px;
+    font-size: .68rem;
+  }
+
+  .app-shell.view-social .social-follow-inline {
+    padding: 6px 8px;
+    font-size: .63rem;
+  }
+
+  .app-shell.view-social .social-compose-footer button {
+    min-height: 38px;
+    height: 38px;
+  }
+}
+
+@media (max-width: 390px) {
+  .app-shell.view-social .social-feed-column {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .app-shell.view-social .social-heading h1 {
+    font-size: 1.8rem;
+  }
+
+  .app-shell.view-social .social-state {
+    max-width: 88px;
+    white-space: normal;
+    line-height: 1.3;
+  }
+
+  .app-shell.view-social .social-post-actions {
+    gap: 6px;
+  }
+}
+
+/* Channels + People directories: shared Codex visual system and responsive layouts. */
+.app-shell.view-channels .directory-page,
+.app-shell.view-people .directory-page {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+  padding: clamp(24px, 4vw, 44px) clamp(16px, 4vw, 54px) 64px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-shell.view-channels .directory-heading,
+.app-shell.view-people .directory-heading {
+  align-items: flex-start;
+  width: min(100%, 1040px);
+  margin-bottom: 22px;
+  padding-bottom: 22px;
+}
+
+.app-shell.view-channels .directory-heading .eyebrow,
+.app-shell.view-people .directory-heading .eyebrow {
+  color: var(--accent);
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .13em;
+}
+
+.app-shell.view-channels .directory-heading h1,
+.app-shell.view-people .directory-heading h1 {
+  margin: 10px 0 9px;
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+  font-size: clamp(2rem, 4vw, 2.65rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -.035em;
+  text-transform: uppercase;
+}
+
+.app-shell.view-channels .directory-heading p,
+.app-shell.view-people .directory-heading p {
+  max-width: 54ch;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .88rem;
+  line-height: 1.7;
+}
+
+.app-shell.view-channels .directory-heading .primary-action,
+.app-shell.view-people .directory-heading .primary-action {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--accent-border);
+  border-radius: 12px 12px 12px 3px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .78rem;
+  font-weight: 700;
+  box-shadow: 0 7px 20px rgba(0, 0, 0, .1);
+}
+
+.app-shell.view-channels .directory-heading .primary-action:not(:disabled):hover,
+.app-shell.view-people .directory-heading .primary-action:hover {
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
+  color: #fff;
+}
+
+.app-shell.view-channels .directory-toolbar,
+.app-shell.view-people .directory-toolbar,
+.app-shell.view-channels .channel-directory-list,
+.app-shell.view-people .people-directory-list {
+  width: min(100%, 1040px);
+}
+
+.app-shell.view-channels .directory-toolbar,
+.app-shell.view-people .directory-toolbar {
+  align-items: center;
+  margin-bottom: 22px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 13px 13px 13px 4px;
+  background: var(--surface);
+}
+
+.app-shell.view-channels .directory-tabs,
+.app-shell.view-people .directory-tabs {
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.app-shell.view-channels .directory-tabs button,
+.app-shell.view-people .directory-tabs button {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 9px 9px 9px 3px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .74rem;
+  font-weight: 700;
+}
+
+.app-shell.view-channels .directory-tabs button.active,
+.app-shell.view-people .directory-tabs button.active {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.app-shell.view-channels .directory-search,
+.app-shell.view-people .directory-search {
+  flex: 0 1 290px;
+  width: min(100%, 290px);
+  height: 40px;
+  border-radius: 10px 10px 10px 3px;
+  background: var(--workspace);
+}
+
+.app-shell.view-channels .directory-search input,
+.app-shell.view-people .directory-search input {
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: 16px;
+}
+
+.app-shell.view-channels .directory-community {
+  margin: 0 0 20px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 14px 4px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .07);
+}
+
+.app-shell.view-channels .directory-community > header {
+  margin-bottom: 12px;
+}
+
+.app-shell.view-channels .directory-server-mark {
+  width: 43px;
+  height: 43px;
+  flex-basis: 43px;
+  border: 1px solid var(--accent-border);
+  border-radius: 13px 13px 13px 4px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+  font-size: .85rem;
+}
+
+.app-shell.view-channels .directory-community > header > div strong {
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .9rem;
+  font-weight: 800;
+}
+
+.app-shell.view-channels .directory-community > header > div small {
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .62rem;
+}
+
+.app-shell.view-channels .directory-community > header > button {
+  min-height: 36px;
+  padding: 0 11px;
+  border-radius: 10px 10px 10px 3px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .7rem;
+  font-weight: 700;
+}
+
+.app-shell.view-channels .directory-channel-rows {
+  gap: 7px;
+  padding-left: 0;
+}
+
+.app-shell.view-channels .directory-channel-row {
+  min-height: 62px;
+  gap: 11px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 11px 11px 11px 3px;
+  background: var(--workspace);
+  transition: border-color .16s ease, background .16s ease, transform .16s ease;
+}
+
+.app-shell.view-channels .directory-channel-row:hover {
+  border-color: var(--accent-border);
+  background: var(--surface2);
+  transform: translateX(2px);
+}
+
+.app-shell.view-channels .directory-room-icon {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  flex: 0 0 35px;
+  border: 1px solid var(--accent-border);
+  border-radius: 10px 10px 10px 3px;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.app-shell.view-channels .directory-room-name strong {
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .82rem;
+  font-weight: 800;
+}
+
+.app-shell.view-channels .directory-room-name small,
+.app-shell.view-channels .directory-room-action {
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .61rem;
+}
+
+.app-shell.view-channels .directory-room-action {
+  color: var(--accent);
+}
+
+.app-shell.view-people .people-directory-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 12px;
+}
+
+.app-shell.view-people .people-directory-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 14px 4px;
+  background: var(--surface);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .06);
+  transition: border-color .16s ease, transform .16s ease, background .16s ease;
+}
+
+.app-shell.view-people .people-directory-row:hover {
+  border-color: var(--accent-border);
+  background: var(--surface2);
+  transform: translateY(-2px);
+}
+
+.app-shell.view-people .people-directory-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-shell.view-people .people-directory-copy strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .84rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell.view-people .people-directory-copy > span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .7rem;
+}
+
+.app-shell.view-people .people-directory-copy small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  color: var(--quiet);
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .61rem;
+}
+
+.app-shell.view-people .people-directory-row > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  flex: 0 0 auto;
+  padding: 0 11px;
+  border: 1px solid var(--accent-border);
+  border-radius: 10px 10px 10px 3px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .7rem;
+  font-weight: 700;
+}
+
+.app-shell.view-people .people-directory-row > button:hover {
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
+  color: #fff;
+}
+
+.app-shell.view-channels .directory-empty,
+.app-shell.view-people .directory-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 620px);
+  margin: 18px auto;
+  padding: 40px 22px;
+  border: 1px dashed var(--accent-border);
+  border-radius: 15px 15px 15px 4px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.app-shell.view-channels .directory-empty > svg,
+.app-shell.view-people .directory-empty > svg {
+  color: var(--accent);
+}
+
+.app-shell.view-channels .directory-empty strong,
+.app-shell.view-people .directory-empty strong {
+  color: var(--text);
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.app-shell.view-channels .directory-empty > span,
+.app-shell.view-people .directory-empty > span {
+  max-width: 48ch;
+  color: var(--muted);
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .8rem;
+  line-height: 1.7;
+}
+
+.app-shell.view-channels .directory-empty > button,
+.app-shell.view-people .directory-empty > button {
+  min-height: 38px;
+  margin-top: 5px;
+  padding: 0 14px;
+  border: 1px solid var(--accent-border);
+  border-radius: 11px 11px 11px 3px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .74rem;
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .app-shell.view-channels .directory-page,
+  .app-shell.view-people .directory-page {
+    padding: 22px 14px max(38px, env(safe-area-inset-bottom));
+  }
+
+  .app-shell.view-channels .directory-heading,
+  .app-shell.view-people .directory-heading {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding-bottom: 17px;
+  }
+
+  .app-shell.view-channels .directory-heading h1,
+  .app-shell.view-people .directory-heading h1 {
+    font-size: clamp(1.85rem, 8vw, 2.2rem);
+  }
+
+  .app-shell.view-channels .directory-heading p,
+  .app-shell.view-people .directory-heading p {
+    font-size: .82rem;
+  }
+
+  .app-shell.view-channels .directory-heading .primary-action,
+  .app-shell.view-people .directory-heading .primary-action {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .app-shell.view-channels .directory-toolbar,
+  .app-shell.view-people .directory-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 9px;
+    padding: 9px;
+    margin-bottom: 16px;
+  }
+
+  .app-shell.view-channels .directory-tabs,
+  .app-shell.view-people .directory-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .app-shell.view-channels .directory-tabs button,
+  .app-shell.view-people .directory-tabs button {
+    justify-content: center;
+    padding: 0 6px;
+    font-size: .68rem;
+  }
+
+  .app-shell.view-channels .directory-search,
+  .app-shell.view-people .directory-search {
+    width: 100%;
+    max-width: none;
+    flex: 0 0 40px;
+    box-sizing: border-box;
+  }
+
+  .app-shell.view-channels .directory-community {
+    padding: 11px;
+    margin-bottom: 13px;
+  }
+
+  .app-shell.view-channels .directory-community > header {
+    gap: 9px;
+  }
+
+  .app-shell.view-channels .directory-community > header > button {
+    min-height: 34px;
+    padding: 0 8px;
+    font-size: .64rem;
+  }
+
+  .app-shell.view-channels .directory-channel-row {
+    min-height: 58px;
+    padding: 8px;
+  }
+
+  .app-shell.view-channels .directory-room-action {
+    max-width: 76px;
+    text-align: right;
+    font-size: .55rem;
+  }
+
+  .app-shell.view-people .people-directory-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .app-shell.view-people .people-directory-row {
+    padding: 12px;
+  }
+
+  .app-shell.view-people .people-directory-row > button {
+    min-height: 38px;
+    padding: 0 10px;
+  }
+}
+
+@media (max-width: 370px) {
+  .app-shell.view-channels .directory-page,
+  .app-shell.view-people .directory-page {
+    padding-right: 11px;
+    padding-left: 11px;
+  }
+
+  .app-shell.view-channels .directory-tabs button,
+  .app-shell.view-people .directory-tabs button {
+    font-size: .62rem;
+  }
+
+  .app-shell.view-channels .directory-room-action {
+    display: none;
+  }
+}
+
+/* Safe sidebar refresh: style only the sidebar's own flex children.
+   Do not override the app-shell grid or workspace sizing. */
+.app-shell > .channel-sidebar {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+}
+
+.app-shell > .channel-sidebar > .server-title {
+  flex: 0 0 68px;
+  min-width: 0;
+  padding-inline: 15px;
+  border-bottom-color: var(--line);
+}
+
+.app-shell > .channel-sidebar > .server-title > span {
+  min-width: 0;
+}
+
+.app-shell > .channel-sidebar > .server-title small {
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .62rem;
+  letter-spacing: .12em;
+}
+
+.app-shell > .channel-sidebar > .server-title strong {
+  overflow: hidden;
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+  font-size: .9rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell > .channel-sidebar > .channel-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 14px 10px 18px;
+}
+
+.app-shell > .channel-sidebar .quick-search {
+  min-height: 40px;
+  height: 40px;
+  border-radius: 11px 11px 11px 3px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .78rem;
+}
+
+.app-shell > .channel-sidebar .section-label {
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .62rem;
+  letter-spacing: .1em;
+}
+
+.app-shell > .channel-sidebar .section-label button {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px 9px 9px 3px;
+}
+
+.app-shell > .channel-sidebar .channel-item,
+.app-shell > .channel-sidebar .dm-row {
+  min-width: 0;
+  border-radius: 10px 10px 10px 3px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+}
+
+.app-shell > .channel-sidebar .channel-item {
+  min-height: 39px;
+  height: auto;
+  padding-block: 7px;
+  font-size: .79rem;
+}
+
+.app-shell > .channel-sidebar .dm-row {
+  min-height: 48px;
+}
+
+.app-shell > .channel-sidebar .dm-row strong {
+  font-size: .76rem;
+  font-weight: 750;
+}
+
+.app-shell > .channel-sidebar .dm-row small {
+  overflow: hidden;
+  font-size: .66rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell > .channel-sidebar .social-side-nav {
+  flex: 0 0 auto;
+  padding: 14px 12px 8px;
+}
+
+.app-shell > .channel-sidebar .social-side-nav > button {
+  min-height: 40px;
+  border-radius: 10px 10px 10px 3px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .78rem;
+}
+
+.app-shell > .channel-sidebar .voice-card {
+  flex: 0 0 auto;
+  margin: 0 10px 8px;
+  border-radius: 12px 12px 12px 4px;
+}
+
+.app-shell > .channel-sidebar > .account-panel {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-width: 0;
+  min-height: 72px;
+  margin-top: auto;
+  padding: 9px 9px max(9px, env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--line);
+  background: var(--side);
+  box-shadow: 0 -7px 20px rgba(0, 0, 0, .08);
+}
+
+.app-shell > .channel-sidebar .account-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 8px;
+  padding: 5px 4px;
+  border-radius: 10px 10px 10px 3px;
+}
+
+.app-shell > .channel-sidebar .account-main > span:nth-child(2) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.app-shell > .channel-sidebar .account-main strong {
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .74rem;
+  font-weight: 800;
+}
+
+.app-shell > .channel-sidebar .account-main small {
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .58rem;
+}
+
+.app-shell > .channel-sidebar .account-actions {
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+.app-shell > .channel-sidebar .account-actions button {
+  width: 30px;
+  height: 32px;
+  border-radius: 9px 9px 9px 3px;
+}
+
+.app-shell > .channel-sidebar > .profile-menu {
+  z-index: 90;
+  bottom: 78px;
+  left: 9px;
+  width: min(230px, calc(100% - 18px));
+  max-width: calc(100% - 18px);
+  border-radius: 13px 13px 13px 4px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+}
+
+@media (max-width: 767px) {
+  .app-shell > .channel-sidebar > .account-panel {
+    padding-bottom: max(9px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-shell > .channel-sidebar > .profile-menu {
+    bottom: 78px;
+  }
+}
+
+/* Directory pages do not use the channel sidebar; give the content its space. */
+.app-shell.view-channels > .channel-sidebar,
+.app-shell.view-people > .channel-sidebar {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .app-shell.view-channels,
+  .app-shell.view-people {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Discover communities: immersive single-page layout with an overlay navigation drawer. */
+.app-shell.view-discover {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app-shell.view-discover .workspace {
+  grid-template-rows: 62px minmax(0, 1fr);
+  min-width: 0;
+  width: 100%;
+  height: 100dvh;
+}
+
+.app-shell.view-discover .discover-back,
+.app-shell.view-discover .discover-sidebar-toggle {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 11px 11px 11px 3px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+
+.app-shell.view-discover .discover-back:hover,
+.app-shell.view-discover .discover-sidebar-toggle:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.app-shell.view-discover .topbar-title {
+  gap: 12px;
+}
+
+.app-shell.view-discover .topbar-title > strong {
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+  font-size: .98rem;
+  font-weight: 700;
+  letter-spacing: .015em;
+}
+
+.app-shell.view-discover .topbar-actions {
+  margin-left: auto;
+}
+
+.app-shell.view-discover .server-rail,
+.app-shell.view-discover .channel-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  transform: translateX(-125%);
+  transition: transform .18s ease;
+  box-shadow: 12px 0 35px rgba(0, 0, 0, .28);
+}
+
+.app-shell.view-discover .server-rail {
+  left: 0;
+  z-index: 52;
+}
+
+.app-shell.view-discover .channel-sidebar {
+  left: 68px;
+  z-index: 51;
+  width: 246px;
+}
+
+.app-shell.view-discover.drawer-open .server-rail,
+.app-shell.view-discover.drawer-open .channel-sidebar {
+  transform: translateX(0);
+}
+
+.app-shell.view-discover .drawer-scrim {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: block;
+  border: 0;
+  background: rgba(0, 0, 0, .58);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+}
+
+.app-shell.view-discover.drawer-open .drawer-scrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.app-shell.view-discover .discover-heading h1 {
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+}
+
+.app-shell.view-discover .discover-heading,
+.app-shell.view-discover .directory-empty {
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+}
+
+@media (max-width: 767px) {
+  .app-shell.view-discover .workspace {
+    grid-template-rows: 56px minmax(0, 1fr);
+  }
+
+  .app-shell.view-discover .topbar {
+    padding-inline: 12px;
+  }
+
+  .app-shell.view-discover .discover-back,
+  .app-shell.view-discover .discover-sidebar-toggle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .app-shell.view-discover .channel-sidebar {
+    left: 64px;
+    width: min(270px, calc(100vw - 64px));
+  }
+}
+
+.app-shell.view-discover .discover-back svg { transform: rotate(180deg); }
+
+/* Desktop directory pages must occupy the complete workspace grid. */
+@media (min-width: 768px) {
+  .app-shell.view-channels,
+  .app-shell.view-people {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-shell.view-channels > .workspace,
+  .app-shell.view-people > .workspace {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .app-shell.view-channels .workspace-body,
+  .app-shell.view-people .workspace-body {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-shell.view-channels .chat-panel,
+  .app-shell.view-people .chat-panel {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Discover navigation is a right-side drawer on desktop and mobile. */
+.app-shell.view-discover .server-rail,
+.app-shell.view-discover .channel-sidebar {
+  left: auto;
+  transform: translateX(115%);
+  transition:
+    transform .26s cubic-bezier(.2, .8, .2, 1),
+    box-shadow .26s ease;
+  box-shadow: -14px 0 38px rgba(0, 0, 0, .32);
+}
+
+.app-shell.view-discover .server-rail {
+  right: 0;
+  z-index: 52;
+}
+
+.app-shell.view-discover .channel-sidebar {
+  right: 68px;
+  z-index: 51;
+}
+
+.app-shell.view-discover.drawer-open .server-rail,
+.app-shell.view-discover.drawer-open .channel-sidebar {
+  transform: translateX(0);
+}
+
+.app-shell.view-discover .drawer-scrim {
+  transition: opacity .26s ease;
+}
+
+@media (max-width: 767px) {
+  .app-shell.view-discover .server-rail {
+    right: 0;
+    left: auto;
+    transform: translateX(115%);
+  }
+
+  .app-shell.view-discover .channel-sidebar {
+    right: 64px;
+    left: auto;
+    width: min(270px, calc(100vw - 64px));
+    transform: translateX(115%);
+  }
+
+  .app-shell.view-discover.drawer-open .server-rail,
+  .app-shell.view-discover.drawer-open .channel-sidebar {
+    transform: translateX(0);
+  }
+}
+
+/* Keep drawer motion subtle and consistent across the app. */
+.app-shell:not(.view-discover) .server-rail,
+.app-shell:not(.view-discover) .channel-sidebar {
+  transition:
+    transform .22s cubic-bezier(.2, .8, .2, 1),
+    box-shadow .22s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .server-rail,
+  .app-shell .channel-sidebar {
+    transition: none !important;
+  }
+}
+
+/* Discover drawer: constrain both panels to the viewport's right edge. */
+.app-shell.view-discover {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.app-shell.view-discover .server-rail {
+  left: auto;
+  right: 0;
+  width: 68px;
+  min-width: 68px;
+  max-width: 68px;
+  box-sizing: border-box;
+}
+
+.app-shell.view-discover .channel-sidebar {
+  left: auto;
+  right: 68px;
+  width: 246px;
+  min-width: 0;
+  max-width: calc(100vw - 80px);
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+@media (max-width: 767px) {
+  .app-shell.view-discover .server-rail {
+    right: 0;
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+  }
+
+  .app-shell.view-discover .channel-sidebar {
+    right: 64px;
+    width: min(246px, calc(100vw - 76px));
+    min-width: 0;
+    max-width: calc(100vw - 76px);
+  }
+}
+
+/* Rocket Slide transition for secondary pages (e.g. Home -> Discover). */
+.route-transition-overlay {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #0b1220;
+  clip-path: inset(0 0 0 100%);
+  animation: rocket-curtain 1.18s cubic-bezier(.65, 0, .35, 1) both;
+}
+
+.route-transition-stars {
+  position: absolute;
+  inset: 0;
+  opacity: .9;
+  background-image:
+    radial-gradient(2px 2px at 12% 18%, #fff 60%, transparent 100%),
+    radial-gradient(2px 2px at 26% 72%, #cbd5e1 60%, transparent 100%),
+    radial-gradient(3px 3px at 47% 32%, #fff 60%, transparent 100%),
+    radial-gradient(2px 2px at 68% 64%, #cbd5e1 60%, transparent 100%),
+    radial-gradient(2px 2px at 86% 24%, #fff 60%, transparent 100%),
+    radial-gradient(2px 2px at 92% 82%, #cbd5e1 60%, transparent 100%);
+  background-size: 100% 100%;
+}
+
+.route-transition-rocket {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: block;
+  font-size: clamp(42px, 7vw, 68px);
+  line-height: 1;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .35));
+  transform: translate(-100px, -50%);
+  animation: rocket-flight 1.18s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes rocket-curtain {
+  0% { clip-path: inset(0 0 0 100%); }
+  34%, 66% { clip-path: inset(0); }
+  100% { clip-path: inset(0 100% 0 0); }
+}
+
+@keyframes rocket-flight {
+  0% { transform: translate(-100px, -50%) rotate(-8deg); }
+  52% { transform: translate(calc(50vw - 34px), -50%) rotate(-8deg); }
+  100% { transform: translate(calc(100vw + 100px), -50%) rotate(-8deg); }
+}
+
+/* Navbar destinations use a restrained horizontal slide instead. */
+.app-shell.page-transition-slide .workspace-body {
+  animation: workspace-slide-in .34s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.app-shell.page-transition-slide .topbar {
+  animation: topbar-slide-in .3s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes workspace-slide-in {
+  from { opacity: .72; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes topbar-slide-in {
+  from { opacity: .8; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-transition-overlay,
+  .route-transition-rocket,
+  .app-shell.page-transition-slide .workspace-body,
+  .app-shell.page-transition-slide .topbar {
+    animation: none !important;
+  }
+  .route-transition-overlay { display: none; }
+}
+
+/* Desktop directory views retain the standard navigation rail and sidebar. */
+@media (min-width: 768px) {
+  .app-shell.view-channels,
+  .app-shell.view-people {
+    grid-template-columns: 68px 246px minmax(0, 1fr);
+  }
+
+  .app-shell.view-channels > .server-rail,
+  .app-shell.view-people > .server-rail {
+    display: flex;
+    grid-column: 1;
+  }
+
+  .app-shell.view-channels > .channel-sidebar,
+  .app-shell.view-people > .channel-sidebar {
+    display: flex;
+    grid-column: 2;
+    min-width: 0;
+    width: 246px;
+  }
+
+  .app-shell.view-channels > .workspace,
+  .app-shell.view-people > .workspace {
+    grid-column: 3;
+    grid-row: 1;
+    min-width: 0;
+    width: 100%;
+    max-width: none;
+  }
+
+  .app-shell.view-channels .workspace-body,
+  .app-shell.view-people .workspace-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Mobile directory navigation stays in the bottom navbar, without side drawers. */
+@media (max-width: 767px) {
+  .app-shell.view-channels > .server-rail,
+  .app-shell.view-channels > .channel-sidebar,
+  .app-shell.view-people > .server-rail,
+  .app-shell.view-people > .channel-sidebar {
+    display: none !important;
+  }
+}
+
+/* Direction-aware navbar slides: forward enters from the right, back from the left. */
+.app-shell.page-transition-slide-forward .workspace-body,
+.app-shell.page-transition-slide-forward .topbar {
+  animation: nav-slide-forward .38s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.app-shell.page-transition-slide-backward .workspace-body,
+.app-shell.page-transition-slide-backward .topbar {
+  animation: nav-slide-backward .38s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes nav-slide-forward {
+  from { opacity: .72; transform: translate3d(34px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes nav-slide-backward {
+  from { opacity: .72; transform: translate3d(-34px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* Rocket Slide: same cover, star field, Font Awesome rocket and timing as the reference file. */
+.route-transition-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  overflow: hidden;
+  background: var(--cover, #0b1220);
+  color: var(--star, #e5e7eb);
+  transform: translateX(100%);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.route-transition-overlay.run { pointer-events: auto; }
+
+.route-transition-stars {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.route-transition-stars i {
+  position: absolute;
+  left: 0;
+  display: block;
+  border-radius: 50%;
+  background: var(--star, #e5e7eb);
+  opacity: .8;
+}
+
+.route-transition-rocket {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  color: var(--star, #e5e7eb);
+  font-size: 64px;
+  line-height: 1;
+  transform: translate(110vw, -50%) rotate(-135deg);
+  will-change: transform;
+}
+
+.route-transition-rocket .fa-rocket {
+  display: block;
+  color: inherit;
+}
+
+.route-transition-label {
+  position: absolute;
+  top: calc(50% + 70px);
+  left: 0;
+  right: 0;
+  color: var(--star, #e5e7eb);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  opacity: .8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.page-transition-slide-forward .workspace-body,
+  .app-shell.page-transition-slide-forward .topbar,
+  .app-shell.page-transition-slide-backward .workspace-body,
+  .app-shell.page-transition-slide-backward .topbar {
+    animation: none !important;
+  }
+  .route-transition-overlay { display: none !important; }
+}
+
+/* The Rocket Slide choreography is driven by Web Animations API, not CSS keyframes. */
+.route-transition-overlay {
+  animation: none !important;
+  clip-path: none !important;
+}
+.route-transition-rocket {
+  animation: none !important;
+}
+
+/* --x1-polishui: responsive drawer bounds and smoother navigation-- */
+
+/* Keep the mobile left drawer fully inside the viewport on Home and regular pages. */
+@media (max-width: 767px) {
+  .app-shell:not(.view-discover) > .server-rail {
+    left: 0;
+    right: auto;
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+    box-sizing: border-box;
+  }
+
+  .app-shell:not(.view-discover) > .channel-sidebar {
+    left: 64px;
+    right: auto;
+    width: min(270px, calc(100vw - 76px));
+    min-width: 0;
+    max-width: calc(100vw - 76px);
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .app-shell:not(.view-discover).drawer-open > .channel-sidebar {
+    transform: translateX(0);
+  }
+}
+
+/* Discover uses a right drawer: both panels stay within the physical screen bounds. */
+.app-shell.view-discover {
+  width: 100%;
+  max-width: 100vw;
+  overflow: visible;
+}
+
+/* Keep the Discover drawer visible outside the workspace clipping context. */
+.app-shell.view-discover > .server-rail,
+.app-shell.view-discover > .channel-sidebar {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  max-height: 100dvh;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.app-shell.view-discover.drawer-open > .server-rail,
+.app-shell.view-discover.drawer-open > .channel-sidebar {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.app-shell.view-discover > .server-rail,
+.app-shell.view-discover > .channel-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: auto;
+  box-sizing: border-box;
+  max-height: 100dvh;
+  overflow-x: hidden;
+  will-change: transform;
+  transition: transform .32s cubic-bezier(.22, .8, .22, 1);
+}
+
+.app-shell.view-discover > .server-rail {
+  right: 0;
+  width: 68px;
+  min-width: 68px;
+  max-width: 68px;
+  transform: translate3d(calc(100% + 2px), 0, 0);
+}
+
+.app-shell.view-discover > .channel-sidebar {
+  right: 68px;
+  width: 246px;
+  min-width: 0;
+  max-width: calc(100vw - 68px - 12px);
+  transform: translate3d(calc(100% + 2px), 0, 0);
+}
+
+.app-shell.view-discover.drawer-open > .server-rail,
+.app-shell.view-discover.drawer-open > .channel-sidebar {
+  transform: translate3d(0, 0, 0);
+}
+
+@media (max-width: 767px) {
+  .app-shell.view-discover > .server-rail {
+    right: 0;
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+  }
+
+  .app-shell.view-discover > .channel-sidebar {
+    right: 64px;
+    width: min(246px, calc(100vw - 64px - 12px));
+    min-width: 0;
+    max-width: calc(100vw - 64px - 12px);
+  }
+}
+
+/* Navigation slide: slower, directional, and with a softer landing. */
+.app-shell.page-transition-slide-forward .workspace-body,
+.app-shell.page-transition-slide-forward .topbar {
+  animation: x1-nav-forward .56s cubic-bezier(.22, 1, .36, 1) both;
+  will-change: transform, opacity;
+}
+
+.app-shell.page-transition-slide-backward .workspace-body,
+.app-shell.page-transition-slide-backward .topbar {
+  animation: x1-nav-backward .56s cubic-bezier(.22, 1, .36, 1) both;
+  will-change: transform, opacity;
+}
+
+@keyframes x1-nav-forward {
+  0% { opacity: .68; transform: translate3d(52px, 0, 0); }
+  72% { opacity: 1; transform: translate3d(-3px, 0, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes x1-nav-backward {
+  0% { opacity: .68; transform: translate3d(-52px, 0, 0); }
+  72% { opacity: 1; transform: translate3d(3px, 0, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.page-transition-slide-forward .workspace-body,
+  .app-shell.page-transition-slide-forward .topbar,
+  .app-shell.page-transition-slide-backward .workspace-body,
+  .app-shell.page-transition-slide-backward .topbar,
+  .app-shell.view-discover > .server-rail,
+  .app-shell.view-discover > .channel-sidebar {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* -- X1 drawer containment hotfix: closed by default on phone -- */
+@media (max-width: 767px) {
+  .app-shell:not(.view-discover) > .server-rail {
+    position: fixed !important;
+    top: 0;
+    bottom: 0;
+    left: 0 !important;
+    right: auto !important;
+    width: 64px !important;
+    min-width: 64px !important;
+    max-width: 64px !important;
+    transform: translate3d(-110%, 0, 0) !important;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform .28s cubic-bezier(.22, .8, .22, 1), visibility .28s;
+  }
+
+  .app-shell:not(.view-discover) > .channel-sidebar {
+    position: fixed !important;
+    top: 0;
+    bottom: 0;
+    left: 64px !important;
+    right: auto !important;
+    width: min(270px, calc(100vw - 76px)) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 76px) !important;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    transform: translate3d(-115%, 0, 0) !important;
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform .28s cubic-bezier(.22, .8, .22, 1), visibility .28s;
+  }
+
+  .app-shell:not(.view-discover).drawer-open > .server-rail,
+  .app-shell:not(.view-discover).drawer-open > .channel-sidebar {
+    transform: translate3d(0, 0, 0) !important;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .app-shell:not(.view-discover) > .drawer-scrim {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .app-shell:not(.view-discover).drawer-open > .drawer-scrim {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
