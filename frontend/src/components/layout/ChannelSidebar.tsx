@@ -82,9 +82,11 @@ export function ChannelSidebar({
         ? 'DIRECTORY'
         : view === 'people'
           ? 'COMMUNITY PEOPLE'
-          : view === 'dm'
-            ? 'DIRECT MESSAGES'
-            : 'COMMUNITY'
+          : view === 'home'
+            ? 'HOME'
+            : view === 'dm'
+              ? 'DIRECT MESSAGES'
+              : 'COMMUNITY'
 
   const serverHeaderTitle =
     view === 'social'
@@ -95,9 +97,11 @@ export function ChannelSidebar({
         ? 'Channels'
         : view === 'people'
           ? 'People'
-          : view === 'dm'
-            ? 'Messages'
-            : server?.name ?? 'Community'
+          : view === 'home'
+            ? 'Home'
+            : view === 'dm'
+              ? 'Messages'
+              : server?.name ?? 'Community'
 
   return (
     <aside className="channel-sidebar">
@@ -168,7 +172,7 @@ export function ChannelSidebar({
           <kbd>⌘ K</kbd>
         </button>
 
-        {view === 'dm' ? (
+        {view === 'home' || view === 'dm' ? (
           <>
             <div className="section-label">
               <span>DIRECT MESSAGES</span>
@@ -189,7 +193,7 @@ export function ChannelSidebar({
                 <button
                   type="button"
                   key={c.userId}
-                  className={`dm-row ${dmId === p.id ? 'chosen' : ''}`}
+                  className={`dm-row ${view !== 'home' && dmId === p.id ? 'chosen' : ''}`}
                   onClick={() => onOpenDm(p.id)}
                 >
                   <Avatar user={p} size="small" />
