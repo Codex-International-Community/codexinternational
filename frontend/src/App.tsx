@@ -10,6 +10,7 @@ import { ApiError, getSession, setSession, subscribeSession, type AuthSession } 
 import { useViewport } from './hooks/useViewport'
 import { Landing } from './pages/Landing'
 import { WorkspacePage } from './pages/WorkspacePage'
+import codexLogo from './assets/codex-logo.jpg'
 
 export default function App() {
   const viewport = useViewport()
@@ -81,7 +82,7 @@ export default function App() {
   if (bootstrapping) {
     return (
       <div className="app-boot-screen" role="status" aria-live="polite">
-        <span className="app-boot-mark" aria-hidden="true">c</span>
+        <img className="landing-brand-mark" src={codexLogo} alt="Codex International" width={64} height={64} />
         <span className="app-boot-spinner" aria-hidden="true" />
         <strong>Restoring your session</strong>
         <p>Checking your connection to Codex.</p>
