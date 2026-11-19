@@ -1076,7 +1076,7 @@ export function WorkspacePage({
           ],
         }
       })
-        setDmId(recipientId)
+      setDmId(recipientId)
       setView('dm')
       setMobileTab('chat')
     } catch (error) {
