@@ -1,7 +1,7 @@
 use std::{collections::HashSet,sync::Arc,time::Duration};
 use axum::extract::{State,WebSocketUpgrade,ws::{Message,WebSocket}};
 use chrono::Utc;
-use fred::interfaces::{KeysInterface, PubsubInterface};
+use fred::interfaces::{EventInterface, KeysInterface, PubsubInterface};
 use serde::{Deserialize,Serialize};
 use tokio::{sync::mpsc,time::{interval,timeout}};
 use uuid::Uuid;
@@ -47,7 +47,7 @@ async fn run_socket(mut socket:WebSocket,state:Arc<AppState>){
       match enqueue(&state,&user,channel_id,SendMessageInput{client_msg_id,content,media_id,reply_to_id,reply_to_story_id}).await{Ok(ack)=>{let _=send(&mut socket,ack).await;},Err(e)=>{let _=send(&mut socket,serde_json::json!({"type":"ERROR","code":"SEND_MESSAGE_FAILED","message":e.to_string()})).await;}}
      },
      ClientFrame::TypingStart{channel_id}=>{
-      if channel_access(&state,channel_id,claims.sub,crate::communities::permissions::PERM_SEND_MESSAGES,true).await.is_ok(){let e=serde_json::json!({"type":"TYPING_START","channelId":channel_id,"userId":claims.sub});let _:Result<i64,_>=state.valkey.publish(format!("pubsub:ch:{channel_id}"),e.to_string()).await;}
+      if channel_access(&state,channel_id,claims.sub,crate::communities::permissions::PERM_SEND_MESSAGES,true).await.is_ok(){let e=serde_json::json!({"type":"TYPING_START","channelId":channel_id,"userId":claims.sub});let _:Result<i64,_>=state.valkey.next().publish(format!("pubsub:ch:{channel_id}"),e.to_string()).await;}
      },
      ClientFrame::MarkRead{channel_id,seq_id}=>{
       if channel_access(&state,channel_id,claims.sub,PERM_VIEW_CHANNEL,false).await.is_ok(){let _=sqlx::query("UPDATE channel_members SET last_read_seq_id=GREATEST(last_read_seq_id,$3) WHERE channel_id=$1 AND user_id=$2").bind(channel_id).bind(claims.sub).bind(seq_id.max(0)).execute(&state.pg).await;}
@@ -77,5 +77,5 @@ pub fn start_pubsub_dispatcher(state:Arc<AppState>){
  tokio::spawn(async move{loop{match messages.recv().await{
   Ok(m)=>{let name=m.channel.to_string();let Some(id)=name.strip_prefix("pubsub:ch:").and_then(|s|Uuid::parse_str(s).ok())else{continue;};if let Ok(payload)=m.value.convert::<String>(){state.ws_registry.publish(id,payload).await;}}
   Err(e)=>tracing::warn!(error=%e,"Valkey Pub/Sub receive error")
- }}})
+ }}});
 }

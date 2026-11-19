@@ -93,7 +93,7 @@ async fn member_permissions(
     .await?
     .ok_or_else(|| AppError::NotFound("community not found".to_string()))?;
 
-    let is_owner = access.0 == user_id;
+    let is_owner = access.0 == Some(user_id);
     let permissions = access.1.unwrap_or(0);
     if !is_owner && access.1.is_none() {
         return Err(AppError::Forbidden("community membership required".to_string()));

@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use fred::interfaces::PubsubInterface;
 use axum::{Json,extract::{Path,Query,State},http::StatusCode};
 use serde::{Deserialize,Serialize};
 use uuid::Uuid;
@@ -73,7 +74,7 @@ pub async fn edit_message(
   .into_iter().find(|message|message.id==message_id.to_string())
   .ok_or_else(||AppError::NotFound("message not found after edit".to_string()))?;
  let event=serde_json::json!({"type":"MESSAGE_UPDATE","message":updated});
- let _:Result<i64,_>=state.valkey.publish(format!("pubsub:ch:{channel_id}"),event.to_string()).await;
+ let _:Result<i64,_>=state.valkey.next().publish(format!("pubsub:ch:{channel_id}"),event.to_string()).await;
  Ok(Json(updated))
 }
 
@@ -92,6 +93,6 @@ pub async fn delete_message(
  sqlx::query("UPDATE messages SET content=NULL,deleted_at=NOW() WHERE id=$1")
   .bind(message_id).execute(&state.pg).await?;
  let event=serde_json::json!({"type":"MESSAGE_DELETE","id":message_id,"channelId":channel_id});
- let _:Result<i64,_>=state.valkey.publish(format!("pubsub:ch:{channel_id}"),event.to_string()).await;
+ let _:Result<i64,_>=state.valkey.next().publish(format!("pubsub:ch:{channel_id}"),event.to_string()).await;
  Ok(StatusCode::NO_CONTENT)
 }
