@@ -175,7 +175,8 @@ export function ChannelSidebar({
               <button
                 type="button"
                 aria-label="New direct message"
-                title="New direct message"
+                title={people.length === 0 ? 'People will be available when the community API is connected.' : 'New direct message'}
+                disabled={people.length === 0}
                 onClick={onNewDmModal}
               >
                 <Icon name="plus" size={14} />
@@ -208,7 +209,8 @@ export function ChannelSidebar({
               <button
                 type="button"
                 aria-label="Create channel"
-                title="Create channel"
+                title={server ? 'Create channel' : 'Join a community before creating a channel.'}
+                disabled={!server}
                 onClick={onCreateChannelModal}
               >
                 <Icon name="plus" size={14} />
@@ -258,7 +260,7 @@ export function ChannelSidebar({
                 </button>
               ))}
 
-            <button type="button" className="create-channel" onClick={onCreateChannelModal}>
+            <button type="button" className="create-channel" onClick={onCreateChannelModal} disabled={!server}>
               <Icon name="plus" size={15} /> Create channel
             </button>
 
@@ -267,7 +269,8 @@ export function ChannelSidebar({
               <button
                 type="button"
                 aria-label="New direct message"
-                title="New direct message"
+                title={people.length === 0 ? 'People will be available when the community API is connected.' : 'New direct message'}
+                disabled={people.length === 0}
                 onClick={onNewDmModal}
               >
                 <Icon name="plus" size={14} />

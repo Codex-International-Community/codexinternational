@@ -6,7 +6,7 @@ import '../styles/adaptive.css'
 import type { AuthSession } from '../api/client'
 import type { ViewportInfo } from '../hooks/useViewport'
 import type { Attachment, View } from '../types/common'
-import type { Channel, Data, Message, Server } from '../types/chat'
+import type { Channel, Data, Message } from '../types/chat'
 import type { SocialPost, SocialTab } from '../types/social'
 
 import { people, roomKey } from '../constants/seedData'
@@ -347,7 +347,7 @@ export function WorkspacePage({
     setDrawerOpen(false)
   }
 
-  const showMembersPanel = ((view === 'channel' && Boolean(server)) || view === 'dm') && membersOpen
+  const showMembersPanel = ((view === 'channel' && Boolean(server) && Boolean(channel)) || (view === 'dm' && Boolean(currentDm))) && membersOpen
 
   return (
     <div
@@ -801,45 +801,30 @@ export function WorkspacePage({
           onSubmit={(e) => {
             e.preventDefault()
             if (modal === 'invite') {
-              notify('Invite links will be available when the invite API is connected.')
+              notify('Invite links will be enabled when the community invite API is ready.')
               setModal(null)
               return
             }
             if (modal === 'dm') {
-              if (modalValue) openDm(modalValue)
+              if (modalValue && people.some((person) => person.id === modalValue)) {
+                openDm(modalValue)
+              } else {
+                notify('No contacts are available yet. The people API is not connected.')
+              }
               setModal(null)
+              setModalValue('')
               return
             }
-            const trimmed = modalValue.trim()
-            if (!trimmed) return
-            if (modal === 'server') {
-              const id = `srv-${Date.now()}`
-              const newServer: Server = {
-                id,
-                name: trimmed,
-                abbr: trimmed.slice(0, 2).toUpperCase(),
-                tone: 'blue',
-              }
-              setData((prev) => ({
-                ...prev,
-                servers: [...prev.servers, newServer],
-                channels: { ...prev.channels, [id]: [{ id: 'general', name: 'general', type: 'text' }] },
-              }))
-              pickServer(id)
-            } else {
-              const id = trimmed.toLowerCase().replace(/\s+/g, '-')
-              setData((prev) => ({
-                ...prev,
-                channels: {
-                  ...prev.channels,
-                  [serverId]: [...(prev.channels[serverId] ?? []), { id, name: id, type: 'text' }],
-                },
-              }))
-              setChannelId(id)
-              setView('channel')
+            if (modal === 'server' || modal === 'channel') {
+              notify(
+                modal === 'server'
+                  ? 'Community creation will be enabled when the community API is ready.'
+                  : 'Channel creation will be enabled when the channel API is ready.',
+              )
+              setModal(null)
+              setModalValue('')
+              return
             }
-            setModal(null)
-            setModalValue('')
           }}
           onClose={() => {
             setModal(null)
