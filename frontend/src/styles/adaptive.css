@@ -1781,6 +1781,6 @@ dialog.bot-reveal-modal {
 @media (min-width: 768px) {
   .app-shell.view-channels,
   .app-shell.view-people {
-    grid-template-columns: 68px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 }
