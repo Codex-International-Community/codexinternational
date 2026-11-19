@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import '../styles/landing.css'
+import codexLogo from '../assets/codex-logo.jpg'
 import { ApiError } from '../api/client'
 import {
   isOAuthConfigured,
@@ -19,13 +20,14 @@ const BRAND = 'Codex Internasional Community'
 
 function BrandMark({ size = 52 }: { size?: number }) {
   return (
-    <span
+    <img
       className="landing-brand-mark"
-      style={{ width: size, height: size, fontSize: Math.round(size * 0.56) }}
-      aria-hidden="true"
-    >
-      c
-    </span>
+      src={codexLogo}
+      alt="Codex International"
+      width={size}
+      height={size}
+      style={{ width: size, height: size }}
+    />
   )
 }
 
@@ -46,6 +48,8 @@ function GitHubIcon() {
 
 interface LandingProps {
   onAuthenticated: () => void
+  /** DEV only: dipanggil tombol bypass, arahkan ke WorkspacePage dari parent */
+  onDevBypass?: () => void
   initialError?: string
 }
 
@@ -57,10 +61,11 @@ interface LandingProps {
  * Security: OTP codes are verified strictly on the Rust backend (Brevo + Valkey SHA-256 hash);
  * no OTP code or mock auth bypass is ever stored on the client.
  */
-export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
+export function Landing({ onAuthenticated, onDevBypass, initialError = '' }: LandingProps) {
   const { isMobile } = useViewport()
   const [desktopTab, setDesktopTab] = useState<AuthTab>('otp')
   const [mobileStep, setMobileStep] = useState<MobileStep>('welcome')
+  const [stepDir, setStepDir] = useState<'forward' | 'back'>('forward')
   const [otpSent, setOtpSent] = useState(false)
 
   const [email, setEmail] = useState('')
@@ -85,6 +90,15 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
 
   const validEmail = /^\S+@\S+\.\S+$/.test(email.trim())
 
+  // --goStep--
+
+  const goStep = (step: MobileStep, dir: 'forward' | 'back' = 'forward') => {
+    setError('')
+    setInfo('')
+    setStepDir(dir)
+    setMobileStep(step)
+  }
+
   const handleApiFailure = (err: unknown) => {
     if (err instanceof ApiError) {
       if (err.retryAfterSecs && err.retryAfterSecs > 0) {
@@ -108,6 +122,7 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
       setCooldownSecs(res.next_retry_after_secs > 0 ? res.next_retry_after_secs : 60)
       setInfo(`6-digit OTP sent to ${email.trim()}. Expires in ${Math.round(res.expires_in_secs / 60)} min.`)
       if (isMobile) {
+        setStepDir('forward')
         setMobileStep('otp-verify')
       }
     } catch (err) {
@@ -207,6 +222,23 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
       </button>
     </div>
   )
+
+
+  // --renderDevBypass--
+
+  /* DEV ONLY: dibuang otomatis oleh Vite saat `npm run build` */
+  const renderDevBypass = () =>
+    import.meta.env.DEV ? (
+      <button
+        type="button"
+        className="oauth-btn"
+        style={{ marginTop: 12, width: '100%', WebkitTapHighlightColor: 'transparent' }}
+        onClick={() => (onDevBypass ?? onAuthenticated)()}
+      >
+        <i className="fa-solid fa-bolt" aria-hidden="true" />
+        <span>Dev bypass → Dashboard</span>
+      </button>
+    ) : null
 
   const renderOtpSection = (showEmailField: boolean, showCodeField: boolean) => (
     <>
@@ -455,22 +487,19 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
 
             <div className="landing-or"><span>OR CONTINUE WITH</span></div>
             {renderOAuthButtons()}
+            {renderDevBypass()}
           </section>
         </main>
       ) : (
         /* ── Mobile Step-by-Step Native App Flow ── */
-        <div className="landing-screen">
+        <div className="landing-screen" data-dir={stepDir}>
           {mobileStep !== 'welcome' && (
             <header className="landing-topbar">
               <button
                 type="button"
                 className="landing-back"
                 aria-label="Back"
-                onClick={() => {
-                  setError('')
-                  setInfo('')
-                  setMobileStep(mobileStep === 'otp-verify' ? 'otp-email' : 'welcome')
-                }}
+                onClick={() => goStep(mobileStep === 'otp-verify' ? 'otp-email' : 'welcome', 'back')}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                   <path d="m15 5-7 7 7 7" />
@@ -503,38 +532,27 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
                 <button
                   type="button"
                   className="oauth-btn"
-                  onClick={() => {
-                    setError('')
-                    setInfo('')
-                    setMobileStep('otp-email')
-                  }}
+                  onClick={() => goStep('otp-email')}
                 >
                   Continue with Email OTP
                 </button>
                 <button
                   type="button"
                   className="oauth-btn"
-                  onClick={() => {
-                    setError('')
-                    setInfo('')
-                    setMobileStep('password')
-                  }}
+                  onClick={() => goStep('password')}
                 >
                   Sign in with Password
                 </button>
                 <button
                   type="button"
                   className="oauth-btn"
-                  onClick={() => {
-                    setError('')
-                    setInfo('')
-                    setMobileStep('register')
-                  }}
+                  onClick={() => goStep('register')}
                 >
                   Create new account
                 </button>
                 <div className="landing-or"><span>OR</span></div>
                 {renderOAuthButtons()}
+                {renderDevBypass()}
               </div>
             </>
           )}

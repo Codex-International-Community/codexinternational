@@ -66,14 +66,11 @@
 }
 
 .landing-brand-mark {
-  display: grid;
-  place-items: center;
+  display: block;
   flex: 0 0 auto;
+  object-fit: cover;
   border-radius: 30% 30% 30% 12%;
-  background: #1d9bf0;
-  color: #fff;
-  font-weight: 800;
-  line-height: 1;
+  background: #0e1230;
 }
 
 /* ── Desktop Web Split Showcase Layout ── */
@@ -467,4 +464,211 @@
   .landing-screen {
     animation-duration: 0.01ms !important;
   }
+}
+
+
+/* ══════════════════════════════════════════════
+   POLISH: smooth step transition + button motion
+   (blok ini menimpa transisi lama, UI lain tidak berubah)
+   ══════════════════════════════════════════════ */
+
+
+/* --smooth-step-transition-- */
+
+/* Konten tiap step masuk dari kanan (maju ke form email/password/register) */
+.landing-screen > div {
+  -webkit-animation: landing-step-in-right 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation: landing-step-in-right 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+/* Kembali ke welcome (topbar hilang): konten masuk dari kiri */
+.landing-screen:not(:has(> .landing-topbar)) > div {
+  -webkit-animation-name: landing-step-in-left;
+  animation-name: landing-step-in-left;
+}
+
+.landing-screen > .landing-actions {
+  -webkit-animation-delay: 0.06s;
+  animation-delay: 0.06s;
+}
+
+.landing-screen > .landing-topbar {
+  -webkit-animation: landing-fade-down 0.32s ease backwards;
+  animation: landing-fade-down 0.32s ease backwards;
+}
+
+
+/* --smooth-form-stagger-- */
+
+/* Field form muncul berurutan, halus (mobile & tab desktop) */
+.landing-form > * {
+  -webkit-animation: landing-rise 0.38s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation: landing-rise 0.38s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.landing-form > *:nth-child(2) { -webkit-animation-delay: 0.04s; animation-delay: 0.04s; }
+.landing-form > *:nth-child(3) { -webkit-animation-delay: 0.08s; animation-delay: 0.08s; }
+.landing-form > *:nth-child(4) { -webkit-animation-delay: 0.12s; animation-delay: 0.12s; }
+.landing-form > *:nth-child(5) { -webkit-animation-delay: 0.16s; animation-delay: 0.16s; }
+.landing-form > *:nth-child(n + 6) { -webkit-animation-delay: 0.2s; animation-delay: 0.2s; }
+
+.landing-error,
+.landing-info {
+  -webkit-animation: landing-rise 0.28s ease backwards;
+  animation: landing-rise 0.28s ease backwards;
+}
+
+
+/* --button-motion-- */
+
+.oauth-btn,
+.landing-continue,
+.landing-mode-tabs button,
+.landing-back,
+.landing-help button {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-transition:
+    background 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease,
+    opacity 0.2s ease,
+    -webkit-transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    background 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease,
+    opacity 0.2s ease,
+    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.landing-input {
+  -webkit-transition: border-color 0.2s ease, background 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+/* Hover angkat tipis (hanya device yang punya hover) */
+@media (hover: hover) {
+  .oauth-btn:hover:not(:disabled),
+  .landing-continue.is-ready:hover:not(:disabled) {
+    -webkit-transform: translateY(-1px);
+    transform: translateY(-1px);
+  }
+}
+
+/* Press feedback */
+.oauth-btn:active:not(:disabled),
+.landing-continue:active:not(:disabled) {
+  -webkit-transform: scale(0.97);
+  transform: scale(0.97);
+}
+
+.landing-mode-tabs button:active {
+  -webkit-transform: scale(0.96);
+  transform: scale(0.96);
+}
+
+.landing-back:active {
+  -webkit-transform: translateX(-3px) scale(0.92);
+  transform: translateX(-3px) scale(0.92);
+  opacity: 0.7;
+}
+
+.landing-help button:active:not(:disabled) {
+  opacity: 0.65;
+}
+
+/* Tombol lanjut "pop" kecil saat berubah jadi ready */
+.landing-continue.is-ready {
+  -webkit-animation: landing-ready-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: landing-ready-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+
+/* --polish-keyframes-- */
+
+@-webkit-keyframes landing-step-in-right {
+  from { opacity: 0; -webkit-transform: translateX(28px); transform: translateX(28px); }
+  to   { opacity: 1; -webkit-transform: translateX(0); transform: translateX(0); }
+}
+
+@keyframes landing-step-in-right {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@-webkit-keyframes landing-step-in-left {
+  from { opacity: 0; -webkit-transform: translateX(-28px); transform: translateX(-28px); }
+  to   { opacity: 1; -webkit-transform: translateX(0); transform: translateX(0); }
+}
+
+@keyframes landing-step-in-left {
+  from { opacity: 0; transform: translateX(-28px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@-webkit-keyframes landing-fade-down {
+  from { opacity: 0; -webkit-transform: translateY(-6px); transform: translateY(-6px); }
+  to   { opacity: 1; -webkit-transform: translateY(0); transform: translateY(0); }
+}
+
+@keyframes landing-fade-down {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@-webkit-keyframes landing-rise {
+  from { opacity: 0; -webkit-transform: translateY(8px); transform: translateY(8px); }
+  to   { opacity: 1; -webkit-transform: translateY(0); transform: translateY(0); }
+}
+
+@keyframes landing-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@-webkit-keyframes landing-ready-pop {
+  0%   { -webkit-transform: scale(1); transform: scale(1); }
+  45%  { -webkit-transform: scale(1.025); transform: scale(1.025); }
+  100% { -webkit-transform: scale(1); transform: scale(1); }
+}
+
+@keyframes landing-ready-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.025); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-screen > div,
+  .landing-screen > .landing-topbar,
+  .landing-form > *,
+  .landing-error,
+  .landing-info,
+  .landing-continue.is-ready {
+    -webkit-animation: none !important;
+    animation: none !important;
+  }
+
+  .oauth-btn,
+  .landing-continue,
+  .landing-mode-tabs button,
+  .landing-back,
+  .landing-help button {
+    -webkit-transition: none !important;
+    transition: none !important;
+  }
+}
+
+
+/* --slide-direction-- */
+
+/* Arah slide dari state React (data-dir), menimpa tebakan :has di atas */
+.landing-screen[data-dir='forward'] > div {
+  -webkit-animation-name: landing-step-in-right;
+  animation-name: landing-step-in-right;
+}
+
+.landing-screen[data-dir='back'] > div {
+  -webkit-animation-name: landing-step-in-left;
+  animation-name: landing-step-in-left;
 }
