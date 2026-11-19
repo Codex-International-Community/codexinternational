@@ -4152,3 +4152,13 @@ dialog.modal--discord-server::backdrop {
   }
   .app-shell.view-social .social-heading h1 { font-size: 27px; }
 }
+
+
+/* Live typing status within the Discord message composer area. */
+.typing-indicator {
+  min-height: 18px;
+  padding: 0 18px 5px;
+  color: var(--muted);
+  font-size: .72rem;
+  line-height: 1.4;
+}

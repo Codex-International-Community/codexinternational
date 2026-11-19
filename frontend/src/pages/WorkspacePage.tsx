@@ -274,6 +274,7 @@ export function WorkspacePage({
   )
   const [composer, setComposer] = useState('')
   const [replyTo, setReplyTo] = useState<Message | null>(null)
+  const [typingText, setTypingText] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -564,6 +565,14 @@ export function WorkspacePage({
     const applyMessages = (wireMessages: ChatMessageWire[]) => {
       if (disposed || wireMessages.length === 0) return
       const mapped = wireMessages.map((item) => mapChatMessage(item, session.user.id))
+      const highestSeq = wireMessages.reduce((max, item) => Math.max(max, item.seqId ?? 0), 0)
+      if (highestSeq > 0 && socket?.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'MARK_READ',
+          channel_id: activeChatChannelId,
+          seq_id: highestSeq,
+        }))
+      }
       setData((previous) => {
         const current = view === 'dm'
           ? previous.dmMessages[activeChatChannelId] ?? []
@@ -648,6 +657,16 @@ export function WorkspacePage({
           return
         }
 
+        if (frame.type === 'TYPING_START' && frame.channelId === activeChatChannelId) {
+          const senderId = typeof frame.userId === 'string' ? frame.userId : ''
+          if (senderId && senderId !== session.user.id) {
+            const sender = people.find((person) => person.id === senderId)
+            setTypingText(sender ? `${sender.name} is typing…` : 'Someone is typing…')
+            window.setTimeout(() => setTypingText(''), 2_000)
+          }
+          return
+        }
+
         if (frame.type === 'MESSAGE_DELETE' && frame.id && frame.channelId === activeChatChannelId) {
           setData((previous) => {
             const list = view === 'dm'
@@ -700,6 +719,7 @@ export function WorkspacePage({
     session.access_token,
     session.device_id,
     session.user.id,
+    people,
     notify,
   ])
 
@@ -1338,8 +1358,17 @@ export function WorkspacePage({
                 replyTo={replyTo}
                 editingId={editingId}
                 attachment={attachment}
-                onComposerTextChange={setComposer}
+                onComposerTextChange={(value) => {
+                  setComposer(value)
+                  if (value.trim() && chatSocketRef.current?.readyState === WebSocket.OPEN && chatSocketReadyRef.current && activeChatChannelId) {
+                    chatSocketRef.current.send(JSON.stringify({
+                      type: 'TYPING_START',
+                      channel_id: activeChatChannelId,
+                    }))
+                  }
+                }}
                 onSendMessage={sendMessage}
+                typingText={typingText}
                 onCancelReply={() => setReplyTo(null)}
                 onCancelEdit={() => {
                   setEditingId(null)

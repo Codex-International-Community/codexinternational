@@ -18,6 +18,7 @@ interface ChatPanelProps {
   editingId: string | null
   attachment: Attachment | null
   onComposerTextChange: (value: string) => void
+  typingText?: string
   onSendMessage: (e?: FormEvent) => void
   onCancelReply: () => void
   onCancelEdit: () => void
@@ -51,6 +52,7 @@ export function ChatPanel({
   editingId,
   attachment,
   onComposerTextChange,
+  typingText = '',
   onSendMessage,
   onCancelReply,
   onCancelEdit,
@@ -175,6 +177,10 @@ export function ChatPanel({
           </div>
         )}
       </div>
+
+      {typingText && (
+        <div className="typing-indicator" aria-live="polite">{typingText}</div>
+      )}
 
       <Composer
         inputRef={messageInputRef}
