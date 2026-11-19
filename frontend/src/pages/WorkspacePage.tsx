@@ -541,7 +541,7 @@ export function WorkspacePage({
         onClick={() => setDrawerOpen(false)}
       />
 
-      {view !== 'channels' && view !== 'people' && (view !== 'discover' || drawerOpen) && (
+      {view !== 'channels' && view !== 'people' && (
         <>
           <ServerRail
             servers={data.servers}
