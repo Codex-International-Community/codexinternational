@@ -19,6 +19,7 @@ use crate::{
 };
 
 pub mod auth;
+pub mod chat;
 pub mod communities;
 pub mod gamification;
 pub mod config;
@@ -63,6 +64,7 @@ pub fn app_router(state: Arc<AppState>) -> Router {
         .nest("/api/v1/bots", auth::bots_router())
         .nest("/api/v1/communities", communities::router())
         .nest("/api/v1/dms", communities::dms_router())
+        .nest("/api/v1", chat::router())
         .route("/api/v1/dev/bots/{id}/review", post(auth::bots::review_bot))
         .route(
             "/api/v1/dev/uid-slots",
@@ -81,6 +83,7 @@ pub fn app_router(state: Arc<AppState>) -> Router {
         ));
 
     Router::new()
+        .route("/ws", get(chat::ws::upgrade))
         .route("/health/live", get(health::live))
         .route("/health/ready", get(health::ready))
         .merge(api)

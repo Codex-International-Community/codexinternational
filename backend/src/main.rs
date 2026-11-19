@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use backend::{app_router, config::AppConfig, shared::db::run_migrations, state::AppState};
+use backend::{app_router, chat::{flusher::run_message_flusher, ws::start_pubsub_dispatcher}, config::AppConfig, shared::db::run_migrations, state::AppState};
 use tokio::net::TcpListener;
 use tracing_subscriber::EnvFilter;
 
@@ -49,6 +49,9 @@ async fn main() {
         tracing::error!(error = %err, "failed to run database migrations");
         std::process::exit(1);
     }
+
+    tokio::spawn(run_message_flusher(state.clone()));
+    start_pubsub_dispatcher(state.clone());
 
     let listener = match TcpListener::bind(&bind_addr).await {
         Ok(listener) => listener,

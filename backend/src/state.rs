@@ -16,6 +16,7 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 use thiserror::Error;
 
 use crate::{
+    chat::registry::WsRegistry,
     auth::{
         oauth::{OAuthClient, ReqwestOAuthClient},
         otp::{BrevoEmailSender, EmailSender},
@@ -41,6 +42,7 @@ pub struct AppState {
     pub valkey: Pool,
     pub valkey_sub: SubscriberClient,
     pub valkey_initialized: bool,
+    pub ws_registry: WsRegistry,
     pub password_hasher: PasswordHasher,
     pub email_sender: Arc<dyn EmailSender>,
     pub oauth_client: Arc<dyn OAuthClient>,
@@ -108,6 +110,7 @@ impl AppState {
             valkey,
             valkey_sub,
             valkey_initialized: false,
+            ws_registry: WsRegistry::default(),
             password_hasher: PasswordHasher::default(),
             email_sender,
             oauth_client,
