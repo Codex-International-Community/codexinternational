@@ -228,7 +228,7 @@ export function WorkspacePage({
       )
       animations.push(starAnimation)
     }
-    label.textContent = `Memuat ${title}…`
+    label.textContent = `Memuat ${view}…`
     cover.classList.add('run')
     void (async () => {
       await animate(cover, [{ transform: 'translateX(100%)' }, { transform: 'translateX(0)' }], 550, 'cubic-bezier(.65,0,.35,1)')
