@@ -2006,3 +2006,123 @@ dialog.bot-reveal-modal {
     transition: none !important;
   }
 }
+
+/* Discover drawer: constrain both panels to the viewport's right edge. */
+.app-shell.view-discover {
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.app-shell.view-discover .server-rail {
+  left: auto;
+  right: 0;
+  width: 68px;
+  min-width: 68px;
+  max-width: 68px;
+  box-sizing: border-box;
+}
+
+.app-shell.view-discover .channel-sidebar {
+  left: auto;
+  right: 68px;
+  width: 246px;
+  min-width: 0;
+  max-width: calc(100vw - 80px);
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+@media (max-width: 767px) {
+  .app-shell.view-discover .server-rail {
+    right: 0;
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+  }
+
+  .app-shell.view-discover .channel-sidebar {
+    right: 64px;
+    width: min(246px, calc(100vw - 76px));
+    min-width: 0;
+    max-width: calc(100vw - 76px);
+  }
+}
+
+/* Rocket Slide transition for secondary pages (e.g. Home -> Discover). */
+.route-transition-overlay {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: #0b1220;
+  clip-path: inset(0 0 0 100%);
+  animation: rocket-curtain 1.18s cubic-bezier(.65, 0, .35, 1) both;
+}
+
+.route-transition-stars {
+  position: absolute;
+  inset: 0;
+  opacity: .9;
+  background-image:
+    radial-gradient(2px 2px at 12% 18%, #fff 60%, transparent 100%),
+    radial-gradient(2px 2px at 26% 72%, #cbd5e1 60%, transparent 100%),
+    radial-gradient(3px 3px at 47% 32%, #fff 60%, transparent 100%),
+    radial-gradient(2px 2px at 68% 64%, #cbd5e1 60%, transparent 100%),
+    radial-gradient(2px 2px at 86% 24%, #fff 60%, transparent 100%),
+    radial-gradient(2px 2px at 92% 82%, #cbd5e1 60%, transparent 100%);
+  background-size: 100% 100%;
+}
+
+.route-transition-rocket {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: block;
+  font-size: clamp(42px, 7vw, 68px);
+  line-height: 1;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .35));
+  transform: translate(-100px, -50%);
+  animation: rocket-flight 1.18s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes rocket-curtain {
+  0% { clip-path: inset(0 0 0 100%); }
+  34%, 66% { clip-path: inset(0); }
+  100% { clip-path: inset(0 100% 0 0); }
+}
+
+@keyframes rocket-flight {
+  0% { transform: translate(-100px, -50%) rotate(-8deg); }
+  52% { transform: translate(calc(50vw - 34px), -50%) rotate(-8deg); }
+  100% { transform: translate(calc(100vw + 100px), -50%) rotate(-8deg); }
+}
+
+/* Navbar destinations use a restrained horizontal slide instead. */
+.app-shell.page-transition-slide .workspace-body {
+  animation: workspace-slide-in .34s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.app-shell.page-transition-slide .topbar {
+  animation: topbar-slide-in .3s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes workspace-slide-in {
+  from { opacity: .72; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes topbar-slide-in {
+  from { opacity: .8; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-transition-overlay,
+  .route-transition-rocket,
+  .app-shell.page-transition-slide .workspace-body,
+  .app-shell.page-transition-slide .topbar {
+    animation: none !important;
+  }
+  .route-transition-overlay { display: none; }
+}
