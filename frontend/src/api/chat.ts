@@ -46,7 +46,12 @@ export function mapChatMessage(wire: ChatMessageWire, currentUserId: string): Me
     tone: authorId === currentUserId ? 'self' : wire.tone ?? 'member',
     time,
     text: wire.text ?? wire.content ?? '',
-    reactions: wire.reactions ?? {},
+    reactions: Object.fromEntries(
+      Object.entries(wire.reactions ?? {}).map(([emoji, userIds]) => [
+        emoji,
+        userIds.map((userId) => userId === currentUserId ? 'self' : userId),
+      ]),
+    ),
     replyTo: wire.replyTo ?? wire.replyToId ?? undefined,
     edited: wire.edited ?? false,
     seqId: wire.seqId,

@@ -718,6 +718,17 @@ export function WorkspacePage({
           return
         }
 
+        if (frame.type === 'MESSAGE_PIN_UPDATE' && frame.messageId && frame.channelId === activeChatChannelId) {
+          setData((previous) => {
+            const current = previous.pins[scopeKey] ?? []
+            const next = frame.pinned
+              ? (current.includes(frame.messageId!) ? current : [...current, frame.messageId!])
+              : current.filter((id) => id !== frame.messageId)
+            return { ...previous, pins: { ...previous.pins, [scopeKey]: next } }
+          })
+          return
+        }
+
         if (frame.type === 'MESSAGE_REACTION_UPDATE' && frame.messageId && frame.channelId === activeChatChannelId) {
           const reactions = Object.fromEntries(
             Object.entries(frame.reactions ?? {}).map(([emoji, userIds]) => [
