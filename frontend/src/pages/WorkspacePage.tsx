@@ -278,9 +278,7 @@ export function WorkspacePage({
   const [modalValue, setModalValue] = useState('')
   const [toast, setToast] = useState('')
   const [attachment, setAttachment] = useState<Attachment | null>(null)
-  const [voiceId, setVoiceId] = useState<string | null>(null)
   const [muted, setMuted] = useState(false)
-  const [deafened, setDeafened] = useState(false)
   const [cameraOn, setCameraOn] = useState(false)
   const [screenSharing, setScreenSharing] = useState(false)
   const [profileMenu, setProfileMenu] = useState(false)
@@ -573,7 +571,6 @@ export function WorkspacePage({
 
   const pickChannel = (c: Channel) => {
     if (c.type === 'voice') {
-      setVoiceId(c.id)
       notify(`Connected to ${c.name} voice preview`)
       setDrawerOpen(false)
       return
