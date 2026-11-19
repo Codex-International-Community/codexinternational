@@ -11,7 +11,6 @@ interface SettingsViewProps {
   onToggleTheme: () => void
   onOpenBots?: () => void
   onLogout?: () => void
-  onResetData: () => void
 }
 
 export function SettingsView({
@@ -22,7 +21,6 @@ export function SettingsView({
   onToggleTheme,
   onOpenBots,
   onLogout,
-  onResetData,
 }: SettingsViewProps) {
   const displayNameId = useId()
 
@@ -71,7 +69,7 @@ export function SettingsView({
           value={displayName}
           onChange={(e) => onDisplayNameChange(e.target.value || 'your account')}
         />
-        <p>Your name is used for local workspace messages you send in this browser.</p>
+        <p>This display name is currently a workspace preview preference. Profile syncing will be added with the profile API.</p>
       </section>
 
       <section className="settings-card">
@@ -89,11 +87,8 @@ export function SettingsView({
       </section>
 
       <section className="settings-card">
-        <h2>Local preview cache</h2>
-        <p>Demo community channels and social drafts cached locally can be cleared here without logging out.</p>
-        <button type="button" className="danger-button" onClick={onResetData}>
-          Reset demo cache
-        </button>
+        <h2>Feature availability</h2>
+        <p>Community membership, channels, direct messages, activity, media and profile syncing will appear here as their backend endpoints become available. Your authenticated account session is already connected.</p>
       </section>
     </div>
   )

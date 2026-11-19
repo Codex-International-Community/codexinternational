@@ -11,7 +11,6 @@ import type { SocialPost, SocialTab } from '../types/social'
 
 import { people, roomKey } from '../constants/seedData'
 import {
-  clearDemoStorage,
   loadData,
   loadFollowedHandles,
   loadSocialPosts,
@@ -44,10 +43,20 @@ import { BotsView } from '../components/views/BotsView'
 interface WorkspacePageProps {
   session: AuthSession
   viewport: ViewportInfo
+  sessionWarning?: string
+  onRetrySessionCheck?: () => void
+  onDismissSessionWarning?: () => void
   onLogout: () => Promise<void>
 }
 
-export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProps) {
+export function WorkspacePage({
+  session,
+  viewport,
+  sessionWarning = '',
+  onRetrySessionCheck,
+  onDismissSessionWarning,
+  onLogout,
+}: WorkspacePageProps) {
   const { isMobile, isDesktop } = viewport
   const [data, setData] = useState<Data>(() => {
     const initial = loadData()
@@ -338,7 +347,7 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
     setDrawerOpen(false)
   }
 
-  const showMembersPanel = (view === 'channel' || view === 'dm') && membersOpen
+  const showMembersPanel = ((view === 'channel' && Boolean(server)) || view === 'dm') && membersOpen
 
   return (
     <div
@@ -402,6 +411,7 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
         onToggleDeafen={() => setDeafened((v) => !v)}
         onDisconnectVoice={() => setVoiceId(null)}
         onNavigateSettings={() => navigateView('settings')}
+        onNavigateDiscover={() => navigateView('discover')}
         onToggleTheme={() =>
           setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))
         }
@@ -435,6 +445,23 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
           onOpenSettings={() => navigateView('settings')}
         />
 
+        {sessionWarning && (
+          <div className="session-warning" role="alert">
+            <div className="session-warning-copy">
+              <strong>Session check unavailable</strong>
+              <span>{sessionWarning}</span>
+            </div>
+            <div className="session-warning-actions">
+              {onRetrySessionCheck && (
+                <button type="button" onClick={onRetrySessionCheck}>Retry</button>
+              )}
+              {onDismissSessionWarning && (
+                <button type="button" className="quiet" onClick={onDismissSessionWarning}>Dismiss</button>
+              )}
+            </div>
+          </div>
+        )}
+
         {searchOpen && (
           <SearchStrip
             inputRef={searchInputRef}
@@ -447,7 +474,7 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
           />
         )}
 
-        <div className="workspace-body">
+        <div className={`workspace-body ${!showMembersPanel && view !== 'social' ? 'workspace-body--single' : ''}`}>
           <section className="chat-panel">
             {view === 'social' ? (
               <SocialFeed
@@ -568,14 +595,6 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
                 }
                 onOpenBots={() => navigateView('bots')}
                 onLogout={() => void onLogout()}
-                onResetData={() => {
-                  clearDemoStorage()
-                  setData({
-                    ...loadData(),
-                    displayName: session.user.display_name || session.user.username,
-                  })
-                  notify('Local preview cache cleared')
-                }}
               />
             ) : view === 'discover' ? (
               <DiscoverView
@@ -702,6 +721,9 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
                 onOpenPinnedView={() => navigateView('pinned')}
                 onInvite={() => setModal('invite')}
                 onNotify={notify}
+                onDiscoverCommunities={() => navigateView('discover')}
+                onBrowseChannels={() => navigateView('channels')}
+                onBrowsePeople={() => navigateView('people')}
               />
             )}
           </section>
@@ -747,7 +769,6 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
               }
               if (tab === 'channels') setView('channels')
               if (tab === 'people') setView('people')
-              if (tab === 'bots') setView('bots')
               setDrawerOpen(false)
             }}
           />
