@@ -3775,3 +3775,64 @@ button:hover > .gf-icon { opacity: 1; }
     padding: 12px 10px;
   }
 }
+
+
+/* Final desktop layout correction.
+   A previous legacy rule force-hid the channel sidebar and collapsed the shell
+   to two columns. Override that rule at the end of the cascade. */
+@media (min-width: 768px) {
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) {
+    display: grid !important;
+    grid-template-columns: 68px 320px minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+  }
+
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) > .server-rail {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) > .channel-sidebar {
+    display: flex !important;
+    position: relative !important;
+    inset: auto !important;
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    width: 320px !important;
+    min-width: 320px !important;
+    max-width: 320px !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    transform: none !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 2 !important;
+    overflow: hidden;
+    box-shadow: none !important;
+  }
+
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) > .workspace {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1080px) {
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) {
+    grid-template-columns: 62px 270px minmax(0, 1fr) !important;
+  }
+
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) > .server-rail {
+    width: 62px !important;
+    min-width: 62px !important;
+    max-width: 62px !important;
+  }
+
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) > .channel-sidebar {
+    width: 270px !important;
+    min-width: 270px !important;
+    max-width: 270px !important;
+  }
+}

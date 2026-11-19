@@ -103,7 +103,7 @@ export function HomeView({ conversations, people, onOpenDm, onBrowsePeople }: Ho
           ) : (
             <div className="friends-empty">
               <div className="friends-empty-illustration" aria-hidden="true">
-                <Icon name={'users'} size={34} />
+                <Icon name={'users'} size={24} />
               </div>
               <strong>{emptyTitle}</strong>
               <p>{emptyDescription}</p>
@@ -134,7 +134,7 @@ export function HomeView({ conversations, people, onOpenDm, onBrowsePeople }: Ho
         ) : (
           <div className="active-now-empty">
             <div className="active-now-art" aria-hidden="true">
-              <Icon name="users" size={34} />
+              <Icon name="users" size={24} />
             </div>
             <strong>It's quiet for now</strong>
             <p>When your friends are active, you'll see them here.</p>
