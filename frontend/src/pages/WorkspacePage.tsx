@@ -635,8 +635,8 @@ export function WorkspacePage({
       )}
       <button
         className="drawer-scrim"
-        aria-label="Close navigation"
-        onClick={() => setDrawerOpen(false)}
+        aria-label="Double tap to close navigation"
+        type="button"
       />
 
       <ServerRail
