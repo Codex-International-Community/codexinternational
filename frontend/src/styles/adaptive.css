@@ -2795,3 +2795,37 @@ button:hover > .gf-icon { opacity: 1; }
     grid-template-columns: 68px minmax(0, 1fr) !important;
   }
 }
+
+/* Keep the compact server navigation visible on directory pages without
+   mounting the full channel drawer over their existing content. */
+@media (max-width: 767px) {
+  .app-shell.view-channels > .server-rail,
+  .app-shell.view-people > .server-rail {
+    display: flex !important;
+    position: fixed !important;
+    inset: 56px auto 68px 0 !important;
+    width: 52px !important;
+    min-width: 52px !important;
+    max-width: 52px !important;
+    height: auto !important;
+    transform: none !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 42 !important;
+  }
+
+  .app-shell.view-channels > .workspace,
+  .app-shell.view-people > .workspace {
+    width: calc(100% - 52px);
+    margin-left: 52px;
+  }
+
+  .app-shell.view-channels .mobile-tabs,
+  .app-shell.view-people .mobile-tabs {
+    width: calc(100vw - 52px);
+  }
+}
+.route-transition-rocket .gf-icon {
+  width: 32px;
+  height: 32px;
+}
