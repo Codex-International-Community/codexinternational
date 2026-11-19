@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 :root {
   color-scheme: light dark;
   --rail: #08080A;
@@ -2540,5 +2541,227 @@ dialog.modal {
     gap: 13px;
     margin-bottom: 21px;
     padding-bottom: 17px;
+  }
+}
+
+
+/* ── Home: aligned with the Codex landing visual system ── */
+.app-shell {
+  --landing-display: 'Oxanium', 'Segoe UI', system-ui, sans-serif;
+  --landing-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --landing-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--landing-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.home-page {
+  padding: clamp(26px, 4vw, 52px) clamp(18px, 4vw, 54px) 56px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-page-inner {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(340px, 1.1fr);
+  align-items: start;
+  gap: clamp(28px, 5vw, 64px);
+  width: min(100%, 1060px);
+}
+
+.home-page-header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+  padding: 14px 0 0;
+  border: 0;
+}
+
+.home-page-header h1 {
+  max-width: 12ch;
+  margin: 0 0 13px;
+  color: var(--text);
+  font-family: var(--landing-display);
+  font-size: clamp(2rem, 4vw, 3.15rem);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -.025em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.home-page-header p {
+  max-width: 38ch;
+  color: var(--muted);
+  font-family: var(--landing-sans);
+  font-size: .9375rem;
+  line-height: 1.7;
+}
+
+.home-page-action {
+  min-height: 44px;
+  padding: 0 17px;
+  border: 1px solid var(--accent-border);
+  border-radius: 12px 12px 12px 3px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-family: var(--landing-sans);
+  font-size: .8125rem;
+  font-weight: 700;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.home-page-action:hover {
+  border-color: var(--accent);
+  background: var(--accent-solid);
+  color: #fff;
+}
+
+.home-page-section {
+  min-width: 0;
+  padding: clamp(18px, 2.5vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 14px 3px;
+  background: var(--black, #08080A);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .18);
+}
+
+.home-page-section h2 {
+  margin: 0 0 18px;
+  color: var(--text);
+  font-family: var(--landing-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: .025em;
+  text-transform: uppercase;
+}
+
+.home-conversation-list {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.home-conversation-row {
+  min-height: 76px;
+  gap: 13px;
+  padding: 12px 14px;
+  border-bottom-color: var(--line);
+  background: var(--surface);
+  transition: background .18s ease;
+}
+
+.home-conversation-row:last-child {
+  border-bottom: 0;
+}
+
+.home-conversation-row:hover {
+  background: var(--surface2);
+}
+
+.home-conversation-copy strong {
+  font-family: var(--landing-sans);
+  font-size: .875rem;
+  font-weight: 700;
+}
+
+.home-conversation-copy small {
+  font-family: var(--landing-sans);
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+.home-empty {
+  align-items: flex-start;
+  padding: 24px 4px 6px;
+}
+
+.home-empty > svg {
+  color: var(--accent);
+}
+
+.home-empty strong {
+  font-family: var(--landing-display);
+  font-size: 1rem;
+}
+
+.home-empty p {
+  font-family: var(--landing-sans);
+  font-size: .85rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 900px) {
+  .home-page-inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 26px;
+    max-width: 720px;
+  }
+
+  .home-page-header {
+    position: static;
+    padding-top: 0;
+  }
+
+  .home-page-header h1 {
+    max-width: 18ch;
+  }
+}
+
+@media (max-width: 767px) {
+  .home-page {
+    padding: 25px 16px 28px;
+  }
+
+  .home-page-inner {
+    gap: 24px;
+  }
+
+  .home-page-header {
+    gap: 16px;
+    margin: 0;
+    padding: 4px 0 0;
+  }
+
+  .home-page-header h1 {
+    max-width: 13ch;
+    margin-bottom: 10px;
+    font-size: clamp(1.85rem, 8vw, 2.35rem);
+  }
+
+  .home-page-header p {
+    max-width: 34ch;
+    font-size: .875rem;
+  }
+
+  .home-page-action {
+    width: 100%;
+    min-height: 46px;
+  }
+
+  .home-page-section {
+    padding: 17px 13px;
+    border-radius: 12px 12px 12px 3px;
+  }
+
+  .home-page-section h2 {
+    margin-bottom: 14px;
+    font-size: .98rem;
+  }
+
+  .home-conversation-row {
+    min-height: 68px;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .home-conversation-copy strong {
+    font-size: .84rem;
+  }
+
+  .home-conversation-copy small {
+    font-size: .75rem;
   }
 }
