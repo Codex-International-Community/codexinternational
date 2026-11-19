@@ -81,7 +81,7 @@ export function ChatPanel({
         <button type="button" className="primary-action" onClick={onDiscoverCommunities}>
           <Icon name="compass" size={16} /> Discover communities
         </button>
-        <span className="workspace-empty-note">Community listings and membership will connect when the backend endpoints are ready.</span>
+        <span className="workspace-empty-note">Join a server to see its channels and start chatting.</span>
       </section>
     )
   }
@@ -92,7 +92,7 @@ export function ChatPanel({
         <span className="workspace-empty-mark"><Icon name="hash" size={25} /></span>
         <span className="eyebrow">COMMUNITY CHANNELS</span>
         <h1 id="workspace-empty-title">No channels yet.</h1>
-        <p>Channel navigation is ready. Channel data will appear when the community API is connected.</p>
+        <p>Create or join a server to add channels here.</p>
         <button type="button" className="primary-action" onClick={onBrowseChannels}>Browse channels</button>
       </section>
     )
@@ -104,7 +104,7 @@ export function ChatPanel({
         <span className="workspace-empty-mark"><Icon name="users" size={25} /></span>
         <span className="eyebrow">DIRECT MESSAGES</span>
         <h1 id="workspace-empty-title">No conversations yet.</h1>
-        <p>People and private conversations will appear when their API endpoints are available.</p>
+        <p>Choose a member from the sidebar to start a direct conversation.</p>
         <button type="button" className="primary-action" onClick={onBrowsePeople}>Browse people</button>
       </section>
     )
@@ -171,7 +171,7 @@ export function ChatPanel({
           <div className="empty-state">
             <Icon name="message" size={25} />
             <strong>No messages yet</strong>
-            <span>Message history will appear here when the chat API is connected.</span>
+            <span>Be the first to start the conversation.</span>
           </div>
         )}
       </div>

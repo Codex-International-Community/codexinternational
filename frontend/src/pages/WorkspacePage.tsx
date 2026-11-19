@@ -5,6 +5,8 @@ import '../styles/adaptive.css'
 
 import type { AuthSession } from '../api/client'
 import { ApiError } from '../api/client'
+import { getSession } from '../api/client'
+import { listMessages, mapChatMessage, postMessage, type ChatMessageWire } from '../api/chat'
 import { createChannel as createChannelApi, createCommunity, createOrGetDm, joinCommunity, listChannels, listCommunities, listCommunityMembers } from '../api/communities'
 import type { ViewportInfo } from '../hooks/useViewport'
 import type { Attachment, View } from '../types/common'
@@ -290,6 +292,8 @@ export function WorkspacePage({
   const [followedHandles, setFollowedHandles] = useState<string[]>(loadFollowedHandles)
 
   const messageInputRef = useRef<HTMLInputElement>(null)
+  const chatSocketRef = useRef<WebSocket | null>(null)
+  const chatSocketReadyRef = useRef(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const feedRef = useRef<HTMLDivElement>(null)
   const socialInputRef = useRef<HTMLTextAreaElement>(null)
@@ -532,6 +536,178 @@ export function WorkspacePage({
     )
   }, [data.dmMessages, data.messages, dmChannelId, key, search, view])
 
+  const activeChatChannelId =
+    view === 'dm'
+      ? (data.conversations.find((conversation) => conversation.userId === dmId)?.id ?? null)
+      : view === 'channel' && channel && channel.type !== 'voice'
+        ? channel.id
+        : null
+
+  useEffect(() => {
+    if (!activeChatChannelId) {
+      chatSocketReadyRef.current = false
+      chatSocketRef.current?.close()
+      chatSocketRef.current = null
+      return
+    }
+
+    let disposed = false
+    let retryTimer: number | null = null
+    let heartbeatTimer: number | null = null
+    let retryDelay = 500
+    let socket: WebSocket | null = null
+
+    const scopeKey = view === 'dm'
+      ? activeChatChannelId
+      : roomKey(server?.id ?? '', activeChatChannelId)
+
+    const applyMessages = (wireMessages: ChatMessageWire[]) => {
+      if (disposed || wireMessages.length === 0) return
+      const mapped = wireMessages.map((item) => mapChatMessage(item, session.user.id))
+      setData((previous) => {
+        const current = view === 'dm'
+          ? previous.dmMessages[activeChatChannelId] ?? []
+          : previous.messages[scopeKey] ?? []
+        const byId = new Map(current.map((message) => [message.id, message]))
+        for (const message of mapped) byId.set(message.id, message)
+        const nextMessages = [...byId.values()].sort((a, b) => (a.seqId ?? 0) - (b.seqId ?? 0))
+        return view === 'dm'
+          ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: nextMessages } }
+          : { ...previous, messages: { ...previous.messages, [scopeKey]: nextMessages } }
+      })
+    }
+
+    const connect = () => {
+      if (disposed) return
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      socket = new WebSocket(`${protocol}//${window.location.host}/ws`)
+      chatSocketRef.current = socket
+      chatSocketReadyRef.current = false
+
+      socket.onopen = () => {
+        retryDelay = 500
+        socket?.send(JSON.stringify({
+          type: 'AUTH',
+          access_token: session.access_token,
+          device_id: session.device_id,
+        }))
+      }
+
+      socket.onmessage = (event) => {
+        let frame: {
+          type?: string
+          channelId?: string
+          messages?: ChatMessageWire[]
+          message?: ChatMessageWire
+          id?: string
+          code?: string
+          messageText?: string
+        }
+        try {
+          frame = JSON.parse(String(event.data))
+        } catch {
+          return
+        }
+
+        if (frame.type === 'READY') {
+          chatSocketReadyRef.current = true
+          const existing = view === 'dm'
+            ? data.dmMessages[activeChatChannelId] ?? []
+            : data.messages[scopeKey] ?? []
+          const lastSeenSeq = existing.reduce((max, item) => Math.max(max, item.seqId ?? 0), 0)
+          socket?.send(JSON.stringify({
+            type: 'SUBSCRIBE_CHANNELS',
+            channels: [{ channel_id: activeChatChannelId, last_seen_seq_id: lastSeenSeq }],
+          }))
+          socket?.send(JSON.stringify({ type: 'FOCUS_CHANNEL', channel_id: activeChatChannelId }))
+          heartbeatTimer = window.setInterval(() => {
+            if (socket?.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({ type: 'PING' }))
+            }
+          }, 25_000)
+          return
+        }
+
+        if (frame.type === 'GAP_SYNC_BATCH' && frame.channelId === activeChatChannelId) {
+          applyMessages(frame.messages ?? [])
+          return
+        }
+
+        if (frame.type === 'MESSAGE_CREATE' && frame.message?.channelId === activeChatChannelId) {
+          applyMessages([frame.message])
+          return
+        }
+
+        if (frame.type === 'MESSAGE_UPDATE' && frame.message?.channelId === activeChatChannelId) {
+          const updated = mapChatMessage(frame.message, session.user.id)
+          setData((previous) => {
+            const list = view === 'dm'
+              ? previous.dmMessages[activeChatChannelId] ?? []
+              : previous.messages[scopeKey] ?? []
+            const next = list.map((item) => item.id === updated.id ? updated : item)
+            return view === 'dm'
+              ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next } }
+              : { ...previous, messages: { ...previous.messages, [scopeKey]: next } }
+          })
+          return
+        }
+
+        if (frame.type === 'MESSAGE_DELETE' && frame.id && frame.channelId === activeChatChannelId) {
+          setData((previous) => {
+            const list = view === 'dm'
+              ? previous.dmMessages[activeChatChannelId] ?? []
+              : previous.messages[scopeKey] ?? []
+            const next = list.filter((item) => item.id !== frame.id)
+            return view === 'dm'
+              ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next } }
+              : { ...previous, messages: { ...previous.messages, [scopeKey]: next } }
+          })
+          return
+        }
+
+        if (frame.type === 'ERROR' && frame.code === 'UNAUTHORIZED') {
+          chatSocketReadyRef.current = false
+          notify('Chat connection was rejected. Please sign in again.')
+        }
+      }
+
+      socket.onclose = () => {
+        chatSocketReadyRef.current = false
+        if (heartbeatTimer !== null) {
+          window.clearInterval(heartbeatTimer)
+          heartbeatTimer = null
+        }
+        if (disposed) return
+        retryTimer = window.setTimeout(connect, retryDelay)
+        retryDelay = Math.min(10_000, retryDelay * 2)
+      }
+
+      socket.onerror = () => {
+        socket?.close()
+      }
+    }
+
+    connect()
+    return () => {
+      disposed = true
+      chatSocketReadyRef.current = false
+      if (retryTimer !== null) window.clearTimeout(retryTimer)
+      if (heartbeatTimer !== null) window.clearInterval(heartbeatTimer)
+      if (socket && socket.readyState < WebSocket.CLOSING) socket.close()
+      if (chatSocketRef.current === socket) chatSocketRef.current = null
+    }
+  }, [
+    activeChatChannelId,
+    view,
+    server?.id,
+    dmId,
+    session.access_token,
+    session.device_id,
+    session.user.id,
+    notify,
+  ])
+
+
   const pinnedMessages = useMemo(
     () =>
       Object.entries(data.pins).flatMap(([scope, ids]) => {
@@ -681,64 +857,59 @@ export function WorkspacePage({
     }
   }
 
-  const sendMessage = (e?: FormEvent) => {
+  const sendMessage = async (e?: FormEvent) => {
     e?.preventDefault()
     const clean = composer.trim()
-    if (!clean && !attachment) return
+    if (attachment) {
+      notify('File uploads are not connected yet. Text messages are ready.')
+      return
+    }
+    if (!clean || !activeChatChannelId) return
 
     if (editingId) {
-      setData((prev) => {
-        const list = view === 'dm' ? (prev.dmMessages[dmChannelId] ?? []) : (prev.messages[key] ?? [])
-        const nextList = list.map((m) =>
-          m.id === editingId ? { ...m, text: clean, edited: true } : m,
-        )
-        return view === 'dm'
-          ? { ...prev, dmMessages: { ...prev.dmMessages, [dmChannelId]: nextList } }
-          : { ...prev, messages: { ...prev.messages, [key]: nextList } }
-      })
-      setEditingId(null)
-      setComposer('')
+      notify('Message editing is not connected yet.')
       return
     }
 
-    const now = new Date()
-    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-    const nextMessage: Message = {
-      id: `m${Date.now()}`,
-      authorId: 'self',
-      author: data.displayName,
-      initials,
-      tone: 'self',
-      time,
-      text: clean || `Shared ${attachment?.name ?? 'attachment'}`,
-      reactions: {},
-      replyTo: replyTo?.id,
-      attachment: attachment ?? undefined,
+    const clientMessageId = crypto.randomUUID()
+    const frame = {
+      type: 'SEND_MESSAGE',
+      channel_id: activeChatChannelId,
+      client_msg_id: clientMessageId,
+      content: clean,
+      reply_to_id: replyTo?.id,
     }
 
-    setData((prev) => {
-      if (view === 'dm') {
-        const existing = prev.conversations.some((c) => c.userId === dmId)
-        const nextConvs = existing
-          ? prev.conversations.map((c) =>
-              c.userId === dmId ? { ...c, lastMessage: nextMessage.text, unread: 0 } : c,
-            )
-          : [...prev.conversations, { id: dmChannelId, userId: dmId, lastMessage: nextMessage.text, unread: 0 }]
-        return {
-          ...prev,
-          conversations: nextConvs,
-          dmMessages: { ...prev.dmMessages, [dmChannelId]: [...(prev.dmMessages[dmChannelId] ?? []), nextMessage] },
-        }
+    try {
+      const socket = chatSocketRef.current
+      if (socket && socket.readyState === WebSocket.OPEN && chatSocketReadyRef.current) {
+        socket.send(JSON.stringify(frame))
+      } else {
+        const ack = await postMessage(activeChatChannelId, {
+          client_msg_id: clientMessageId,
+          content: clean,
+          reply_to_id: replyTo?.id,
+        })
+        const persisted = await listMessages(activeChatChannelId, Math.max(0, ack.seq_id - 1), 5)
+        const mapped = persisted
+        setData((previous) => {
+          const current = view === 'dm'
+            ? previous.dmMessages[activeChatChannelId] ?? []
+            : previous.messages[key] ?? []
+          const byId = new Map(current.map((message) => [message.id, message]))
+          for (const message of mapped) byId.set(message.id, message)
+          const next = [...byId.values()].sort((a, b) => (a.seqId ?? 0) - (b.seqId ?? 0))
+          return view === 'dm'
+            ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next } }
+            : { ...previous, messages: { ...previous.messages, [key]: next } }
+        })
       }
-      return {
-        ...prev,
-        messages: { ...prev.messages, [key]: [...(prev.messages[key] ?? []), nextMessage] },
-      }
-    })
 
-    setComposer('')
-    setReplyTo(null)
-    setAttachment(null)
+      setComposer('')
+      setReplyTo(null)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Message could not be sent.')
+    }
   }
 
   const pickServer = (id: string) => {

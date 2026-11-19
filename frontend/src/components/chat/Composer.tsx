@@ -143,7 +143,7 @@ export function Composer({
         <span>
           <kbd>ENTER</kbd> to send
         </span>
-        <span>Stored in this browser only</span>
+        <span>Synced with this conversation</span>
       </div>
     </div>
   )

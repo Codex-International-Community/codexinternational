@@ -36,6 +36,8 @@ export interface Message {
   replyTo?: string
   attachment?: Attachment
   edited?: boolean
+  seqId?: number
+  clientMsgId?: string
   role?: string
 }
 
