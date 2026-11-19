@@ -1,5 +1,62 @@
 import type { IconName } from '../../types/common'
-import { iconPaths } from '../../constants/icons'
+
+const gentlefaceNames: Record<IconName, string> = {
+  home: 'home',
+  compass: 'compass',
+  plus: 'plus',
+  chevron: 'chevron-down',
+  hash: 'hash',
+  volume: 'volume',
+  search: 'search',
+  bell: 'bell',
+  users: 'users',
+  pin: 'pin',
+  inbox: 'inbox',
+  help: 'help-circle',
+  info: 'info',
+  settings: 'settings',
+  mic: 'mic',
+  headphones: 'headset',
+  more: 'more-horizontal',
+  send: 'send',
+  smile: 'smile',
+  paperclip: 'paperclip',
+  gift: 'gift',
+  image: 'image',
+  reply: 'reply',
+  copy: 'copy',
+  close: 'x',
+  menu: 'menu',
+  phone: 'phone',
+  video: 'video',
+  screen: 'monitor',
+  shield: 'shield',
+  at: 'at-sign',
+  calendar: 'calendar',
+  sparkles: 'sparkles',
+  logout: 'log-out',
+  check: 'check',
+  user: 'user',
+  message: 'message',
+  edit: 'edit',
+  bookmark: 'bookmark',
+  external: 'external-link',
+  mute: 'volume-off',
+  thread: 'messages',
+  flag: 'flag',
+  link: 'link',
+  arrow: 'arrow-right',
+  trash: 'trash',
+  save: 'save',
+  moon: 'moon',
+  sun: 'sun',
+  play: 'play',
+  arrowUp: 'arrow-up',
+  heart: 'heart',
+  share: 'share',
+  eye: 'eye',
+  eyeOff: 'eye-off',
+}
 
 interface IconProps {
   name: IconName
@@ -7,19 +64,17 @@ interface IconProps {
 }
 
 export function Icon({ name, size = 18 }: IconProps) {
+  // Gentleface icons are drawn on a 16px grid; use native 16px or 32px assets.
+  const iconSize = size > 24 ? 32 : 16
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+    <img
+      className="gf-icon"
+      src={`https://gentleface.com/svg/line-round/${iconSize}/${gentlefaceNames[name]}.svg`}
+      width={iconSize}
+      height={iconSize}
+      alt=""
       aria-hidden="true"
-    >
-      <path d={iconPaths[name]} />
-    </svg>
+      draggable={false}
+    />
   )
 }
