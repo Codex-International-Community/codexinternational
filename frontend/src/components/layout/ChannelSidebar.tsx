@@ -139,7 +139,7 @@ export function ChannelSidebar({
             className={socialTab === 'for-you' ? 'selected' : ''}
             onClick={() => onSelectSocialTab('for-you')}
           >
-            <span aria-hidden="true">◉</span> For you
+            <Icon name="compass" size={16} /> For you
           </button>
           <button
             type="button"
