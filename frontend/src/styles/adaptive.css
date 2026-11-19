@@ -2265,3 +2265,12 @@ dialog.bot-reveal-modal {
   }
   .route-transition-overlay { display: none !important; }
 }
+
+/* The Rocket Slide choreography is driven by Web Animations API, not CSS keyframes. */
+.route-transition-overlay {
+  animation: none !important;
+  clip-path: none !important;
+}
+.route-transition-rocket {
+  animation: none !important;
+}
