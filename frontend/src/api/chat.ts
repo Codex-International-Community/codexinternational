@@ -97,3 +97,35 @@ export async function deleteMessage(messageId: string): Promise<void> {
     method: 'DELETE',
   })
 }
+
+export interface MessageReactionsResult {
+  message_id: string
+  channel_id: string
+  reactions: Record<string, string[]>
+}
+
+export async function toggleMessageReaction(
+  messageId: string,
+  emoji: string,
+): Promise<MessageReactionsResult> {
+  return apiRequest<MessageReactionsResult>(
+    `/api/v1/messages/${encodeURIComponent(messageId)}/reactions/${encodeURIComponent(emoji)}`,
+    { method: 'POST' },
+  )
+}
+
+export async function pinMessage(messageId: string): Promise<void> {
+  await apiRequest<void>(`/api/v1/messages/${encodeURIComponent(messageId)}/pin`, { method: 'POST' })
+}
+
+export async function unpinMessage(messageId: string): Promise<void> {
+  await apiRequest<void>(`/api/v1/messages/${encodeURIComponent(messageId)}/pin`, { method: 'DELETE' })
+}
+
+export async function listPinnedMessages(channelId: string): Promise<Message[]> {
+  const result = await apiRequest<ChatMessageWire[]>(
+    `/api/v1/channels/${encodeURIComponent(channelId)}/pins`,
+  )
+  const currentUserId = getSession()?.user.id ?? ''
+  return result.map((message) => mapChatMessage(message, currentUserId))
+}

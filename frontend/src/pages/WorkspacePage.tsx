@@ -432,6 +432,54 @@ export function WorkspacePage({
   }, [view, serverId, channelId, dmId])
 
   useEffect(() => {
+    if (view !== 'pinned') return
+    let cancelled = false
+    const targets = [
+      ...data.servers.flatMap((serverItem) =>
+        (data.channels[serverItem.id] ?? []).map((channelItem) => ({
+          channelId: channelItem.id,
+          scope: roomKey(serverItem.id, channelItem.id),
+          direct: false,
+        })),
+      ),
+      ...data.conversations.map((conversation) => ({
+        channelId: conversation.id,
+        scope: `dm:${conversation.id}`,
+        direct: true,
+      })),
+    ]
+
+    void Promise.all(
+      targets.map(async (target) => ({
+        ...target,
+        messages: await listPinnedMessages(target.channelId).catch(() => []),
+      })),
+    ).then((results) => {
+      if (cancelled) return
+      setData((previous) => {
+        const nextPins = { ...previous.pins }
+        const nextMessages = { ...previous.messages }
+        const nextDmMessages = { ...previous.dmMessages }
+        for (const result of results) {
+          nextPins[result.scope] = result.messages.map((message) => message.id)
+          if (result.direct) {
+            nextDmMessages[result.channelId] = result.messages
+          } else {
+            nextMessages[result.scope] = result.messages
+          }
+        }
+        return { ...previous, pins: nextPins, messages: nextMessages, dmMessages: nextDmMessages }
+      })
+    }).catch((error: unknown) => {
+      if (!cancelled) notify(error instanceof Error ? error.message : 'Pinned messages could not be loaded.')
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [view, data.servers, data.channels, data.conversations, notify])
+
+  useEffect(() => {
     const ok = saveSocialPosts(socialPosts)
     if (!ok) {
       window.setTimeout(
@@ -611,6 +659,9 @@ export function WorkspacePage({
           id?: string
           code?: string
           messageText?: string
+          messageId?: string
+          reactions?: Record<string, string[]>
+          userId?: string
         }
         try {
           frame = JSON.parse(String(event.data))
@@ -664,6 +715,25 @@ export function WorkspacePage({
             setTypingText(sender ? `${sender.name} is typing…` : 'Someone is typing…')
             window.setTimeout(() => setTypingText(''), 2_000)
           }
+          return
+        }
+
+        if (frame.type === 'MESSAGE_REACTION_UPDATE' && frame.messageId && frame.channelId === activeChatChannelId) {
+          const reactions = Object.fromEntries(
+            Object.entries(frame.reactions ?? {}).map(([emoji, userIds]) => [
+              emoji,
+              userIds.map((userId) => userId === session.user.id ? 'self' : userId),
+            ]),
+          )
+          setData((previous) => {
+            const list = view === 'dm'
+              ? previous.dmMessages[activeChatChannelId] ?? []
+              : previous.messages[scopeKey] ?? []
+            const next = list.map((item) => item.id === frame.messageId ? { ...item, reactions } : item)
+            return view === 'dm'
+              ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next } }
+              : { ...previous, messages: { ...previous.messages, [scopeKey]: next } }
+          })
           return
         }
 
@@ -1391,22 +1461,26 @@ export function WorkspacePage({
                 }}
                 onAddEmoji={(emoji) => setComposer((v) => `${v} ${emoji}`)}
                 onReact={(id, emoji) => {
-                  setData((prev) => {
-                    const list = view === 'dm' ? (prev.dmMessages[dmChannelId] ?? []) : (prev.messages[key] ?? [])
-                    const nextList = list.map((m) => {
-                      if (m.id !== id) return m
-                      const users = m.reactions[emoji] ?? []
-                      const nextUsers = users.includes('self')
-                        ? users.filter((u) => u !== 'self')
-                        : [...users, 'self']
-                      const nextReactions = { ...m.reactions, [emoji]: nextUsers }
-                      if (nextUsers.length === 0) delete nextReactions[emoji]
-                      return { ...m, reactions: nextReactions }
-                    })
-                    return view === 'dm'
-                      ? { ...prev, dmMessages: { ...prev.dmMessages, [dmChannelId]: nextList } }
-                      : { ...prev, messages: { ...prev.messages, [key]: nextList } }
-                  })
+                  void (async () => {
+                    try {
+                      const result = await toggleMessageReaction(id, emoji)
+                      const reactions = Object.fromEntries(
+                        Object.entries(result.reactions).map(([reaction, userIds]) => [
+                          reaction,
+                          userIds.map((userId) => userId === session.user.id ? 'self' : userId),
+                        ]),
+                      )
+                      setData((previous) => {
+                        const list = view === 'dm' ? (previous.dmMessages[dmChannelId] ?? []) : (previous.messages[key] ?? [])
+                        const nextList = list.map((message) => message.id === id ? { ...message, reactions } : message)
+                        return view === 'dm'
+                          ? { ...previous, dmMessages: { ...previous.dmMessages, [dmChannelId]: nextList } }
+                          : { ...previous, messages: { ...previous.messages, [key]: nextList } }
+                      })
+                    } catch (error) {
+                      notify(error instanceof Error ? error.message : 'Reaction could not be saved.')
+                    }
+                  })()
                 }}
                 onReply={setReplyTo}
                 onEdit={(m) => {
@@ -1431,13 +1505,22 @@ export function WorkspacePage({
                   })()
                 }}
                 onTogglePin={(m) => {
-                  setData((prev) => {
-                    const current = prev.pins[key] ?? []
-                    const next = current.includes(m.id)
-                      ? current.filter((x) => x !== m.id)
-                      : [...current, m.id]
-                    return { ...prev, pins: { ...prev.pins, [key]: next } }
-                  })
+                  void (async () => {
+                    const isPinned = (data.pins[key] ?? []).includes(m.id)
+                    try {
+                      if (isPinned) await unpinMessage(m.id)
+                      else await pinMessage(m.id)
+                      setData((previous) => {
+                        const current = previous.pins[key] ?? []
+                        const next = isPinned
+                          ? current.filter((item) => item !== m.id)
+                          : [...current, m.id]
+                        return { ...previous, pins: { ...previous.pins, [key]: next } }
+                      })
+                    } catch (error) {
+                      notify(error instanceof Error ? error.message : 'Pin change could not be saved.')
+                    }
+                  })()
                 }}
                 onOpenPinnedView={() => navigateView('pinned')}
                 onInvite={() => setModal('invite')}
