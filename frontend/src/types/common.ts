@@ -1,6 +1,7 @@
 export type IconName =
   | 'home'
   | 'compass'
+  | 'rocket'
   | 'plus'
   | 'chevron'
   | 'hash'
