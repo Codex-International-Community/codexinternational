@@ -61,6 +61,8 @@ pub fn app_router(state: Arc<AppState>) -> Router {
     let api = Router::new()
         .nest("/api/v1/auth", auth::router())
         .nest("/api/v1/bots", auth::bots_router())
+        .nest("/api/v1/communities", communities::router())
+        .nest("/api/v1/dms", communities::dms_router())
         .route("/api/v1/dev/bots/{id}/review", post(auth::bots::review_bot))
         .route(
             "/api/v1/dev/uid-slots",
