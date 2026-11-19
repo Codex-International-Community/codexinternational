@@ -133,7 +133,7 @@ jobs:
             sudo systemctl restart codexter-backend
 
             cd "$APP_DIR/frontend"
-            npm ci
+            npm ci --include=dev
             npm run build
 
             curl -fsS http://127.0.0.1:8081/health/live > /dev/null
