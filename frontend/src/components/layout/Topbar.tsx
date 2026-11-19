@@ -55,7 +55,7 @@ export function Topbar({
           : view === 'bots'
             ? 'shield'
             : view === 'home'
-              ? 'home'
+              ? 'users'
               : view === 'dm'
               ? 'message'
               : view === 'discover'
@@ -74,7 +74,7 @@ export function Topbar({
 
   const topicText =
     view === 'home'
-      ? 'Your direct messages and recent conversations.'
+      ? ''
       : view === 'channel'
       ? 'A place to share ideas and catch up.'
       : view === 'dm'
@@ -97,7 +97,7 @@ export function Topbar({
           <Icon name={symbolIcon} />
         </span>
         <strong>{title}</strong>
-        {!isMobile && (
+        {!isMobile && view !== 'home' && topicText && (
           <>
             <i />
             <span className="channel-topic">{topicText}</span>

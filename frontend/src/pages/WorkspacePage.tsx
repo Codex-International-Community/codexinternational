@@ -21,6 +21,7 @@ import {
 
 import { Toast } from '../components/common/Toast'
 import { ServerRail } from '../components/layout/ServerRail'
+import { ChannelSidebar } from '../components/layout/ChannelSidebar'
 import { Topbar } from '../components/layout/Topbar'
 import { SearchStrip } from '../components/layout/SearchStrip'
 import { MobileTabs, type MobileTab } from '../components/layout/MobileTabs'
@@ -444,7 +445,7 @@ export function WorkspacePage({
 
   const title =
     view === 'home'
-      ? 'Home'
+      ? 'Friends'
       : view === 'channel'
       ? channel?.name ?? 'general'
       : view === 'dm'
@@ -619,30 +620,64 @@ export function WorkspacePage({
         servers={data.servers}
         activeServerId={serverId}
         activeView={view}
-        currentUser={currentUser}
-        displayName={data.displayName}
-        theme={data.theme}
-        profileMenuOpen={profileMenu}
+        onSelectHome={() => {
+          setView('home')
+          setMobileTab('home')
+        }}
         onSelectServer={pickServer}
         onCreateServer={() => {
           setModal('server')
           setModalValue('')
         }}
+        onNavigateDiscover={() => navigateView('discover')}
         onOpenBots={() => navigateView('bots')}
-        onToggleProfileMenu={() => setProfileMenu((open) => !open)}
-        onNavigateSettings={() => {
-          setProfileMenu(false)
-          navigateView('settings')
-        }}
-        onToggleTheme={() => {
-          setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))
-          setProfileMenu(false)
-        }}
-        onLogout={() => {
-          setProfileMenu(false)
-          void onLogout()
-        }}
       />
+
+      {view !== 'discover' && view !== 'channels' && view !== 'people' && (
+        <ChannelSidebar
+          currentUser={currentUser}
+          view={view}
+          server={server}
+          channels={channels}
+          channelId={channel?.id ?? ''}
+          dmId={dmId}
+          conversations={data.conversations}
+          people={people}
+          displayName={data.displayName}
+          theme={data.theme}
+          socialTab={socialTab}
+          voiceId={null}
+          muted={muted}
+          deafened={false}
+          profileMenuOpen={profileMenu}
+          onToggleProfileMenu={() => setProfileMenu((open) => !open)}
+          onSelectSocialTab={setSocialTab}
+          onOpenQuickSearch={() => setSearchOpen(true)}
+          onSelectChannel={pickChannel}
+          onOpenDm={openDm}
+          onCreateChannelModal={() => {
+            setModal('channel')
+            setModalValue('')
+          }}
+          onNewDmModal={() => {
+            setModal('dm')
+            setModalValue('')
+          }}
+          onVoiceChannelNotice={() => notify('Voice is not connected yet.')}
+          onToggleMute={() => setMuted((value) => !value)}
+          onToggleDeafen={() => notify('Deafen will be available when voice is connected.')}
+          onDisconnectVoice={() => notify('No active voice connection.')}
+          onNavigateHome={() => {
+            setView('home')
+            setMobileTab('home')
+          }}
+          onNavigateSettings={() => navigateView('settings')}
+          onNavigateDiscover={() => navigateView('discover')}
+          onToggleTheme={() => setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))}
+          onOpenBots={() => navigateView('bots')}
+          onLogout={() => void onLogout()}
+        />
+      )}
 
       <main className="workspace">
         <Topbar

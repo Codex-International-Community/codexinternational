@@ -1,60 +1,46 @@
-import { Avatar } from '../common/Avatar'
 import { Icon } from '../common/Icon'
-import type { Server, User } from '../../types/chat'
-import type { Theme, View } from '../../types/common'
+import type { Server } from '../../types/chat'
+import type { View } from '../../types/common'
 
 interface ServerRailProps {
   servers: Server[]
   activeServerId: string
   activeView: View
-  currentUser: User
-  displayName: string
-  theme: Theme
-  profileMenuOpen: boolean
+  onSelectHome: () => void
   onSelectServer: (id: string) => void
   onCreateServer: () => void
+  onNavigateDiscover: () => void
   onOpenBots: () => void
-  onToggleProfileMenu: () => void
-  onNavigateSettings: () => void
-  onToggleTheme: () => void
-  onLogout: () => void
 }
 
 export function ServerRail({
   servers,
   activeServerId,
   activeView,
-  currentUser,
-  displayName,
-  theme,
-  profileMenuOpen,
+  onSelectHome,
   onSelectServer,
   onCreateServer,
+  onNavigateDiscover,
   onOpenBots,
-  onToggleProfileMenu,
-  onNavigateSettings,
-  onToggleTheme,
-  onLogout,
 }: ServerRailProps) {
-  // The join endpoint is not connected yet, so the plus action stays unavailable.
-  const canJoinRegisteredServer = false
+  const homeActive = activeView === 'home' || activeView === 'dm'
 
   return (
-    <aside className="server-rail" aria-label="Joined servers">
+    <aside className="server-rail" aria-label="Server navigation">
       <button
         type="button"
-        className="rail-add"
-        aria-label="Join a registered server"
-        title={canJoinRegisteredServer ? 'Join a server' : 'No registered servers available to join'}
-        disabled={!canJoinRegisteredServer}
-        onClick={onCreateServer}
+        className={`brand-mark ${homeActive ? 'active' : ''}`}
+        aria-label="Friends and direct messages"
+        aria-current={homeActive ? 'page' : undefined}
+        title="Friends and direct messages"
+        onClick={onSelectHome}
       >
-        <Icon name="plus" size={21} />
+        c
       </button>
 
       <div className="rail-rule" />
 
-      <div className="rail-list" aria-label="Your joined servers">
+      <div className="rail-list" aria-label="Your servers">
         {servers.map((server) => {
           const active = activeServerId === server.id && activeView === 'channel'
           return (
@@ -72,10 +58,28 @@ export function ServerRail({
             </button>
           )
         })}
-        {servers.length === 0 && (
-          <span className="rail-empty" title="No joined servers">—</span>
-        )}
       </div>
+
+      <button
+        type="button"
+        className="rail-add"
+        aria-label="Create server"
+        title="Create server"
+        onClick={onCreateServer}
+      >
+        <Icon name="plus" size={21} />
+      </button>
+
+      <button
+        type="button"
+        className={`rail-discover ${activeView === 'discover' ? 'active' : ''}`}
+        aria-label="Discover communities"
+        aria-current={activeView === 'discover' ? 'page' : undefined}
+        title="Discover communities"
+        onClick={onNavigateDiscover}
+      >
+        <Icon name="compass" size={19} />
+      </button>
 
       <div className="rail-spacer" />
 
@@ -88,35 +92,6 @@ export function ServerRail({
       >
         <Icon name="shield" size={19} />
       </button>
-
-      <div className="rail-profile-wrap">
-        {profileMenuOpen && (
-          <div className="rail-profile-menu" role="menu">
-            <strong>{displayName}</strong>
-            <span>Account and preferences</span>
-            <button type="button" role="menuitem" onClick={onNavigateSettings}>
-              <Icon name="settings" size={15} /> Settings
-            </button>
-            <button type="button" role="menuitem" onClick={onToggleTheme}>
-              <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
-              {theme === 'dark' ? 'Light theme' : 'Dark theme'}
-            </button>
-            <button type="button" role="menuitem" onClick={onLogout}>
-              <Icon name="logout" size={15} /> Sign out
-            </button>
-          </div>
-        )}
-        <button
-          type="button"
-          className={`rail-user ${profileMenuOpen ? 'active' : ''}`}
-          aria-label={`Account: ${displayName}`}
-          aria-expanded={profileMenuOpen}
-          title={displayName}
-          onClick={onToggleProfileMenu}
-        >
-          <Avatar user={currentUser} size="normal" />
-        </button>
-      </div>
     </aside>
   )
 }
