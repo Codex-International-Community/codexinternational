@@ -50,6 +50,95 @@ interface WorkspacePageProps {
   onLogout: () => Promise<void>
 }
 
+interface WorkspaceRoute {
+  view: View
+  serverId: string
+  channelId: string
+  dmId: string
+}
+
+const defaultWorkspaceRoute: WorkspaceRoute = {
+  view: 'home',
+  serverId: 'studio',
+  channelId: 'general',
+  dmId: 'mika',
+}
+
+function parseWorkspaceRoute(pathname: string): WorkspaceRoute {
+  const segments = pathname
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment)
+      } catch {
+        return segment
+      }
+    })
+
+  if (segments[0] === 'channels' && segments[1] === '@me') {
+    return segments[2]
+      ? { ...defaultWorkspaceRoute, view: 'dm', dmId: segments[2] }
+      : defaultWorkspaceRoute
+  }
+
+  if (segments[0] === 'channels' && segments[1] && segments[2]) {
+    return {
+      ...defaultWorkspaceRoute,
+      view: 'channel',
+      serverId: segments[1],
+      channelId: segments[2],
+    }
+  }
+
+  if (segments[0] === 'directory' && segments[1] === 'channels') {
+    return { ...defaultWorkspaceRoute, view: 'channels' }
+  }
+
+  if (segments[0] === 'directory' && segments[1] === 'people') {
+    return { ...defaultWorkspaceRoute, view: 'people' }
+  }
+
+  const staticRoutes: Record<string, View> = {
+    discover: 'discover',
+    social: 'social',
+    settings: 'settings',
+    activity: 'notifications',
+    pinned: 'pinned',
+    bots: 'bots',
+  }
+  const view = staticRoutes[segments[0] ?? '']
+
+  return view ? { ...defaultWorkspaceRoute, view } : defaultWorkspaceRoute
+}
+
+function buildWorkspacePath({ view, serverId, channelId, dmId }: WorkspaceRoute): string {
+  switch (view) {
+    case 'home':
+      return '/channels/@me'
+    case 'dm':
+      return `/channels/@me/${encodeURIComponent(dmId)}`
+    case 'channel':
+      return `/channels/${encodeURIComponent(serverId)}/${encodeURIComponent(channelId)}`
+    case 'discover':
+      return '/discover'
+    case 'social':
+      return '/social'
+    case 'settings':
+      return '/settings'
+    case 'notifications':
+      return '/activity'
+    case 'pinned':
+      return '/pinned'
+    case 'channels':
+      return '/directory/channels'
+    case 'people':
+      return '/directory/people'
+    case 'bots':
+      return '/bots'
+  }
+}
+
 export function WorkspacePage({
   session,
   viewport,
@@ -66,10 +155,13 @@ export function WorkspacePage({
       displayName: session.user.display_name || session.user.username || initial.displayName,
     }
   })
-  const [view, setView] = useState<View>('channel')
-  const [serverId, setServerId] = useState('studio')
-  const [channelId, setChannelId] = useState('general')
-  const [dmId, setDmId] = useState('mika')
+  const [initialRoute] = useState<WorkspaceRoute>(() =>
+    parseWorkspaceRoute(window.location.pathname),
+  )
+  const [view, setView] = useState<View>(initialRoute.view)
+  const [serverId, setServerId] = useState(initialRoute.serverId)
+  const [channelId, setChannelId] = useState(initialRoute.channelId)
+  const [dmId, setDmId] = useState(initialRoute.dmId)
   const [membersOpen, setMembersOpen] = useState(isDesktop)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [mobileTab, setMobileTab] = useState<MobileTab>('chat')
@@ -99,6 +191,7 @@ export function WorkspacePage({
   const feedRef = useRef<HTMLDivElement>(null)
   const socialInputRef = useRef<HTMLTextAreaElement>(null)
   const blobUrlsRef = useRef<Set<string>>(new Set())
+  const routeSyncReadyRef = useRef(false)
 
   const revokeBlobUrl = useCallback((url?: string) => {
     if (url && url.startsWith('blob:')) {
@@ -159,6 +252,45 @@ export function WorkspacePage({
   useEffect(() => {
     saveFollowedHandles(followedHandles)
   }, [followedHandles])
+  useEffect(() => {
+    const nextPath = buildWorkspacePath({ view, serverId, channelId, dmId })
+    if (window.location.pathname !== nextPath) {
+      if (routeSyncReadyRef.current) {
+        window.history.pushState({ view }, '', nextPath)
+      } else {
+        window.history.replaceState({ view }, '', nextPath)
+      }
+    }
+    routeSyncReadyRef.current = true
+  }, [view, serverId, channelId, dmId])
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = parseWorkspaceRoute(window.location.pathname)
+      setView(route.view)
+      setServerId(route.serverId)
+      setChannelId(route.channelId)
+      setDmId(route.dmId)
+      setMobileTab(
+        route.view === 'home'
+          ? 'home'
+          : route.view === 'social'
+            ? 'social'
+            : route.view === 'channels'
+              ? 'channels'
+              : route.view === 'people'
+                ? 'people'
+                : 'chat',
+      )
+      setDrawerOpen(false)
+      setSearchOpen(false)
+      setProfileMenu(false)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
 
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
