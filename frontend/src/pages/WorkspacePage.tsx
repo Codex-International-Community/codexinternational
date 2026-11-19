@@ -619,7 +619,7 @@ export function WorkspacePage({
       {pageTransition === 'rocket' && (
         <div className="route-transition-overlay" aria-hidden="true" ref={rocketCoverRef}>
           <div className="route-transition-stars" ref={rocketStarsRef} />
-          <span className="route-transition-rocket" ref={rocketRef}><i className="fa-solid fa-rocket" /></span>
+          <span className="route-transition-rocket" ref={rocketRef}><Icon name="rocket" size={32} /></span>
           <div className="route-transition-label" ref={rocketLabelRef}>Memuat…</div>
         </div>
       )}
