@@ -20,7 +20,10 @@ interface ChannelSidebarProps {
   muted: boolean
   deafened: boolean
   profileMenuOpen: boolean
+  serverMenuOpen: boolean
   onToggleProfileMenu: () => void
+  onToggleServerMenu: () => void
+  onCopyServerId: () => void
   onSelectSocialTab: (tab: SocialTab) => void
   onOpenQuickSearch: () => void
   onSelectChannel: (channel: Channel) => void
@@ -56,7 +59,10 @@ export function ChannelSidebar({
   muted,
   deafened,
   profileMenuOpen,
+  serverMenuOpen,
   onToggleProfileMenu,
+  onToggleServerMenu,
+  onCopyServerId,
   onSelectSocialTab,
   onOpenQuickSearch,
   onSelectChannel,
@@ -108,8 +114,10 @@ export function ChannelSidebar({
         <button
           type="button"
           className="server-title"
-          aria-expanded={profileMenuOpen}
-          onClick={onToggleProfileMenu}
+          aria-expanded={serverMenuOpen}
+          aria-haspopup={server ? 'menu' : undefined}
+          onClick={server ? onToggleServerMenu : undefined}
+          disabled={!server}
         >
           <span>
             <small>{serverHeaderSub}</small>
@@ -117,6 +125,20 @@ export function ChannelSidebar({
           </span>
           <Icon name="chevron" size={16} />
         </button>
+      )}
+      {server && view === 'channel' && serverMenuOpen && (
+        <div className="server-menu" role="menu" aria-label={`${server.name} server menu`}>
+          <div className="server-menu-heading">
+            <strong>{server.name}</strong>
+            <small>Server options</small>
+          </div>
+          <button type="button" role="menuitem" onClick={() => { onCreateChannelModal(); onToggleServerMenu() }}>
+            <Icon name="plus" size={15} /> Create Channel
+          </button>
+          <button type="button" role="menuitem" onClick={onCopyServerId}>
+            <Icon name="copy" size={15} /> Copy Server ID
+          </button>
+        </div>
       )}
 
       {view === 'social' && (

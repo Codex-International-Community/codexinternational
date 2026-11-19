@@ -287,6 +287,7 @@ export function WorkspacePage({
   const [cameraOn, setCameraOn] = useState(false)
   const [screenSharing, setScreenSharing] = useState(false)
   const [profileMenu, setProfileMenu] = useState(false)
+  const [serverMenuOpen, setServerMenuOpen] = useState(false)
   const [notificationRead, setNotificationRead] = useState(false)
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>(loadSocialPosts)
   const [socialDraft, setSocialDraft] = useState('')
@@ -546,6 +547,7 @@ export function WorkspacePage({
       
       setSearchOpen(false)
       setProfileMenu(false)
+      setServerMenuOpen(false)
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -563,6 +565,7 @@ export function WorkspacePage({
         
         setSearchOpen(false)
         setProfileMenu(false)
+      setServerMenuOpen(false)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -1151,7 +1154,22 @@ export function WorkspacePage({
           muted={muted}
           deafened={false}
           profileMenuOpen={profileMenu}
-          onToggleProfileMenu={() => setProfileMenu((open) => !open)}
+          serverMenuOpen={serverMenuOpen}
+          onToggleServerMenu={() => {
+            setProfileMenu(false)
+            setServerMenuOpen((open) => !open)
+          }}
+          onCopyServerId={() => {
+            if (!server?.id) return
+            void navigator.clipboard.writeText(server.id)
+              .then(() => notify('Server ID copied'))
+              .catch(() => notify('Could not copy server ID.'))
+            setServerMenuOpen(false)
+          }}
+          onToggleProfileMenu={() => {
+            setServerMenuOpen(false)
+            setProfileMenu((open) => !open)
+          }}
           onSelectSocialTab={setSocialTab}
           onOpenQuickSearch={() => setSearchOpen(true)}
           onSelectChannel={pickChannel}
