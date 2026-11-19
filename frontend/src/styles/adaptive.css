@@ -729,3 +729,86 @@ dialog.bot-reveal-modal {
     font-size: .64rem;
   }
 }
+
+/* Final, explicitly scoped Chat tab landing styles.
+   Keep this selector more specific than legacy workspace and global action rules. */
+.app-shell .workspace .chat-panel > .workspace-empty {
+  align-items: flex-start;
+  justify-content: flex-start;
+  width: min(100%, 1060px);
+  padding: clamp(26px, 4vw, 52px) clamp(18px, 4vw, 54px) 56px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-shell .workspace .chat-panel > .workspace-empty > .eyebrow {
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .7rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+}
+
+.app-shell .workspace .chat-panel > .workspace-empty h1 {
+  max-width: 13ch;
+  margin: 12px 0;
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+  font-size: clamp(1.85rem, 8vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -.025em;
+  text-transform: uppercase;
+}
+
+.app-shell .workspace .chat-panel > .workspace-empty p {
+  max-width: 38ch;
+  margin: 0 0 22px;
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .875rem;
+  line-height: 1.7;
+}
+
+.app-shell .workspace .chat-panel > .workspace-empty .primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  width: auto;
+  padding: 0 17px;
+  border: 1px solid var(--accent-border);
+  border-radius: 12px 12px 12px 3px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+  font-size: .8125rem;
+  font-weight: 700;
+  letter-spacing: .005em;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .12);
+}
+
+.app-shell .workspace .chat-panel > .workspace-empty .primary-action:hover {
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
+  color: #fff;
+}
+
+.app-shell .workspace .chat-panel > .workspace-empty .workspace-empty-note {
+  max-width: 52ch;
+  margin-top: 17px;
+  font-family: var(--landing-mono, 'Space Mono', monospace);
+  font-size: .66rem;
+  line-height: 1.65;
+}
+
+@media (max-width: 767px) {
+  .app-shell .workspace .chat-panel > .workspace-empty {
+    width: 100%;
+    padding: 25px 16px 36px;
+  }
+
+  .app-shell .workspace .chat-panel > .workspace-empty .primary-action {
+    width: 100%;
+    min-height: 46px;
+  }
+}
+
