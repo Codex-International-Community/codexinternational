@@ -11,7 +11,6 @@ interface TopbarProps {
   searchOpen: boolean
   notificationRead: boolean
   unreadCount: number
-  onOpenDrawer: () => void
   onBack?: () => void
   onFocusSocialComposer: () => void
   onVoiceCallModal: () => void
@@ -34,7 +33,6 @@ export function Topbar({
   searchOpen,
   notificationRead,
   unreadCount,
-  onOpenDrawer,
   onBack,
   onFocusSocialComposer,
   onVoiceCallModal,
@@ -93,16 +91,6 @@ export function Topbar({
         {view === 'discover' && onBack && (
           <button type="button" className="discover-back" onClick={onBack} aria-label="Back to previous page" title="Back">
             <Icon name="arrow" />
-          </button>
-        )}
-        {isMobile && (
-          <button
-            type="button"
-            className="mobile-menu"
-            onClick={onOpenDrawer}
-            aria-label="Open navigation"
-          >
-            <Icon name="menu" />
           </button>
         )}
         <span className="channel-symbol">
