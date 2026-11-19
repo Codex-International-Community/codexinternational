@@ -225,135 +225,37 @@ export function ChannelSidebar({
           })}
         </section>
 
-        {view === 'home' || view === 'dm' ? (
-          <>
-            <div className="section-label">
-              <span>DIRECT MESSAGES</span>
-              <button
-                type="button"
-                aria-label="New direct message"
-                title={people.length === 0 ? 'People will be available when the community API is connected.' : 'New direct message'}
-                disabled={people.length === 0}
-                onClick={onNewDmModal}
-              >
-                <Icon name="plus" size={14} />
-              </button>
-            </div>
-            {conversations.map((c) => {
-              const p = people.find((u) => u.id === c.userId)
-              if (!p) return null
-              return (
-                <button
-                  type="button"
-                  key={c.userId}
-                  className={`dm-row ${view !== 'home' && dmId === p.id ? 'chosen' : ''}`}
-                  onClick={() => onOpenDm(p.id)}
-                >
-                  <Avatar user={p} size="small" />
-                  <span>
-                    <strong>{p.name}</strong>
-                    <small>{c.lastMessage}</small>
-                  </span>
-                  {c.unread > 0 && <i className="unread-badge">{c.unread}</i>}
-                </button>
-              )
-            })}
-          </>
-        ) : (
-          <>
-            <div className="section-label">
-              <span>TEXT CHANNELS</span>
-              <button
-                type="button"
-                aria-label="Create channel"
-                title={server ? 'Create channel' : 'Join a community before creating a channel.'}
-                disabled={!server}
-                onClick={onCreateChannelModal}
-              >
-                <Icon name="plus" size={14} />
-              </button>
-            </div>
-            {channels
-              .filter((c) => c.type === 'text')
-              .map((c) => (
-                <button
-                  type="button"
-                  key={c.id}
-                  className={`channel-item ${
-                    channelId === c.id && view === 'channel' ? 'chosen' : ''
-                  }`}
-                  onClick={() => onSelectChannel(c)}
-                >
-                  <Icon name="hash" size={17} />
-                  <span>{c.name}</span>
-                </button>
-              ))}
-            {channels.every((c) => c.type !== 'text') && (
-              <p className="sidebar-empty">Text channels will appear here when community data is available.</p>
-            )}
-
-            <div className="section-label voice-label">
-              <span>VOICE CHANNELS</span>
-              <button
-                type="button"
-                aria-label="Voice channel info"
-                title="Voice channel info"
-                onClick={onVoiceChannelNotice}
-              >
-                <Icon name="plus" size={14} />
-              </button>
-            </div>
-            {channels
-              .filter((c) => c.type === 'voice')
-              .map((c) => (
-                <button
-                  type="button"
-                  key={c.id}
-                  className="channel-item"
-                  onClick={() => onSelectChannel(c)}
-                >
-                  <Icon name="volume" size={17} />
-                  <span>{c.name}</span>
-                </button>
-              ))}
-
-            <button type="button" className="create-channel" onClick={onCreateChannelModal} disabled={!server}>
-              <Icon name="plus" size={15} /> Create channel
+        <div className="section-label dm-label">
+          <span>DIRECT MESSAGES</span>
+          <button
+            type="button"
+            aria-label="New direct message"
+            title={people.length === 0 ? 'People will be available when the community API is connected.' : 'New direct message'}
+            disabled={people.length === 0}
+            onClick={onNewDmModal}
+          >
+            <Icon name="plus" size={14} />
+          </button>
+        </div>
+        {conversations.map((c) => {
+          const p = people.find((u) => u.id === c.userId)
+          if (!p) return null
+          return (
+            <button
+              type="button"
+              key={p.id}
+              className={`dm-row ${view === 'dm' && dmId === p.id ? 'chosen' : ''}`}
+              onClick={() => onOpenDm(p.id)}
+            >
+              <Avatar user={p} size="small" />
+              <span>
+                <strong>{p.name}</strong>
+                <small>{c.lastMessage}</small>
+              </span>
+              {c.unread > 0 && <i className="unread-badge">{c.unread}</i>}
             </button>
-
-            <div className="section-label dm-label">
-              <span>DIRECT MESSAGES</span>
-              <button
-                type="button"
-                aria-label="New direct message"
-                title={people.length === 0 ? 'People will be available when the community API is connected.' : 'New direct message'}
-                disabled={people.length === 0}
-                onClick={onNewDmModal}
-              >
-                <Icon name="plus" size={14} />
-              </button>
-            </div>
-            {conversations.map((c) => {
-              const p = people.find((u) => u.id === c.userId)
-              if (!p) return null
-              return (
-                <button
-                  type="button"
-                  key={p.id}
-                  className="dm-row"
-                  onClick={() => onOpenDm(p.id)}
-                >
-                  <Avatar user={p} size="small" />
-                  <span>
-                    <strong>{p.name}</strong>
-                    <small>{c.lastMessage}</small>
-                  </span>
-                  {c.unread > 0 && <i className="unread-badge">{c.unread}</i>}
-                </button>
-              )
-            })}
-          </>
-        )}
+          )
+        })}
       </div>
 
       {voiceId && (
