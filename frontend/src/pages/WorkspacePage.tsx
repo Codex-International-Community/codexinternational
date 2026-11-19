@@ -1566,6 +1566,7 @@ export function WorkspacePage({
           {showMembersPanel && (
             <MembersPanel
               isDm={view === 'dm'}
+              currentUser={currentUser}
               currentDmUser={currentDm}
               people={people}
               mobileOpen={isMobile && membersOpen}

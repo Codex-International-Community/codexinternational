@@ -4,6 +4,7 @@ import type { User } from '../../types/chat'
 
 interface MembersPanelProps {
   isDm: boolean
+  currentUser: User
   currentDmUser?: User
   people: User[]
   mobileOpen?: boolean
@@ -14,6 +15,7 @@ interface MembersPanelProps {
 
 export function MembersPanel({
   isDm,
+  currentUser,
   currentDmUser,
   people,
   mobileOpen = false,
@@ -21,9 +23,10 @@ export function MembersPanel({
   onInvite,
   onNotify,
 }: MembersPanelProps) {
-  const onlinePeople = people.filter((person) => person.status === 'online')
-  const idlePeople = people.filter((person) => person.status === 'idle')
-  const visiblePeople = isDm && currentDmUser ? [currentDmUser] : people
+  const communityPeople = [currentUser, ...people]
+  const onlinePeople = communityPeople.filter((person) => person.status === 'online')
+  const idlePeople = communityPeople.filter((person) => person.status !== 'online')
+  const visiblePeople = isDm && currentDmUser ? [currentDmUser] : communityPeople
 
   return (
     <aside className={`members-panel ${mobileOpen ? 'mobile-members-open' : ''}`}>
@@ -51,9 +54,9 @@ export function MembersPanel({
             <div className="member-section">
               <div className="member-label">ONLINE ({onlinePeople.length})</div>
               {onlinePeople.map((person) => (
-                <button className="member" key={person.id} onClick={() => onOpenDm(person.id)}>
+                <button className="member" key={person.id} onClick={() => person.id !== currentUser.id && onOpenDm(person.id)}>
                   <Avatar user={person} />
-                  <span><strong>{person.name}</strong><small>{person.role ?? 'Online'}</small></span>
+                  <span><strong>{person.name}{person.id === currentUser.id ? ' (You)' : ''}</strong><small>{person.role ?? 'Online'}</small></span>
                 </button>
               ))}
             </div>
@@ -62,14 +65,14 @@ export function MembersPanel({
             <div className="member-section">
               <div className="member-label">AWAY ({idlePeople.length})</div>
               {idlePeople.map((person) => (
-                <button className="member" key={person.id} onClick={() => onOpenDm(person.id)}>
+                <button className="member" key={person.id} onClick={() => person.id !== currentUser.id && onOpenDm(person.id)}>
                   <Avatar user={person} />
-                  <span><strong>{person.name}</strong><small>Away</small></span>
+                  <span><strong>{person.name}{person.id === currentUser.id ? ' (You)' : ''}</strong><small>{person.role ?? 'Away'}</small></span>
                 </button>
               ))}
             </div>
           )}
-          {people.length === 0 && (
+          {communityPeople.length === 0 && (
             <div className="directory-empty">
               <Icon name="users" size={22} />
               <strong>No members to show</strong>
@@ -78,7 +81,7 @@ export function MembersPanel({
           )}
         </>
       )}
-      <div className="member-footer"><Icon name="shield" size={14} /> Member data appears when the community API is connected</div>
+      <div className="member-footer"><Icon name="shield" size={14} /> Community members
     </aside>
   )
 }
