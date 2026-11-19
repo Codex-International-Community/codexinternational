@@ -6,7 +6,7 @@ import {
   logoutSession,
   type OAuthProvider,
 } from './api/auth'
-import { getSession, setSession, subscribeSession, type AuthSession } from './api/client'
+import { ApiError, getSession, setSession, subscribeSession, type AuthSession } from './api/client'
 import { useViewport } from './hooks/useViewport'
 import { Landing } from './pages/Landing'
 import { WorkspacePage } from './pages/WorkspacePage'
@@ -55,8 +55,16 @@ export default function App() {
       if (getSession()) {
         try {
           await fetchMe()
-        } catch {
-          setSession(null)
+          if (!cancelled) setAuthError('')
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 401) {
+            setSession(null)
+            if (!cancelled) setAuthError('Your session has expired. Sign in again.')
+          } else if (!cancelled) {
+            setAuthError(
+              "We couldn't verify your session because the backend is unavailable. Your current tab session is still open.",
+            )
+          }
         }
       }
       if (!cancelled) setBootstrapping(false)
@@ -72,8 +80,11 @@ export default function App() {
 
   if (bootstrapping) {
     return (
-      <div className="app-boot-screen">
-        <span>Verifying session with Codex backend…</span>
+      <div className="app-boot-screen" role="status" aria-live="polite">
+        <span className="app-boot-mark" aria-hidden="true">c</span>
+        <span className="app-boot-spinner" aria-hidden="true" />
+        <strong>Restoring your session</strong>
+        <p>Checking your connection to Codex.</p>
       </div>
     )
   }
@@ -94,6 +105,12 @@ export default function App() {
     <WorkspacePage
       session={session}
       viewport={viewport}
+      sessionWarning={authError}
+      onRetrySessionCheck={() => {
+        setAuthError('')
+        setBootstrapping(true)
+      }}
+      onDismissSessionWarning={() => setAuthError('')}
       onLogout={async () => {
         await logoutSession()
         setLocalSession(null)

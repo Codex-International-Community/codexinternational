@@ -32,6 +32,7 @@ interface ChannelSidebarProps {
   onToggleDeafen: () => void
   onDisconnectVoice: () => void
   onNavigateSettings: () => void
+  onNavigateDiscover: () => void
   onToggleTheme: () => void
   onOpenBots?: () => void
   onLogout?: () => void
@@ -65,6 +66,7 @@ export function ChannelSidebar({
   onToggleDeafen,
   onDisconnectVoice,
   onNavigateSettings,
+  onNavigateDiscover,
   onToggleTheme,
   onOpenBots,
   onLogout,
@@ -73,8 +75,10 @@ export function ChannelSidebar({
 
   const serverHeaderSub =
     view === 'social'
-      ? 'SOCIAL FEED'
-      : view === 'channels'
+      ? 'SOCIAL'
+      : view === 'discover'
+        ? 'EXPLORE'
+        : view === 'channels'
         ? 'DIRECTORY'
         : view === 'people'
           ? 'COMMUNITY PEOPLE'
@@ -84,8 +88,10 @@ export function ChannelSidebar({
 
   const serverHeaderTitle =
     view === 'social'
-      ? 'Threads & X'
-      : view === 'channels'
+      ? 'Social'
+      : view === 'discover'
+        ? 'Discover communities'
+        : view === 'channels'
         ? 'Channels'
         : view === 'people'
           ? 'People'
@@ -106,6 +112,16 @@ export function ChannelSidebar({
           <strong>{serverHeaderTitle}</strong>
         </span>
         <Icon name="chevron" size={16} />
+      </button>
+
+      <button
+        type="button"
+        className="mobile-drawer-link"
+        onClick={onNavigateDiscover}
+      >
+        <Icon name="compass" size={16} />
+        <span>Discover communities</span>
+        <Icon name="arrow" size={14} />
       </button>
 
       {view === 'social' && (
@@ -159,7 +175,8 @@ export function ChannelSidebar({
               <button
                 type="button"
                 aria-label="New direct message"
-                title="New direct message"
+                title={people.length === 0 ? 'People will be available when the community API is connected.' : 'New direct message'}
+                disabled={people.length === 0}
                 onClick={onNewDmModal}
               >
                 <Icon name="plus" size={14} />
@@ -192,7 +209,8 @@ export function ChannelSidebar({
               <button
                 type="button"
                 aria-label="Create channel"
-                title="Create channel"
+                title={server ? 'Create channel' : 'Join a community before creating a channel.'}
+                disabled={!server}
                 onClick={onCreateChannelModal}
               >
                 <Icon name="plus" size={14} />
@@ -213,6 +231,9 @@ export function ChannelSidebar({
                   <span>{c.name}</span>
                 </button>
               ))}
+            {channels.every((c) => c.type !== 'text') && (
+              <p className="sidebar-empty">Text channels will appear here when community data is available.</p>
+            )}
 
             <div className="section-label voice-label">
               <span>VOICE CHANNELS</span>
@@ -239,7 +260,7 @@ export function ChannelSidebar({
                 </button>
               ))}
 
-            <button type="button" className="create-channel" onClick={onCreateChannelModal}>
+            <button type="button" className="create-channel" onClick={onCreateChannelModal} disabled={!server}>
               <Icon name="plus" size={15} /> Create channel
             </button>
 
@@ -248,7 +269,8 @@ export function ChannelSidebar({
               <button
                 type="button"
                 aria-label="New direct message"
-                title="New direct message"
+                title={people.length === 0 ? 'People will be available when the community API is connected.' : 'New direct message'}
+                disabled={people.length === 0}
                 onClick={onNewDmModal}
               >
                 <Icon name="plus" size={14} />
@@ -281,10 +303,10 @@ export function ChannelSidebar({
         <div className="voice-card">
           <div>
             <i />
-            VOICE CONNECTED
+            VOICE PREVIEW
           </div>
           <strong>{activeVoiceChannel?.name}</strong>
-          <span>Local demo session</span>
+          <span>Audio is not connected in this preview</span>
           <div className="voice-actions">
             <button
               type="button"
@@ -326,7 +348,7 @@ export function ChannelSidebar({
           <Avatar user={currentUser} />
           <span>
             <strong>{displayName}</strong>
-            <small>Online</small>
+            <small>Signed in</small>
           </span>
           <Icon name="more" size={18} />
         </button>
@@ -365,7 +387,7 @@ export function ChannelSidebar({
       {profileMenuOpen && (
         <div className="profile-menu">
           <strong>{displayName}</strong>
-          <span>Online · Available</span>
+          <span>Account and preferences</span>
           <button
             type="button"
             onClick={() => {

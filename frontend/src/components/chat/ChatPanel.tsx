@@ -32,6 +32,9 @@ interface ChatPanelProps {
   onOpenPinnedView: () => void
   onInvite: () => void
   onNotify: (text: string) => void
+  onDiscoverCommunities: () => void
+  onBrowseChannels: () => void
+  onBrowsePeople: () => void
 }
 
 export function ChatPanel({
@@ -62,16 +65,48 @@ export function ChatPanel({
   onOpenPinnedView,
   onInvite,
   onNotify,
+  onDiscoverCommunities,
+  onBrowseChannels,
+  onBrowsePeople,
 }: ChatPanelProps) {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
 
-  if ((!isDm && !server) || (isDm && !currentDm)) {
+  if (!isDm && !server) {
     return (
-      <div className="directory-empty">
-        <Icon name="message" size={26} />
-        <strong>No conversation selected</strong>
-        <span>Join a community or open a conversation to get started.</span>
-      </div>
+      <section className="workspace-empty" aria-labelledby="workspace-empty-title">
+        <span className="workspace-empty-mark"><Icon name="compass" size={25} /></span>
+        <span className="eyebrow">WELCOME TO CODEX</span>
+        <h1 id="workspace-empty-title">Find your community.</h1>
+        <p>Join a community to bring channels, conversations and people into one place.</p>
+        <button type="button" className="primary-action" onClick={onDiscoverCommunities}>
+          <Icon name="compass" size={16} /> Discover communities
+        </button>
+        <span className="workspace-empty-note">Community listings and membership will connect when the backend endpoints are ready.</span>
+      </section>
+    )
+  }
+
+  if (!isDm && !channel) {
+    return (
+      <section className="workspace-empty" aria-labelledby="workspace-empty-title">
+        <span className="workspace-empty-mark"><Icon name="hash" size={25} /></span>
+        <span className="eyebrow">COMMUNITY CHANNELS</span>
+        <h1 id="workspace-empty-title">No channels yet.</h1>
+        <p>Channel navigation is ready. Channel data will appear when the community API is connected.</p>
+        <button type="button" className="primary-action" onClick={onBrowseChannels}>Browse channels</button>
+      </section>
+    )
+  }
+
+  if (isDm && !currentDm) {
+    return (
+      <section className="workspace-empty" aria-labelledby="workspace-empty-title">
+        <span className="workspace-empty-mark"><Icon name="users" size={25} /></span>
+        <span className="eyebrow">DIRECT MESSAGES</span>
+        <h1 id="workspace-empty-title">No conversations yet.</h1>
+        <p>People and private conversations will appear when their API endpoints are available.</p>
+        <button type="button" className="primary-action" onClick={onBrowsePeople}>Browse people</button>
+      </section>
     )
   }
 
@@ -136,7 +171,7 @@ export function ChatPanel({
           <div className="empty-state">
             <Icon name="message" size={25} />
             <strong>No messages yet</strong>
-            <span>Messages will appear here when the conversation starts.</span>
+            <span>Message history will appear here when the chat API is connected.</span>
           </div>
         )}
       </div>
