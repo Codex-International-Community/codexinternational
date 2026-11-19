@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
 import type { Channel, Conversation, Server, User } from '../../types/chat'
@@ -82,9 +82,6 @@ export function ChannelSidebar({
   const activeVoiceChannel = channels.find((c) => c.id === voiceId)
   const [expandedServers, setExpandedServers] = useState<string[]>(activeServerId ? [activeServerId] : [])
   const toggleServerExpanded = (id: string) => setExpandedServers((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
-  useEffect(() => {
-    if (activeServerId) setExpandedServers((current) => current.includes(activeServerId) ? current : [...current, activeServerId])
-  }, [activeServerId])
 
   const serverHeaderSub =
     view === 'social'
@@ -189,7 +186,10 @@ export function ChannelSidebar({
                     type="button"
                     className="joined-server-select"
                     aria-current={active ? 'page' : undefined}
-                    onClick={() => onSelectServer(joinedServer.id)}
+                    onClick={() => {
+                      setExpandedServers((current) => current.includes(joinedServer.id) ? current : [...current, joinedServer.id])
+                      onSelectServer(joinedServer.id)
+                    }}
                   >
                     <span className={`joined-server-mark ${joinedServer.tone}`}>{joinedServer.abbr}</span>
                     <strong>{joinedServer.name}</strong>
@@ -211,7 +211,10 @@ export function ChannelSidebar({
                         type="button"
                         key={joinedChannel.id}
                         className={`channel-item ${active && view === 'channel' && channelId === joinedChannel.id ? 'chosen' : ''}`}
-                        onClick={() => onSelectServerChannel(joinedServer.id, joinedChannel)}
+                        onClick={() => {
+                          setExpandedServers((current) => current.includes(joinedServer.id) ? current : [...current, joinedServer.id])
+                          onSelectServerChannel(joinedServer.id, joinedChannel)
+                        }}
                       >
                         <Icon name={joinedChannel.type === 'voice' ? 'volume' : 'hash'} size={16} />
                         <span>{joinedChannel.name}</span>
