@@ -47,12 +47,12 @@ export function ActionModal({
 
   const description =
     type === 'server'
-      ? 'Create a new space. It will be available in your server list.'
+      ? 'Community setup is being prepared. Creation will unlock when the community API is available.'
       : type === 'channel'
-        ? 'Add a text channel to this community.'
+        ? 'Channel setup is being prepared. Creation will unlock when the channel API is available.'
         : type === 'dm'
-          ? 'Choose someone to open a local direct message.'
-          : 'Copy a demo invite link to share this preview.'
+          ? 'Choose a community member to start a private conversation.'
+          : 'Invite links will unlock when community membership endpoints are available.'
 
   const label =
     type === 'server'
@@ -66,12 +66,12 @@ export function ActionModal({
 
   const buttonText =
     type === 'server'
-      ? 'Create community'
+      ? 'Community API pending'
       : type === 'channel'
-        ? 'Create channel'
+        ? 'Channel API pending'
         : type === 'dm'
           ? 'Open conversation'
-          : 'Copy invite link'
+          : 'Invite API pending'
 
   return (
     <dialog
@@ -97,24 +97,38 @@ export function ActionModal({
         <p>{description}</p>
 
         {type === 'dm' ? (
-          <fieldset className="person-picker-fieldset">
-            <legend className="modal-field-label">CHOOSE PERSON</legend>
-            <div className="person-picker">
-              {people.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  aria-pressed={value === p.id}
-                  className={value === p.id ? 'selected' : ''}
-                  onClick={() => onChangeValue(p.id)}
-                >
-                  <Avatar user={p} size="small" />
-                  {p.name}
-                  {value === p.id && <Icon name="check" size={15} />}
-                </button>
-              ))}
+          people.length > 0 ? (
+            <fieldset className="person-picker-fieldset">
+              <legend className="modal-field-label">CHOOSE PERSON</legend>
+              <div className="person-picker">
+                {people.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    aria-pressed={value === p.id}
+                    className={value === p.id ? 'selected' : ''}
+                    onClick={() => onChangeValue(p.id)}
+                  >
+                    <Avatar user={p} size="small" />
+                    {p.name}
+                    {value === p.id && <Icon name="check" size={15} />}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          ) : (
+            <div className="modal-pending" role="status">
+              <Icon name="users" size={21} />
+              <strong>No contacts yet</strong>
+              <span>People will appear here when community member endpoints are connected.</span>
             </div>
-          </fieldset>
+          )
+        ) : type === 'invite' ? (
+          <div className="modal-pending" role="status">
+            <Icon name="link" size={21} />
+            <strong>Invite links are not available yet</strong>
+            <span>The community invite API has not been connected.</span>
+          </div>
         ) : (
           <>
             <label htmlFor={inputId}>{label}</label>
@@ -122,18 +136,21 @@ export function ActionModal({
               id={inputId}
               className="modal-input"
               autoFocus
-              value={type === 'invite' ? 'community.example/invite/demo' : value}
-              readOnly={type === 'invite'}
+              value={value}
               onChange={(e) => onChangeValue(e.target.value)}
               placeholder={placeholder}
             />
+            <div className="modal-pending modal-pending--inline" role="status">
+              <Icon name="info" size={16} />
+              <span>{type === 'server' ? 'This form is a UI preview; community creation is not active yet.' : 'This form is a UI preview; channel creation is not active yet.'}</span>
+            </div>
           </>
         )}
 
-        <button className="modal-primary" type="submit">
+        <button className="modal-primary" type="submit" disabled={type !== 'dm' || people.length === 0}>
           {buttonText}
         </button>
-        <small className="modal-note">All demo data stays in this browser.</small>
+        <small className="modal-note">Actions will become available as their backend endpoints are integrated.</small>
       </form>
     </dialog>
   )

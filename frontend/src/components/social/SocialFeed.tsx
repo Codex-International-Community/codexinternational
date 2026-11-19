@@ -76,14 +76,14 @@ export function SocialFeed({
       <div className="social-feed-column">
         <div className="social-heading">
           <div>
-            <span className="social-kicker">A PUBLIC SQUARE FOR YOUR COMMUNITY</span>
+            <span className="social-kicker">COMMUNITY CONVERSATIONS</span>
             <h1>
-              Threads <em>&amp;</em> X
+              Social
             </h1>
             <p>Quick thoughts, shared interests, and conversations that keep going.</p>
           </div>
           <span className="social-state">
-            COMMUNITY FEED <i />
+            API PENDING <i />
           </span>
         </div>
 
@@ -93,6 +93,7 @@ export function SocialFeed({
           draft={draft}
           onChange={onDraftChange}
           onSubmit={onPublish}
+          canPublish={false}
         />
 
         <div className="social-feed-tabs" role="tablist" aria-label="Timeline filter">
@@ -143,7 +144,7 @@ export function SocialFeed({
                   ? 'Follow a few people to bring their conversations into this feed.'
                   : socialTab === 'saved'
                     ? 'Save posts you want to come back to.'
-                    : 'Publish a thought above to start the local timeline.'}
+                    : 'Your community timeline will appear here when social endpoints are connected.'}
               </p>
               <button type="button" onClick={() => onTabChange('for-you')}>
                 Explore the timeline

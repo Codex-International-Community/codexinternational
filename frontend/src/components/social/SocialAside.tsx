@@ -13,8 +13,8 @@ export function SocialAside({ onFocusComposer }: SocialAsideProps) {
       <section className="social-aside-section social-now">
         <span className="social-aside-kicker">YOUR COMMUNITY</span>
         <h2>Start a conversation.</h2>
-        <p>Share an update with people in your community.</p>
-        <button onClick={onFocusComposer}>
+        <p>Feed discovery and publishing will unlock when the social API is available.</p>
+        <button onClick={onFocusComposer} disabled>
           Write a post <Icon name="arrowUp" size={14} />
         </button>
       </section>

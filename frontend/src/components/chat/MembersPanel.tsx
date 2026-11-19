@@ -30,7 +30,7 @@ export function MembersPanel({
       <div className="members-heading">
         <div>
           <strong>{isDm ? 'Contact' : 'Members'}</strong>
-          <span>{visiblePeople.length}</span>
+          <span>{visiblePeople.length > 0 ? visiblePeople.length : '—'}</span>
         </div>
         <button onClick={onInvite} title="Invite">
           <Icon name="plus" size={15} />
@@ -78,7 +78,7 @@ export function MembersPanel({
           )}
         </>
       )}
-      <div className="member-footer"><Icon name="shield" size={14} /> Live community members</div>
+      <div className="member-footer"><Icon name="shield" size={14} /> Member data appears when the community API is connected</div>
     </aside>
   )
 }

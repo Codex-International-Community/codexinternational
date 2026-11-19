@@ -40,7 +40,12 @@ export function ChannelDirectory({
           <h1>Channels</h1>
           <p>Browse every text and voice room across the communities you have joined.</p>
         </div>
-        <button className="primary-action" onClick={() => onCreateChannel()}>
+        <button
+          className="primary-action"
+          onClick={() => onCreateChannel()}
+          disabled={servers.length === 0}
+          title={servers.length === 0 ? 'Join a community before creating a channel.' : 'Create channel'}
+        >
           <Icon name="plus" size={15} /> Create channel
         </button>
       </header>
@@ -113,7 +118,13 @@ export function ChannelDirectory({
           )
         })}
 
-        {directoryItems.length === 0 && (
+        {servers.length === 0 ? (
+          <div className="directory-empty">
+            <Icon name="hash" size={24} />
+            <strong>No communities yet</strong>
+            <span>Join or create a community to see its channels here. Channel data will sync when the community API is ready.</span>
+          </div>
+        ) : directoryItems.length === 0 ? (
           <div className="directory-empty">
             <Icon name="search" size={24} />
             <strong>No channels found</strong>
@@ -127,7 +138,7 @@ export function ChannelDirectory({
               Clear filters
             </button>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   )
