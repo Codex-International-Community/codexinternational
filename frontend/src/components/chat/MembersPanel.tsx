@@ -30,7 +30,7 @@ export function MembersPanel({
       <div className="members-heading">
         <div>
           <strong>{isDm ? 'Contact' : 'Members'}</strong>
-          <span>{visiblePeople.length > 0 ? visiblePeople.length : '—'}</span>
+          <span>{visiblePeople.length > 0 ? visiblePeople.length : '-'}</span>
         </div>
         <button onClick={onInvite} title="Invite">
           <Icon name="plus" size={15} />

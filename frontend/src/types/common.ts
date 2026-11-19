@@ -53,6 +53,7 @@ export type IconName =
   | 'share'
   | 'eye'
   | 'eyeOff'
+  | 'info'
 
 export type View =
   | 'channel'
