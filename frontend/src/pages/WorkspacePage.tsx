@@ -263,9 +263,6 @@ export function WorkspacePage({
   const [membersOpen, setMembersOpen] = useState(isDesktop)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  useEffect(() => {
-    setDrawerOpen(false)
-  }, [view])
   const [mobileTab, setMobileTab] = useState<MobileTab>(() =>
     mobileTabForView(initialRoute.view),
   )
@@ -391,7 +388,7 @@ export function WorkspacePage({
       setDmId(route.dmId)
       setNotFoundPath(route.path ?? '')
       setMobileTab(mobileTabForView(route.view))
-      setDrawerOpen(false)
+      
       setSearchOpen(false)
       setProfileMenu(false)
     }
@@ -408,7 +405,7 @@ export function WorkspacePage({
         setSearchOpen(true)
       }
       if (e.key === 'Escape' && !document.querySelector('dialog:modal')) {
-        setDrawerOpen(false)
+        
         setSearchOpen(false)
         setProfileMenu(false)
       }
@@ -566,26 +563,26 @@ export function WorkspacePage({
     if (first) setChannelId(first.id)
     setView('channel')
     setMobileTab('chat')
-    setDrawerOpen(false)
+    
   }
 
   const pickChannel = (c: Channel) => {
     if (c.type === 'voice') {
       notify(`Connected to ${c.name} voice preview`)
-      setDrawerOpen(false)
+      
       return
     }
     setChannelId(c.id)
     setView('channel')
     setMobileTab('chat')
-    setDrawerOpen(false)
+    
   }
 
   const openDm = (uid: string) => {
     setDmId(uid)
     setView('dm')
     setMobileTab('chat')
-    setDrawerOpen(false)
+    
     setData((prev) => ({
       ...prev,
       conversations: prev.conversations.map((c) => (c.userId === uid ? { ...c, unread: 0 } : c)),
@@ -602,7 +599,7 @@ export function WorkspacePage({
     if (nextView === 'social') setMobileTab('social')
     else if (nextView === 'channels') setMobileTab('channels')
     else if (nextView === 'people') setMobileTab('people')
-    setDrawerOpen(false)
+    
   }
 
   const showMembersPanel = ((view === 'channel' && Boolean(server) && Boolean(channel)) || (view === 'dm' && Boolean(currentDm))) && membersOpen
@@ -610,7 +607,7 @@ export function WorkspacePage({
   return (
     <div
       onPointerUp={(event) => {
-        if (!isMobile || !drawerOpen || (event.target as HTMLElement).closest('.server-rail')) return
+        if (!isMobile || !drawerOpen || (event.target as HTMLElement).closest('.server-rail, .mobile-menu')) return
         const now = Date.now()
         if (now - lastDrawerTapRef.current < 320) {
           setDrawerOpen(false)
@@ -689,7 +686,7 @@ export function WorkspacePage({
               setView('home')
               setMobileTab('home')
             }
-            setDrawerOpen(false)
+            
           }}
           onFocusSocialComposer={() => socialInputRef.current?.focus()}
           onVoiceCallModal={() => setModal('call')}
@@ -1044,7 +1041,7 @@ export function WorkspacePage({
               }
               if (tab === 'channels') setView('channels')
               if (tab === 'people') setView('people')
-              setDrawerOpen(false)
+              
             }}
           />
         )}
