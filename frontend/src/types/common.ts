@@ -55,6 +55,7 @@ export type IconName =
   | 'eyeOff'
 
 export type View =
+  | 'home'
   | 'channel'
   | 'dm'
   | 'discover'
