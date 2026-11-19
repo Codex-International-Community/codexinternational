@@ -1,4 +1,4 @@
-import { useId, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
 import { useModalDialog } from '../../hooks/useModalDialog'
@@ -26,6 +26,8 @@ export function ActionModal({
   const titleId = useId()
   const inputId = useId()
   const dialogRef = useModalDialog({ onClose, dismissible: true })
+  const [serverStep, setServerStep] = useState<'choose' | 'create' | 'join'>('choose')
+  const [serverPurpose, setServerPurpose] = useState<'friends' | 'community'>('friends')
 
   const iconName =
     type === 'server'
@@ -76,11 +78,20 @@ export function ActionModal({
   return (
     <dialog
       ref={dialogRef}
-      className="modal"
+      className={type === 'server' ? 'modal modal--discord-server' : 'modal'}
       aria-labelledby={titleId}
       {...({ closedby: 'any' } as Record<string, string>)}
     >
-      <form className="modal-form" onSubmit={onSubmit}>
+      <form
+        className={type === 'server' ? 'modal-form discord-server-form' : 'modal-form'}
+        onSubmit={(event) => {
+          if (type === 'server') {
+            event.preventDefault()
+            return
+          }
+          onSubmit(event)
+        }}
+      >
         <button
           type="button"
           className="modal-x"
@@ -90,67 +101,198 @@ export function ActionModal({
           <Icon name="close" />
         </button>
 
-        <div className="modal-icon">
-          <Icon name={iconName} size={22} />
-        </div>
-        <h2 id={titleId}>{title}</h2>
-        <p>{description}</p>
+        {type === 'server' ? (
+          <div className="discord-server-flow">
+            {serverStep !== 'choose' && (
+              <button
+                type="button"
+                className="discord-server-back"
+                onClick={() => setServerStep('choose')}
+              >
+                <Icon name="arrow" size={15} />
+                Back
+              </button>
+            )}
 
-        {type === 'dm' ? (
-          people.length > 0 ? (
-            <fieldset className="person-picker-fieldset">
-              <legend className="modal-field-label">CHOOSE PERSON</legend>
-              <div className="person-picker">
-                {people.map((p) => (
+            {serverStep === 'choose' ? (
+              <>
+                <div className="discord-server-heading">
+                  <h2 id={titleId}>Create a server</h2>
+                  <p>Your server is where you and your friends hang out. Make yours and start talking.</p>
+                </div>
+
+                <div className="discord-server-choices">
                   <button
-                    key={p.id}
                     type="button"
-                    aria-pressed={value === p.id}
-                    className={value === p.id ? 'selected' : ''}
-                    onClick={() => onChangeValue(p.id)}
+                    className="discord-server-choice"
+                    onClick={() => {
+                      setServerPurpose('friends')
+                      setServerStep('create')
+                    }}
                   >
-                    <Avatar user={p} size="small" />
-                    {p.name}
-                    {value === p.id && <Icon name="check" size={15} />}
+                    <span className="discord-server-choice-icon">
+                      <Icon name="users" size={21} />
+                    </span>
+                    <span className="discord-server-choice-copy">
+                      <strong>Create My Own</strong>
+                      <small>Start with a blank server and make it yours.</small>
+                    </span>
+                    <Icon name="arrow" size={17} />
                   </button>
-                ))}
-              </div>
-            </fieldset>
-          ) : (
-            <div className="modal-pending" role="status">
-              <Icon name="users" size={21} />
-              <strong>No contacts yet</strong>
-              <span>People will appear here when community member endpoints are connected.</span>
-            </div>
-          )
-        ) : type === 'invite' ? (
-          <div className="modal-pending" role="status">
-            <Icon name="link" size={21} />
-            <strong>Invite links are not available yet</strong>
-            <span>The community invite API has not been connected.</span>
+
+                  <button
+                    type="button"
+                    className="discord-server-choice"
+                    onClick={() => {
+                      setServerPurpose('community')
+                      setServerStep('create')
+                    }}
+                  >
+                    <span className="discord-server-choice-icon">
+                      <Icon name="compass" size={21} />
+                    </span>
+                    <span className="discord-server-choice-copy">
+                      <strong>For a club or community</strong>
+                      <small>Bring people together around a shared interest.</small>
+                    </span>
+                    <Icon name="arrow" size={17} />
+                  </button>
+                </div>
+
+                <div className="discord-server-divider"><span>OR</span></div>
+                <button
+                  type="button"
+                  className="discord-server-join"
+                  onClick={() => setServerStep('join')}
+                >
+                  <span>
+                    <strong>Already have an invite?</strong>
+                    <small>Join an existing server</small>
+                  </span>
+                  <Icon name="arrow" size={17} />
+                </button>
+              </>
+            ) : serverStep === 'create' ? (
+              <>
+                <div className="discord-server-heading discord-server-heading--step">
+                  <div className="discord-server-large-icon">
+                    <Icon name="users" size={27} />
+                  </div>
+                  <h2 id={titleId}>Customize your server</h2>
+                  <p>Give your new server a name. You can change it anytime.</p>
+                </div>
+                <div className="discord-server-purpose">
+                  {serverPurpose === 'friends' ? 'A server for friends' : 'A community server'}
+                </div>
+                <label className="discord-server-label" htmlFor={inputId}>SERVER NAME</label>
+                <input
+                  id={inputId}
+                  className="modal-input discord-server-input"
+                  autoFocus
+                  maxLength={64}
+                  value={value}
+                  onChange={(event) => onChangeValue(event.target.value)}
+                  placeholder="Enter a server name"
+                />
+                <div className="discord-server-unavailable" role="status">
+                  Server creation is not connected yet.
+                </div>
+                <button className="discord-server-primary" type="button" disabled>
+                  Create Server
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="discord-server-heading discord-server-heading--step">
+                  <div className="discord-server-large-icon">
+                    <Icon name="compass" size={27} />
+                  </div>
+                  <h2 id={titleId}>Join a server</h2>
+                  <p>Enter an invite link or code to join a community.</p>
+                </div>
+                <label className="discord-server-label" htmlFor={inputId}>INVITE LINK</label>
+                <input
+                  id={inputId}
+                  className="modal-input discord-server-input"
+                  autoFocus
+                  value={value}
+                  onChange={(event) => onChangeValue(event.target.value)}
+                  placeholder="Paste an invite link or code"
+                />
+                <div className="discord-server-unavailable" role="status">
+                  Joining servers is not connected yet.
+                </div>
+                <button className="discord-server-primary" type="button" disabled>
+                  Join Server
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>
-            <label htmlFor={inputId}>{label}</label>
-            <input
-              id={inputId}
-              className="modal-input"
-              autoFocus
-              value={value}
-              onChange={(e) => onChangeValue(e.target.value)}
-              placeholder={placeholder}
-            />
-            <div className="modal-pending modal-pending--inline" role="status">
-              <Icon name="info" size={16} />
-              <span>{type === 'server' ? 'This form is a UI preview; community creation is not active yet.' : 'This form is a UI preview; channel creation is not active yet.'}</span>
+            <div className="modal-icon">
+              <Icon name={iconName} size={22} />
             </div>
+            <h2 id={titleId}>{title}</h2>
+            <p>{description}</p>
+
+            {type === 'dm' ? (
+              people.length > 0 ? (
+                <fieldset className="person-picker-fieldset">
+                  <legend className="modal-field-label">CHOOSE PERSON</legend>
+                  <div className="person-picker">
+                    {people.map((person) => (
+                      <button
+                        key={person.id}
+                        type="button"
+                        aria-pressed={value === person.id}
+                        className={value === person.id ? 'selected' : ''}
+                        onClick={() => onChangeValue(person.id)}
+                      >
+                        <Avatar user={person} size="small" />
+                        {person.name}
+                        {value === person.id && <Icon name="check" size={15} />}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              ) : (
+                <div className="modal-pending" role="status">
+                  <Icon name="users" size={21} />
+                  <strong>No contacts yet</strong>
+                  <span>People will appear here when community member endpoints are connected.</span>
+                </div>
+              )
+            ) : type === 'invite' ? (
+              <div className="modal-pending" role="status">
+                <Icon name="link" size={21} />
+                <strong>Invite links are not available yet</strong>
+                <span>The community invite API has not been connected.</span>
+              </div>
+            ) : (
+              <>
+                <label htmlFor={inputId}>{label}</label>
+                <input
+                  id={inputId}
+                  className="modal-input"
+                  autoFocus
+                  value={value}
+                  onChange={(event) => onChangeValue(event.target.value)}
+                  placeholder={placeholder}
+                />
+                <div className="modal-pending modal-pending--inline" role="status">
+                  <Icon name="info" size={16} />
+                  <span>This form is a UI preview; channel creation is not active yet.</span>
+                </div>
+              </>
+            )}
+
+            <button className="modal-primary" type="submit" disabled={type !== 'dm' || people.length === 0}>
+              {buttonText}
+            </button>
+            <small className="modal-note">Actions will become available as their backend endpoints are integrated.</small>
           </>
         )}
-
-        <button className="modal-primary" type="submit" disabled={type !== 'dm' || people.length === 0}>
-          {buttonText}
-        </button>
-        <small className="modal-note">Actions will become available as their backend endpoints are integrated.</small>
       </form>
     </dialog>
   )
