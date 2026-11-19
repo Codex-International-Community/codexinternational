@@ -2242,8 +2242,7 @@ dialog.modal {
 .rail-discover,
 .rail-social,
 .rail-directory,
-.mobile-menu,
-.collapse-channels {
+.mobile-menu {
   display: inline-flex;
   align-items: center;
   justify-content: center;
