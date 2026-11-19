@@ -514,7 +514,12 @@ export function WorkspacePage({
     }))
   }
 
+  const discoverReturnRouteRef = useRef<WorkspaceRoute | null>(null)
+
   const navigateView = (nextView: View) => {
+    if (nextView === 'discover') {
+      discoverReturnRouteRef.current = { view, serverId, channelId, dmId, path: notFoundPath }
+    }
     setView(nextView)
     if (nextView === 'social') setMobileTab('social')
     else if (nextView === 'channels') setMobileTab('channels')
@@ -536,7 +541,7 @@ export function WorkspacePage({
         onClick={() => setDrawerOpen(false)}
       />
 
-      {view !== 'channels' && view !== 'people' && (
+      {view !== 'channels' && view !== 'people' && (view !== 'discover' || drawerOpen) && (
         <>
           <ServerRail
             servers={data.servers}
@@ -610,6 +615,21 @@ export function WorkspacePage({
           notificationRead={notificationRead}
           unreadCount={data.conversations.reduce((acc, c) => acc + c.unread, 0)}
           onOpenDrawer={() => setDrawerOpen(true)}
+          onBack={() => {
+            const previous = discoverReturnRouteRef.current
+            if (previous) {
+              setView(previous.view)
+              setServerId(previous.serverId)
+              setChannelId(previous.channelId)
+              setDmId(previous.dmId)
+              setNotFoundPath(previous.path ?? '')
+              setMobileTab(mobileTabForView(previous.view))
+            } else {
+              setView('home')
+              setMobileTab('home')
+            }
+            setDrawerOpen(false)
+          }}
           onFocusSocialComposer={() => socialInputRef.current?.focus()}
           onVoiceCallModal={() => setModal('call')}
           onVideoCallModal={() => setModal('call')}
@@ -950,7 +970,7 @@ export function WorkspacePage({
           )}
         </div>
 
-        {isMobile && (
+        {isMobile && view !== 'discover' && (
           <MobileTabs
             activeTab={mobileTab}
             onSelectTab={(tab) => {
