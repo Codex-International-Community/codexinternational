@@ -25,7 +25,8 @@ export function ServerRail({
     <aside className="server-rail" aria-label="Workspace navigation">
       <button
         type="button"
-        className="brand-mark"
+        className={`brand-mark ${activeView === 'home' ? 'active' : ''}`}
+        aria-current={activeView === 'home' ? 'page' : undefined}
         aria-label="Home"
         title="Home"
         onClick={onSelectHome}
