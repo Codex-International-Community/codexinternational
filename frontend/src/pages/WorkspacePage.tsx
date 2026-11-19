@@ -629,8 +629,7 @@ export function WorkspacePage({
         onClick={() => setDrawerOpen(false)}
       />
 
-      {(!isMobile || (view !== 'channels' && view !== 'people')) && (
-        <>
+      <>
           <ServerRail
             servers={data.servers}
             activeServerId={serverId}
@@ -648,9 +647,12 @@ export function WorkspacePage({
             onNavigateView={navigateView}
           />
 
-          <ChannelSidebar
+          {view !== 'channels' && view !== 'people' && <ChannelSidebar
         currentUser={currentUser}
         view={view}
+        servers={data.servers}
+        allChannels={data.channels}
+        activeServerId={serverId}
         server={server}
         channels={channels}
         channelId={channel?.id ?? ''}
@@ -668,6 +670,20 @@ export function WorkspacePage({
         onSelectSocialTab={setSocialTab}
         onOpenQuickSearch={() => setSearchOpen(true)}
         onSelectChannel={pickChannel}
+        onSelectServer={pickServer}
+        onSelectServerChannel={(joinedServerId, joinedChannel) => {
+          setServerId(joinedServerId)
+          if (joinedChannel.type === 'voice') {
+            setVoiceId(joinedChannel.id)
+            notify(`Connected to ${joinedChannel.name} voice preview`)
+            setDrawerOpen(false)
+            return
+          }
+          setChannelId(joinedChannel.id)
+          setView('channel')
+          setMobileTab('chat')
+          setDrawerOpen(false)
+        }}
         onOpenDm={openDm}
         onCreateChannelModal={() => {
           setModal('channel')
@@ -688,9 +704,8 @@ export function WorkspacePage({
         }
             onOpenBots={() => navigateView('bots')}
             onLogout={() => void onLogout()}
-          />
-        </>
-      )}
+          />}
+      </>
 
       <main className="workspace">
         <Topbar
