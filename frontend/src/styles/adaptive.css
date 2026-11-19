@@ -2598,3 +2598,45 @@ dialog.bot-reveal-modal {
     z-index: 52 !important;
   }
 }
+
+/* Rocket transition follows the active workspace theme on every viewport. */
+.route-transition-overlay {
+  background: var(--workspace) !important;
+  color: var(--text) !important;
+  z-index: 400 !important;
+}
+.route-transition-stars i {
+  background: var(--muted, var(--text)) !important;
+}
+.route-transition-rocket {
+  color: var(--accent) !important;
+}
+.route-transition-rocket .fa-rocket {
+  color: var(--accent) !important;
+}
+.route-transition-label {
+  color: var(--text) !important;
+  font-family: var(--landing-display, inherit);
+  letter-spacing: .02em;
+}
+@media (min-width: 768px) {
+  .route-transition-rocket {
+    width: 72px;
+    height: 72px;
+    font-size: 72px;
+  }
+  .route-transition-label {
+    font-size: 16px;
+  }
+}
+@media (max-width: 767px) {
+  .route-transition-rocket {
+    width: 56px;
+    height: 56px;
+    font-size: 56px;
+  }
+  .route-transition-label {
+    top: calc(50% + 62px);
+    font-size: 14px;
+  }
+}
