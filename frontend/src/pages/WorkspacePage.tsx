@@ -30,7 +30,6 @@ import { CallModal } from '../components/modals/CallModal'
 
 import { ChatPanel } from '../components/chat/ChatPanel'
 import { MembersPanel } from '../components/chat/MembersPanel'
-import { ThreadPanel } from '../components/chat/ThreadPanel'
 import { SocialFeed } from '../components/social/SocialFeed'
 import { SocialAside } from '../components/social/SocialAside'
 import { ChannelDirectory } from '../components/directories/ChannelDirectory'
@@ -270,8 +269,6 @@ export function WorkspacePage({
   )
   const [composer, setComposer] = useState('')
   const [replyTo, setReplyTo] = useState<Message | null>(null)
-  const [activeThread, setActiveThread] = useState<{ scope: string; message: Message } | null>(null)
-  const [threadReplies, setThreadReplies] = useState<Record<string, Message[]>>({})
   const [editingId, setEditingId] = useState<string | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -500,36 +497,6 @@ export function WorkspacePage({
     [session.user.id, session.user.display_name, session.user.username, data.displayName, initials],
   )
 
-  const openThread = (message: Message) => {
-    setActiveThread({ scope: key, message })
-    setMembersOpen(false)
-  }
-
-  const sendThreadReply = (text: string) => {
-    if (!activeThread || activeThread.scope !== key || !text.trim()) return
-
-    const now = new Date()
-    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-    const reply: Message = {
-      id: `thread-${Date.now()}`,
-      authorId: session.user.id,
-      author: currentUser.name,
-      initials,
-      tone: 'self',
-      time,
-      text: text.trim(),
-      reactions: {},
-    }
-    const threadKey = `${activeThread.scope}:${activeThread.message.id}`
-    setThreadReplies((previous) => ({
-      ...previous,
-      [threadKey]: [...(previous[threadKey] ?? []), reply],
-    }))
-  }
-
-  const activeThreadKey = activeThread ? `${activeThread.scope}:${activeThread.message.id}` : ''
-  const threadPanelOpen = Boolean(activeThread && (view === 'channel' || view === 'dm') && activeThread.scope === key)
-
   const sendMessage = (e?: FormEvent) => {
     e?.preventDefault()
     const clean = composer.trim()
@@ -638,7 +605,7 @@ export function WorkspacePage({
     
   }
 
-  const showMembersPanel = ((view === 'channel' && Boolean(server) && Boolean(channel)) || (view === 'dm' && Boolean(currentDm))) && membersOpen && !threadPanelOpen
+  const showMembersPanel = ((view === 'channel' && Boolean(server) && Boolean(channel)) || (view === 'dm' && Boolean(currentDm))) && membersOpen
 
   return (
     <div
@@ -786,7 +753,7 @@ export function WorkspacePage({
           />
         )}
 
-        <div className={`workspace-body ${!showMembersPanel && view !== 'social' && !threadPanelOpen ? 'workspace-body--single' : ''} ${threadPanelOpen ? 'workspace-body--with-thread' : ''}`}>
+        <div className={`workspace-body ${!showMembersPanel && view !== 'social' ? 'workspace-body--single' : ''}`}>
           <section className="chat-panel">
             {view === 'not-found' ? (
               <NotFoundView
@@ -1019,9 +986,6 @@ export function WorkspacePage({
                   })
                 }}
                 onReply={setReplyTo}
-                onCreateThread={openThread}
-                threadReplies={threadReplies}
-                threadScope={key}
                 onEdit={(m) => {
                   setEditingId(m.id)
                   setComposer(m.text)
@@ -1055,17 +1019,6 @@ export function WorkspacePage({
               />
             )}
           </section>
-
-          {threadPanelOpen && activeThread && (
-            <ThreadPanel
-              channelName={view === 'dm' ? currentDm?.name ?? 'Direct Message' : channel?.name ?? 'channel'}
-              parentMessage={activeThread.message}
-              replies={threadReplies[activeThreadKey] ?? []}
-              currentUser={currentUser}
-              onClose={() => setActiveThread(null)}
-              onSend={sendThreadReply}
-            />
-          )}
 
           {!isMobile && view === 'social' && (
             <SocialAside

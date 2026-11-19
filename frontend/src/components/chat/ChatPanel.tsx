@@ -26,9 +26,6 @@ interface ChatPanelProps {
   onAddEmoji: (emoji: string) => void
   onReact: (messageId: string, emoji: string) => void
   onReply: (message: Message) => void
-  onCreateThread: (message: Message) => void
-  threadReplies: Record<string, Message[]>
-  threadScope: string
   onEdit: (message: Message) => void
   onRemove: (message: Message) => void
   onTogglePin: (message: Message) => void
@@ -62,9 +59,6 @@ export function ChatPanel({
   onAddEmoji,
   onReact,
   onReply,
-  onCreateThread,
-  threadReplies,
-  threadScope,
   onEdit,
   onRemove,
   onTogglePin,
@@ -165,8 +159,6 @@ export function ChatPanel({
             isMenuOpen={activeMenuId === message.id}
             onReact={onReact}
             onReply={handleStartReply}
-            onCreateThread={(item) => { onCreateThread(item); setActiveMenuId(null) }}
-            threadReplyCount={(threadReplies[`${threadScope}:${message.id}`] ?? []).length}
             onEdit={(item) => { onEdit(item); setActiveMenuId(null) }}
             onRemove={(item) => { onRemove(item); setActiveMenuId(null) }}
             onTogglePin={(item) => { onTogglePin(item); setActiveMenuId(null) }}
