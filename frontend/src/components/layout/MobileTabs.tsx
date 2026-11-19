@@ -28,7 +28,7 @@ export function MobileTabs({ activeTab, onSelectTab }: MobileTabsProps) {
         className={activeTab === 'social' ? 'active' : ''}
         onClick={() => onSelectTab('social')}
       >
-        <span className="mobile-social-mark">＠</span>
+        <Icon name="at" />
         <span>Social</span>
       </button>
       <button
