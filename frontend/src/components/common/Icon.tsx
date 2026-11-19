@@ -1,8 +1,9 @@
 import type { IconName } from '../../types/common'
 
-const gentlefaceNames: Record<IconName, string> = {
+// Gentleface line-round icon set, MIT licensed: https://gentleface.com/\nconst gentlefaceNames: Record<IconName, string> = {
   home: 'home',
   compass: 'compass',
+  rocket: 'rocket',
   plus: 'plus',
   chevron: 'chevron-down',
   hash: 'hash',
