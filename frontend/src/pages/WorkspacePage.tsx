@@ -6,7 +6,7 @@ import '../styles/adaptive.css'
 import type { AuthSession } from '../api/client'
 import type { ViewportInfo } from '../hooks/useViewport'
 import type { Attachment, View } from '../types/common'
-import type { Channel, Data, Message } from '../types/chat'
+import type { Channel, Data, Message, ThreadEntry } from '../types/chat'
 import type { SocialPost, SocialTab } from '../types/social'
 
 import { people, roomKey } from '../constants/seedData'
@@ -31,6 +31,7 @@ import { CallModal } from '../components/modals/CallModal'
 import { ChatPanel } from '../components/chat/ChatPanel'
 import { MembersPanel } from '../components/chat/MembersPanel'
 import { ThreadPanel } from '../components/chat/ThreadPanel'
+import { ThreadsView } from '../components/views/ThreadsView'
 import { SocialFeed } from '../components/social/SocialFeed'
 import { SocialAside } from '../components/social/SocialAside'
 import { ChannelDirectory } from '../components/directories/ChannelDirectory'
@@ -115,6 +116,7 @@ function parseWorkspaceRoute(
     settings: 'settings',
     activity: 'notifications',
     pinned: 'pinned',
+    threads: 'threads',
     bots: 'bots',
   }
   const view = segments.length === 1 ? staticRoutes[segments[0]] : undefined
@@ -142,6 +144,8 @@ function buildWorkspacePath({ view, serverId, channelId, dmId, path }: Workspace
       return '/activity'
     case 'pinned':
       return '/pinned'
+    case 'threads':
+      return '/threads'
     case 'channels':
       return '/directory/channels'
     case 'people':
@@ -271,6 +275,7 @@ export function WorkspacePage({
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [activeThread, setActiveThread] = useState<{ scope: string; message: Message } | null>(null)
   const [threadReplies, setThreadReplies] = useState<Record<string, Message[]>>({})
+  const [threadEntries, setThreadEntries] = useState<ThreadEntry[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -449,6 +454,8 @@ export function WorkspacePage({
   const title =
     view === 'home'
       ? 'Friends'
+      : view === 'threads'
+        ? 'Threads'
       : view === 'channel'
       ? channel?.name ?? 'general'
       : view === 'dm'
@@ -500,8 +507,32 @@ export function WorkspacePage({
   )
 
   const openThread = (message: Message) => {
-    setActiveThread({ scope: key, message })
+    const scope = key
+    const id = `${scope}:${message.id}`
+    setThreadEntries((previous) =>
+      previous.some((entry) => entry.id === id)
+        ? previous
+        : [...previous, { id, scope, message, createdAt: Date.now() }],
+    )
+    setActiveThread({ scope, message })
     setMembersOpen(false)
+  }
+
+  const openThreadEntry = (entry: ThreadEntry) => {
+    setActiveThread({ scope: entry.scope, message: entry.message })
+    setMembersOpen(false)
+    if (entry.scope.startsWith('dm:')) {
+      setDmId(entry.scope.slice(3))
+      setView('dm')
+    } else {
+      const [nextServerId, nextChannelId] = entry.scope.split(':')
+      if (nextServerId && nextChannelId) {
+        setServerId(nextServerId)
+        setChannelId(nextChannelId)
+        setView('channel')
+      }
+    }
+    setMobileTab('chat')
   }
 
   const sendThreadReply = (text: string) => {
@@ -527,7 +558,7 @@ export function WorkspacePage({
   }
 
   const activeThreadKey = activeThread ? `${activeThread.scope}:${activeThread.message.id}` : ''
-  const threadPanelOpen = Boolean(activeThread && activeThread.scope === key)
+  const threadPanelOpen = Boolean(activeThread && (view === 'channel' || view === 'dm') && activeThread.scope === key)
 
   const sendMessage = (e?: FormEvent) => {
     e?.preventDefault()
@@ -707,6 +738,7 @@ export function WorkspacePage({
             setView('home')
             setMobileTab('home')
           }}
+          onNavigateThreads={() => navigateView('threads')}
           onNavigateSettings={() => navigateView('settings')}
           onNavigateDiscover={() => navigateView('discover')}
           onToggleTheme={() => setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))}
@@ -798,6 +830,15 @@ export function WorkspacePage({
                 people={people}
                 onOpenDm={openDm}
                 onBrowsePeople={() => navigateView('people')}
+              />
+            ) : view === 'threads' ? (
+              <ThreadsView
+                entries={threadEntries}
+                repliesByThread={threadReplies}
+                servers={data.servers}
+                channels={data.channels}
+                people={people}
+                onOpenThread={openThreadEntry}
               />
             ) : view === 'social' ? (
               <SocialFeed
