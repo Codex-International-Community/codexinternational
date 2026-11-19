@@ -17,6 +17,7 @@ interface UseModalDialogOptions {
 export function useModalDialog({ onClose, dismissible = true }: UseModalDialogOptions) {
   const dialogRef = useRef<HTMLDialogElement>(null)
   const onCloseRef = useRef(onClose)
+  const ignoredCloseEventsRef = useRef(0)
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -31,6 +32,12 @@ export function useModalDialog({ onClose, dismissible = true }: UseModalDialogOp
     }
 
     const handleClose = () => {
+      if (ignoredCloseEventsRef.current > 0) {
+        ignoredCloseEventsRef.current -= 1
+        dialog.returnValue = ''
+        return
+      }
+
       dialog.returnValue = ''
       onCloseRef.current()
     }
@@ -78,6 +85,11 @@ export function useModalDialog({ onClose, dismissible = true }: UseModalDialogOp
       dialog.removeEventListener('cancel', handleCancel)
       removeFallback?.()
       if (dialog.open) {
+        // Native dialog close events are queued. During React Strict Mode's
+        // effect replay, the next setup can attach its listener before this
+        // cleanup-generated event is delivered. Ignore that one event so it
+        // cannot be mistaken for a user closing the newly reopened dialog.
+        ignoredCloseEventsRef.current += 1
         dialog.close()
       }
     }
