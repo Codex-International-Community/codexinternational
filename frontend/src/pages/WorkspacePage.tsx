@@ -20,6 +20,7 @@ import {
 } from '../utils/storage'
 
 import { Toast } from '../components/common/Toast'
+import { Icon } from '../components/common/Icon'
 import { ServerRail } from '../components/layout/ServerRail'
 import { ChannelSidebar } from '../components/layout/ChannelSidebar'
 import { Topbar } from '../components/layout/Topbar'
