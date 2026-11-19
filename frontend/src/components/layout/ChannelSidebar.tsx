@@ -177,8 +177,8 @@ export function ChannelSidebar({
               <button
                 type="button"
                 aria-label="New direct message"
-                title={people.length === 0 ? 'No people are available yet' : 'New direct message'}
-                disabled={people.length === 0}
+                title="New direct message"
+                aria-haspopup="dialog"
                 onClick={onNewDmModal}
               >
                 <Icon name="plus" size={14} />
