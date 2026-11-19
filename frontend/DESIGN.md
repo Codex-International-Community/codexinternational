@@ -1,4 +1,4 @@
-# Commons — Product & Design Direction
+# Commons: Product & Design Direction
 
 ## Product
 A community workspace that brings group chat, a public social timeline, channel discovery, and member discovery into one coherent place. The frontend preview runs locally in the browser; account identity, feeds, voice/video, and cross-device sync are not backed by a server.
@@ -12,11 +12,11 @@ Editorial community software: warm ink surfaces, pale mineral text, restrained l
 - **Discover / Activity / Settings:** supporting areas, with the same typography, spacing, and interaction language.
 
 ## Color direction
-X-inspired neutral palette; Commons keeps its own layout, components, naming, and brand mark.
-- Dark / Lights Out: background #000000, raised surface #16181C, hover surface #202327, border #2F3336, text #E7E9EA, muted #AAB0B6.
-- Light / Default: background #FFFFFF, surface #F7F9F9, hover surface #EFF3F4, border #CFD9DE, text #0F1419, muted #536471.
-- Shared accent: X blue #1D9BF0 with a subtle blue-tinted selection surface. Keep success green #00BA7C and danger red #F4212E only for semantic status.
-- Radius: 9–15px for controls and interactive surfaces; asymmetric 5px corner only as a quiet signature.
+Unified Codex International Slate-Navy tonal palette (synchronized between landing portal and community application):
+- Dark: background `#111522`, deep rail `#0B0E18`, raised surface `#1E263B`, hover surface `#26314A`, border `#303D59`, strong border `#536684`, primary text `#DCE3EF`, muted `#98A9C4`, high-contrast CTA `#DCE3EF` (text `#111522`), signal accent `#6BC2FF` / `#3898EC`.
+- Light: background `#EEF2F8`, alt surface `#DCE3EF`, raised surface `#FFFFFF`, border `#C2CEE0`, strong border `#536684`, primary text `#111522`, muted `#303D59`, high-contrast CTA `#111522` (text `#FFFFFF`), signal accent `#1659A8`.
+- Semantic status only: success green `#00BA7C` (dark) / `#008A5C` (light) and danger red `#F4212E` (dark) / `#D91B27` (light).
+- Radius: `14px 14px 14px 3px` signature asymmetric corner for primary cards and CTAs; `6px`–`10px` for standard controls.
 - Spacing: 4px base rhythm, with 8 / 12 / 16 / 24 / 32px steps.
 - Typography: system sans for interface and body copy; Georgia for editorial display headlines.
 - Motion: short state transitions; respect reduced-motion preferences.

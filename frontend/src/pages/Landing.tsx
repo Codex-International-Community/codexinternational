@@ -389,7 +389,7 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
           <section className="landing-showcase">
             <div className="landing-badge-row">
               <BrandMark size={48} />
-              <span className="landing-lbl">Komunitas coding</span>
+              <span className="landing-badge-pill">RUST AXUM / VALKEY / BREVO OTP</span>
             </div>
             <h1>Welcome to {BRAND}</h1>
             <p className="landing-showcase-lead">
@@ -398,7 +398,7 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
             <div className="landing-pillars">
               <div className="landing-pillar">
                 <strong>Server-Verified Brevo OTP</strong>
-                <span>6-digit codes are SHA-256 hashed in Valkey with exponential 24h backoff — never stored on your browser.</span>
+                <span>6-digit codes are SHA-256 hashed in Valkey with exponential 24h backoff, never stored on your browser.</span>
               </div>
               <div className="landing-pillar">
                 <strong>Rotating Device Sessions</strong>

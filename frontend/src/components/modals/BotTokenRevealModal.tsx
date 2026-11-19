@@ -44,7 +44,7 @@ export function BotTokenRevealModal({
         <h2 id="bot-reveal-title">Save your bot credential now</h2>
         <p>
           Token <strong>{tokenInfo.label}</strong> is shown <strong>only once</strong>.
-          Copy and store it in your VPS <code>.env</code>, Notepad, or secret manager — we only keep its SHA-256 hash.
+          Copy and store it in your VPS <code>.env</code>, Notepad, or secret manager. We only keep its SHA-256 hash.
         </p>
 
         <span className="modal-field-label">TOKEN ID (SAVE FOR REVOCATION)</span>
