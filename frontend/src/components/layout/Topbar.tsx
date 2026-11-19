@@ -95,7 +95,7 @@ export function Topbar({
             <Icon name="arrow" />
           </button>
         )}
-        {isMobile && view !== 'discover' && (
+        {isMobile && (
           <button
             type="button"
             className="mobile-menu"
