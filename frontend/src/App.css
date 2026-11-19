@@ -2022,7 +2022,7 @@ dialog.modal {
   display: none;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .app-shell {
     display: block;
   }
@@ -2153,7 +2153,7 @@ dialog.modal {
   }
   .mobile-tabs {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     height: 54px;
     border-top: 1px solid var(--line);
     background: var(--side);
@@ -2246,4 +2246,11 @@ dialog.modal {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* The desktop sidebar stays visible; its collapse control is tablet-only. */
+@media (min-width: 1024px) {
+  .collapse-channels {
+    display: none;
+  }
 }

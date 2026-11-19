@@ -11,6 +11,7 @@ export type IconName =
   | 'pin'
   | 'inbox'
   | 'help'
+  | 'info'
   | 'settings'
   | 'mic'
   | 'headphones'

@@ -1763,7 +1763,7 @@ dialog.modal {
   }
   .mobile-tabs {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     height: 62px;
     padding: 5px 3px max(5px, env(safe-area-inset-bottom));
   }

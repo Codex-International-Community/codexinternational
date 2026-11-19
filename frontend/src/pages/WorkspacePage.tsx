@@ -369,7 +369,7 @@ export function WorkspacePage({
         activeView={view}
         onSelectHome={() => {
           setView('home')
-          setMobileTab('chat')
+          setMobileTab('home')
           setChannelSidebarOpen(true)
           setDrawerOpen(false)
         }}
@@ -773,6 +773,7 @@ export function WorkspacePage({
             activeTab={mobileTab}
             onSelectTab={(tab) => {
               setMobileTab(tab)
+              if (tab === 'home') setView('home')
               if (tab === 'chat') setView('channel')
               if (tab === 'social') {
                 setView('social')
