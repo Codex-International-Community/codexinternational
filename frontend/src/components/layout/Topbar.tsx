@@ -92,7 +92,7 @@ export function Topbar({
       <div className="topbar-title">
         {view === 'discover' && onBack && (
           <button type="button" className="discover-back" onClick={onBack} aria-label="Back to previous page" title="Back">
-            <Icon name="arrow-left" />
+            <Icon name="arrow" />
           </button>
         )}
         {isMobile && view !== 'channels' && view !== 'people' && view !== 'discover' && (
@@ -120,7 +120,7 @@ export function Topbar({
       <div className="topbar-actions">
         {view === 'discover' ? (
           <button type="button" className="discover-sidebar-toggle" onClick={onOpenDrawer} aria-label="Open sidebar" title="Open sidebar">
-            <Icon name="panel-left" />
+            <Icon name="menu" />
           </button>
         ) : view === 'social' ? (
           <button
