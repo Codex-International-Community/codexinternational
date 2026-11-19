@@ -1784,3 +1784,125 @@ dialog.bot-reveal-modal {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Discover communities: immersive single-page layout with an overlay navigation drawer. */
+.app-shell.view-discover {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app-shell.view-discover .workspace {
+  grid-template-rows: 62px minmax(0, 1fr);
+  min-width: 0;
+  width: 100%;
+  height: 100dvh;
+}
+
+.app-shell.view-discover .discover-back,
+.app-shell.view-discover .discover-sidebar-toggle {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 11px 11px 11px 3px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+
+.app-shell.view-discover .discover-back:hover,
+.app-shell.view-discover .discover-sidebar-toggle:hover {
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+.app-shell.view-discover .topbar-title {
+  gap: 12px;
+}
+
+.app-shell.view-discover .topbar-title > strong {
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+  font-size: .98rem;
+  font-weight: 700;
+  letter-spacing: .015em;
+}
+
+.app-shell.view-discover .topbar-actions {
+  margin-left: auto;
+}
+
+.app-shell.view-discover .server-rail,
+.app-shell.view-discover .channel-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  transform: translateX(-125%);
+  transition: transform .18s ease;
+  box-shadow: 12px 0 35px rgba(0, 0, 0, .28);
+}
+
+.app-shell.view-discover .server-rail {
+  left: 0;
+  z-index: 52;
+}
+
+.app-shell.view-discover .channel-sidebar {
+  left: 68px;
+  z-index: 51;
+  width: 246px;
+}
+
+.app-shell.view-discover.drawer-open .server-rail,
+.app-shell.view-discover.drawer-open .channel-sidebar {
+  transform: translateX(0);
+}
+
+.app-shell.view-discover .drawer-scrim {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: block;
+  border: 0;
+  background: rgba(0, 0, 0, .58);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+}
+
+.app-shell.view-discover.drawer-open .drawer-scrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.app-shell.view-discover .discover-heading h1 {
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+}
+
+.app-shell.view-discover .discover-heading,
+.app-shell.view-discover .directory-empty {
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+}
+
+@media (max-width: 767px) {
+  .app-shell.view-discover .workspace {
+    grid-template-rows: 56px minmax(0, 1fr);
+  }
+
+  .app-shell.view-discover .topbar {
+    padding-inline: 12px;
+  }
+
+  .app-shell.view-discover .discover-back,
+  .app-shell.view-discover .discover-sidebar-toggle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .app-shell.view-discover .channel-sidebar {
+    left: 64px;
+    width: min(270px, calc(100vw - 64px));
+  }
+}
