@@ -21,6 +21,7 @@ interface TopbarProps {
   onOpenNotifications: () => void
   onOpenInbox: () => void
   onOpenSettings?: () => void
+  onCopyLink: () => void
 }
 
 export function Topbar({
@@ -42,6 +43,7 @@ export function Topbar({
   onOpenNotifications,
   onOpenInbox,
   onOpenSettings,
+  onCopyLink,
 }: TopbarProps) {
   const symbolIcon: IconName =
     view === 'social'
@@ -64,7 +66,9 @@ export function Topbar({
                     ? 'bell'
                     : view === 'pinned'
                       ? 'pin'
-                      : channel?.type === 'voice'
+                      : view === 'not-found'
+                        ? 'help'
+                        : channel?.type === 'voice'
                         ? 'volume'
                         : 'hash'
 
@@ -188,6 +192,14 @@ export function Topbar({
                 {unreadCount > 0 && <i className="notify-dot" />}
               </button>
             )}
+            <button
+              type="button"
+              aria-label="Copy link"
+              title="Copy link"
+              onClick={onCopyLink}
+            >
+              <Icon name="link" />
+            </button>
           </>
         ) : null}
         {isMobile && onOpenSettings && (

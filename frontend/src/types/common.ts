@@ -68,6 +68,7 @@ export type View =
   | 'channels'
   | 'people'
   | 'bots'
+  | 'not-found'
 
 export type Theme = 'dark' | 'light'
 

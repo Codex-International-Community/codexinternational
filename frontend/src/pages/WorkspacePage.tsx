@@ -40,6 +40,7 @@ import { SettingsView } from '../components/views/SettingsView'
 import { NotificationsView } from '../components/views/NotificationsView'
 import { PinnedView } from '../components/views/PinnedView'
 import { BotsView } from '../components/views/BotsView'
+import { NotFoundView } from '../components/views/NotFoundView'
 
 interface WorkspacePageProps {
   session: AuthSession
@@ -55,6 +56,7 @@ interface WorkspaceRoute {
   serverId: string
   channelId: string
   dmId: string
+  path?: string
 }
 
 const defaultWorkspaceRoute: WorkspaceRoute = {
@@ -79,13 +81,17 @@ function parseWorkspaceRoute(
       }
     })
 
+  if (segments.length === 0) return { ...fallback, view: 'home' }
+
   if (segments[0] === 'channels' && segments[1] === '@me') {
-    return segments[2]
-      ? { ...fallback, view: 'dm', dmId: segments[2] }
-      : { ...fallback, view: 'home' }
+    if (segments.length === 2) return { ...fallback, view: 'home' }
+    if (segments.length === 3 && segments[2]) {
+      return { ...fallback, view: 'dm', dmId: segments[2] }
+    }
+    return { ...fallback, view: 'not-found', path: pathname }
   }
 
-  if (segments[0] === 'channels' && segments[1] && segments[2]) {
+  if (segments[0] === 'channels' && segments.length === 3 && segments[1] && segments[2]) {
     return {
       ...fallback,
       view: 'channel',
@@ -94,11 +100,11 @@ function parseWorkspaceRoute(
     }
   }
 
-  if (segments[0] === 'directory' && segments[1] === 'channels') {
+  if (segments.length === 2 && segments[0] === 'directory' && segments[1] === 'channels') {
     return { ...fallback, view: 'channels' }
   }
 
-  if (segments[0] === 'directory' && segments[1] === 'people') {
+  if (segments.length === 2 && segments[0] === 'directory' && segments[1] === 'people') {
     return { ...fallback, view: 'people' }
   }
 
@@ -110,12 +116,14 @@ function parseWorkspaceRoute(
     pinned: 'pinned',
     bots: 'bots',
   }
-  const view = staticRoutes[segments[0] ?? '']
+  const view = segments.length === 1 ? staticRoutes[segments[0]] : undefined
 
-  return view ? { ...fallback, view } : { ...fallback, view: 'home' }
+  return view
+    ? { ...fallback, view }
+    : { ...fallback, view: 'not-found', path: pathname }
 }
 
-function buildWorkspacePath({ view, serverId, channelId, dmId }: WorkspaceRoute): string {
+function buildWorkspacePath({ view, serverId, channelId, dmId, path }: WorkspaceRoute): string {
   switch (view) {
     case 'home':
       return '/channels/@me'
@@ -139,6 +147,8 @@ function buildWorkspacePath({ view, serverId, channelId, dmId }: WorkspaceRoute)
       return '/directory/people'
     case 'bots':
       return '/bots'
+    case 'not-found':
+      return path ?? '/404'
   }
 }
 
@@ -173,6 +183,7 @@ export function WorkspacePage({
   const [serverId, setServerId] = useState(initialRoute.serverId)
   const [channelId, setChannelId] = useState(initialRoute.channelId)
   const [dmId, setDmId] = useState(initialRoute.dmId)
+  const [notFoundPath, setNotFoundPath] = useState(initialRoute.path ?? '')
   const [membersOpen, setMembersOpen] = useState(isDesktop)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [mobileTab, setMobileTab] = useState<MobileTab>(() =>
@@ -236,6 +247,16 @@ export function WorkspacePage({
     window.setTimeout(() => setToast((curr) => (curr === text ? '' : curr)), 2600)
   }, [])
 
+  const copyCurrentLink = useCallback(async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
+      await navigator.clipboard.writeText(window.location.href)
+      notify('Link copied to clipboard')
+    } catch {
+      notify('Could not copy link. Check browser clipboard permissions.')
+    }
+  }, [notify])
+
   useEffect(() => {
     const ok = saveData(data)
     if (!ok) {
@@ -266,7 +287,7 @@ export function WorkspacePage({
     saveFollowedHandles(followedHandles)
   }, [followedHandles])
   useEffect(() => {
-    const nextPath = buildWorkspacePath({ view, serverId, channelId, dmId })
+    const nextPath = buildWorkspacePath({ view, serverId, channelId, dmId, path: notFoundPath })
     if (window.location.pathname !== nextPath) {
       if (routeSyncReadyRef.current) {
         window.history.pushState({ view }, '', nextPath)
@@ -275,7 +296,7 @@ export function WorkspacePage({
       }
     }
     routeSyncReadyRef.current = true
-  }, [view, serverId, channelId, dmId])
+  }, [view, serverId, channelId, dmId, notFoundPath])
 
   useEffect(() => {
     const handlePopState = () => {
@@ -289,6 +310,7 @@ export function WorkspacePage({
       setServerId(route.serverId)
       setChannelId(route.channelId)
       setDmId(route.dmId)
+      setNotFoundPath(route.path ?? '')
       setMobileTab(mobileTabForView(route.view))
       setDrawerOpen(false)
       setSearchOpen(false)
@@ -367,7 +389,19 @@ export function WorkspacePage({
                     ? 'Activity'
                     : view === 'pinned'
                       ? 'Pinned messages'
-                      : 'Settings'
+                      : view === 'not-found'
+                        ? 'Page not found'
+                        : 'Settings'
+
+  useEffect(() => {
+    const pageTitle =
+      view === 'channel'
+        ? `#${channel?.name ?? 'channel'} · ${server?.name ?? 'Codex International'}`
+        : view === 'dm'
+          ? `${currentDm?.name ?? 'Direct messages'} · Codex International`
+          : `${title} · Codex International`
+    document.title = pageTitle
+  }, [channel?.name, currentDm?.name, server?.name, title, view])
 
   const initials = data.displayName
     .split(/\s+/)
@@ -584,6 +618,7 @@ export function WorkspacePage({
           }}
           onOpenInbox={() => navigateView('dm')}
           onOpenSettings={() => navigateView('settings')}
+          onCopyLink={() => void copyCurrentLink()}
         />
 
         {sessionWarning && (
@@ -617,7 +652,13 @@ export function WorkspacePage({
 
         <div className={`workspace-body ${!showMembersPanel && view !== 'social' ? 'workspace-body--single' : ''}`}>
           <section className="chat-panel">
-            {view === 'home' ? (
+            {view === 'not-found' ? (
+              <NotFoundView
+                path={notFoundPath || window.location.pathname}
+                onGoHome={() => navigateView('home')}
+                onGoBack={() => window.history.back()}
+              />
+            ) : view === 'home' ? (
               <HomeView
                 conversations={data.conversations}
                 people={people}
