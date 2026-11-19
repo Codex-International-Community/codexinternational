@@ -180,6 +180,19 @@ export function WorkspacePage({
     parseWorkspaceRoute(window.location.pathname),
   )
   const [view, setView] = useState<View>(initialRoute.view)
+  const [pageTransition, setPageTransition] = useState<'rocket' | 'slide' | null>(null)
+  const previousViewRef = useRef<View>(initialRoute.view)
+
+  useEffect(() => {
+    const previousView = previousViewRef.current
+    previousViewRef.current = view
+    if (previousView === view) return
+    const navbarViews: View[] = ['home', 'channel', 'dm', 'social', 'channels', 'people']
+    const transition = navbarViews.includes(view) ? 'slide' : 'rocket'
+    setPageTransition(transition)
+    const timeout = window.setTimeout(() => setPageTransition(null), transition === 'rocket' ? 1180 : 360)
+    return () => window.clearTimeout(timeout)
+  }, [view])
   const [serverId, setServerId] = useState(initialRoute.serverId)
   const [channelId, setChannelId] = useState(initialRoute.channelId)
   const [dmId, setDmId] = useState(initialRoute.dmId)
@@ -533,8 +546,14 @@ export function WorkspacePage({
     <div
       className={`app-shell theme-${data.theme} ${isMobile ? 'viewport-mobile' : 'viewport-desktop'} ${
         drawerOpen ? 'drawer-open' : ''
-      } view-${view}`}
+      } ${pageTransition ? `page-transition-${pageTransition}` : ''} view-${view}`}
     >
+      {pageTransition === 'rocket' && (
+        <div className="route-transition-overlay" aria-hidden="true">
+          <span className="route-transition-stars" />
+          <span className="route-transition-rocket">🚀</span>
+        </div>
+      )}
       <button
         className="drawer-scrim"
         aria-label="Close navigation"
