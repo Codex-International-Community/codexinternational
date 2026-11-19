@@ -1,0 +1,8 @@
+name = "codexinternational"
+compatibility_date = "2026-11-19"
+
+[assets]
+directory = "."
+binding = "ASSETS"
+
+[previews]
