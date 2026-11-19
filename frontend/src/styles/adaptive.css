@@ -1908,3 +1908,101 @@ dialog.bot-reveal-modal {
 }
 
 .app-shell.view-discover .discover-back svg { transform: rotate(180deg); }
+
+/* Desktop directory pages must occupy the complete workspace grid. */
+@media (min-width: 768px) {
+  .app-shell.view-channels,
+  .app-shell.view-people {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-shell.view-channels > .workspace,
+  .app-shell.view-people > .workspace {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .app-shell.view-channels .workspace-body,
+  .app-shell.view-people .workspace-body {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-shell.view-channels .chat-panel,
+  .app-shell.view-people .chat-panel {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Discover navigation is a right-side drawer on desktop and mobile. */
+.app-shell.view-discover .server-rail,
+.app-shell.view-discover .channel-sidebar {
+  left: auto;
+  transform: translateX(115%);
+  transition:
+    transform .26s cubic-bezier(.2, .8, .2, 1),
+    box-shadow .26s ease;
+  box-shadow: -14px 0 38px rgba(0, 0, 0, .32);
+}
+
+.app-shell.view-discover .server-rail {
+  right: 0;
+  z-index: 52;
+}
+
+.app-shell.view-discover .channel-sidebar {
+  right: 68px;
+  z-index: 51;
+}
+
+.app-shell.view-discover.drawer-open .server-rail,
+.app-shell.view-discover.drawer-open .channel-sidebar {
+  transform: translateX(0);
+}
+
+.app-shell.view-discover .drawer-scrim {
+  transition: opacity .26s ease;
+}
+
+@media (max-width: 767px) {
+  .app-shell.view-discover .server-rail {
+    right: 0;
+    left: auto;
+    transform: translateX(115%);
+  }
+
+  .app-shell.view-discover .channel-sidebar {
+    right: 64px;
+    left: auto;
+    width: min(270px, calc(100vw - 64px));
+    transform: translateX(115%);
+  }
+
+  .app-shell.view-discover.drawer-open .server-rail,
+  .app-shell.view-discover.drawer-open .channel-sidebar {
+    transform: translateX(0);
+  }
+}
+
+/* Keep drawer motion subtle and consistent across the app. */
+.app-shell:not(.view-discover) .server-rail,
+.app-shell:not(.view-discover) .channel-sidebar {
+  transition:
+    transform .22s cubic-bezier(.2, .8, .2, 1),
+    box-shadow .22s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell .server-rail,
+  .app-shell .channel-sidebar {
+    transition: none !important;
+  }
+}
