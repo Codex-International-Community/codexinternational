@@ -656,10 +656,9 @@ export function WorkspacePage({
           type?: string
           channelId?: string
           messages?: ChatMessageWire[]
-          message?: ChatMessageWire
+          message?: ChatMessageWire | string
           id?: string
           code?: string
-          message?: string
           messageText?: string
           messageId?: string
           pinned?: boolean
@@ -692,12 +691,12 @@ export function WorkspacePage({
           return
         }
 
-        if (frame.type === 'MESSAGE_CREATE' && frame.message?.channelId === activeChatChannelId) {
+        if (frame.type === 'MESSAGE_CREATE' && typeof frame.message !== 'string' && frame.message?.channelId === activeChatChannelId) {
           applyMessages([frame.message])
           return
         }
 
-        if (frame.type === 'MESSAGE_UPDATE' && frame.message?.channelId === activeChatChannelId) {
+        if (frame.type === 'MESSAGE_UPDATE' && typeof frame.message !== 'string' && frame.message?.channelId === activeChatChannelId) {
           const updated = mapChatMessage(frame.message, session.user.id)
           setData((previous) => {
             const list = view === 'dm'
