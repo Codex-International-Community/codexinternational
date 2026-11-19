@@ -1,16 +1,19 @@
 :root {
   color-scheme: light dark;
-  --rail: #0B0E18;
-  --side: #111522;
-  --workspace: #111522;
-  --surface: #1E263B;
-  --surface2: #26314A;
-  --line: #303D59;
-  --text: #DCE3EF;
-  --muted: #98A9C4;
-  --quiet: #7B8FA8;
-  --accent: #3898EC;
-  --accent-bg: rgba(56, 152, 236, .16);
+  --rail: #0A0A0C;
+  --side: #121115;
+  --workspace: #121115;
+  --surface: #1A191F;
+  --surface2: #24212B;
+  --line: #2D2936;
+  --text: #F5F4F7;
+  --muted: #B4B0BC;
+  --quiet: #9690A2;
+  --accent: #D994F2;
+  --accent-solid: #8A30A6;
+  --accent-solid-hover: #9C38BC;
+  --accent-bg: rgba(180, 79, 211, .16);
+  --accent-border: rgba(217, 148, 242, .38);
   --green: #00ba7c;
   --danger: #f4212e;
   --serif: Georgia, "Times New Roman", serif;
@@ -22,17 +25,20 @@
 
 .theme-light {
   color-scheme: light;
-  --rail: #DCE3EF;
-  --side: #EEF2F8;
-  --workspace: #EEF2F8;
+  --rail: #EFEBF3;
+  --side: #F7F6F9;
+  --workspace: #F7F6F9;
   --surface: #FFFFFF;
-  --surface2: #DCE3EF;
-  --line: #C2CEE0;
-  --text: #111522;
-  --muted: #303D59;
-  --quiet: #536684;
-  --accent: #1659A8;
-  --accent-bg: rgba(22, 89, 168, .11);
+  --surface2: #EAE5F0;
+  --line: #D5CEE0;
+  --text: #121114;
+  --muted: #4A4352;
+  --quiet: #635B6E;
+  --accent: #73268F;
+  --accent-solid: #73268F;
+  --accent-solid-hover: #8A30A6;
+  --accent-bg: rgba(115, 38, 143, .11);
+  --accent-border: rgba(115, 38, 143, .35);
   --green: #008a5c;
   --danger: #d91b27;
 }
@@ -85,7 +91,7 @@ button:active {
 
 .server-rail .brand-mark {
   border-radius: 15px 15px 15px 5px;
-  background: var(--accent);
+  background: var(--accent-solid);
   color: #fff;
   font-family: var(--serif);
   font-style: italic;
@@ -96,7 +102,7 @@ button:active {
 
 .server-rail .brand-mark:hover {
   border-radius: 15px 15px 15px 5px;
-  background: #1a8cd8;
+  background: var(--accent-solid-hover);
   color: #fff;
 }
 
@@ -124,9 +130,9 @@ button:active {
 .server-rail .server-pill:hover,
 .server-rail .server-pill.active {
   border-radius: 14px 14px 14px 5px;
-  background: var(--accent);
+  background: var(--accent-solid);
   color: #fff;
-  border-color: var(--accent);
+  border-color: var(--accent-solid);
 }
 
 .server-pill i {
@@ -151,7 +157,7 @@ button:active {
 }
 
 .server-rail .rail-add:hover {
-  background: var(--accent);
+  background: var(--accent-solid);
   color: #fff;
 }
 
@@ -400,7 +406,7 @@ button:active {
   gap: 8px;
   width: auto;
   padding: 0 13px;
-  border: 1px solid rgba(29, 155, 240, .35);
+  border: 1px solid var(--accent-border);
   background: var(--accent-bg);
   color: var(--accent);
   font-size: 0.8125rem;
@@ -443,7 +449,7 @@ button:active {
   flex-basis: 52px;
   width: 52px;
   height: 52px;
-  border: 1px solid rgba(29, 155, 240, .25);
+  border: 1px solid var(--accent-border);
   border-radius: 18px 18px 18px 6px;
   background: var(--accent-bg);
   color: var(--accent);
@@ -613,12 +619,12 @@ button:active {
 }
 
 .composer-tools .send {
-  background: var(--accent);
+  background: var(--accent-solid);
   color: #fff;
 }
 
 .composer-tools .send:hover {
-  background: #1a8cd8;
+  background: var(--accent-solid-hover);
   color: #fff;
 }
 
@@ -714,7 +720,7 @@ button:active {
 }
 
 .avatar.self {
-  background: linear-gradient(140deg, #1d9bf0, #1768a5);
+  background: linear-gradient(140deg, #8A30A6, #5C1F70);
   color: #fff;
 }
 
@@ -805,12 +811,12 @@ button:active {
 }
 
 .primary-action {
-  background: var(--accent);
+  background: var(--accent-solid);
   color: #fff;
 }
 
 .primary-action:hover {
-  background: #1a8cd8;
+  background: var(--accent-solid-hover);
 }
 
 .discover-grid {
@@ -827,7 +833,7 @@ button:active {
 
 .discover-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(29, 155, 240, .35);
+  border-color: var(--accent-border);
 }
 
 .discover-art {
@@ -838,7 +844,7 @@ button:active {
 .discover-art.card-blue,
 .discover-art.card-orange,
 .discover-art.card-green {
-  background: linear-gradient(135deg, #1d9bf0, #16466b);
+  background: linear-gradient(135deg, #8A30A6, #3E154B);
 }
 
 .discover-art span {
@@ -940,12 +946,12 @@ dialog.modal {
 
 .modal-primary {
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--accent-solid);
   color: #fff;
 }
 
 .modal-primary:hover {
-  background: #1a8cd8;
+  background: var(--accent-solid-hover);
 }
 
 .modal-icon {
@@ -1164,7 +1170,7 @@ dialog.modal {
   padding: 0 14px;
   border: 0;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--accent-solid);
   color: #fff;
   font-size: 0.8125rem;
   font-weight: 800;
@@ -1392,7 +1398,7 @@ dialog.modal {
   padding: 0 12px;
   border: 0;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--accent-solid);
   color: #fff;
   font-size: 0.8125rem;
   font-weight: 800;
@@ -1593,7 +1599,7 @@ dialog.modal {
 .social-follow-inline {
   flex: 0 0 auto;
   padding: 6px 11px;
-  border: 1px solid rgba(29, 155, 240, .42);
+  border: 1px solid var(--accent-border);
   border-radius: 999px;
   background: var(--accent-bg);
   color: var(--accent);
@@ -1948,7 +1954,7 @@ dialog.modal {
   flex: 0 0 auto;
   min-height: 38px;
   padding: 0 14px;
-  border: 1px solid rgba(29, 155, 240, .42);
+  border: 1px solid var(--accent-border);
   border-radius: 999px;
   background: var(--accent-bg);
   color: var(--accent);
@@ -1957,8 +1963,8 @@ dialog.modal {
 }
 
 .directory-heading .primary-action:hover {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
   color: #fff;
 }
 
@@ -2372,7 +2378,7 @@ dialog.modal {
 /* Home / direct-message landing */
 .brand-mark.active {
   border-radius: 12px;
-  background: #7668d4;
+  background: var(--accent-solid);
 }
 
 .home-page {

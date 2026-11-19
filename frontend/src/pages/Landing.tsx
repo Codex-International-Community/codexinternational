@@ -43,7 +43,11 @@ function GoogleIcon() {
 }
 
 function GitHubIcon() {
-  return <i className="fa-brands fa-github" style={{ fontSize: 18 }} aria-hidden="true" />
+  return (
+    <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 1.25a10.75 10.75 0 0 0-3.4 20.95c.54.1.73-.23.73-.52v-1.82c-2.99.65-3.62-1.44-3.62-1.44-.49-1.24-1.2-1.57-1.2-1.57-.98-.67.07-.65.07-.65 1.08.08 1.65 1.11 1.65 1.11.96 1.65 2.52 1.17 3.14.9.1-.7.38-1.17.68-1.44-2.39-.27-4.9-1.2-4.9-5.32 0-1.18.42-2.14 1.11-2.9-.11-.27-.48-1.37.11-2.85 0 0 .9-.29 2.95 1.1a10.2 10.2 0 0 1 5.38 0c2.05-1.39 2.95-1.1 2.95-1.1.59 1.48.22 2.58.11 2.85.69.76 1.11 1.72 1.11 2.9 0 4.13-2.51 5.04-4.91 5.31.39.33.73.99.73 2v2.97c0 .29.19.63.74.52A10.75 10.75 0 0 0 12 1.25Z" />
+    </svg>
+  )
 }
 
 interface LandingProps {
@@ -380,9 +384,6 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
 
   return (
     <div className="landing-shell">
-      <span className="landing-circle" aria-hidden="true" />
-      <span className="landing-block" aria-hidden="true" />
-
       {!isMobile ? (
         /* ── Desktop & Tablet Web Split View ── */
         <main className="landing-desktop-frame">
@@ -498,7 +499,6 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
             <>
               <div className="landing-hero">
                 <BrandMark size={84} />
-                <span className="landing-lbl">Komunitas coding</span>
                 <h1>Welcome to {BRAND}</h1>
                 <p className="landing-hero-sub">
                   Sign in with server-verified Email OTP, password, or OAuth2.

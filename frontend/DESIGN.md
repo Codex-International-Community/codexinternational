@@ -4,7 +4,7 @@
 A community workspace that brings group chat, a public social timeline, channel discovery, and member discovery into one coherent place. The frontend preview runs locally in the browser; account identity, feeds, voice/video, and cross-device sync are not backed by a server.
 
 ## Visual direction
-Editorial community software: warm ink surfaces, pale mineral text, restrained leaf-green accents, serif display typography paired with a neutral sans-serif interface face. The interface should feel active and personal without relying on glass panels, oversized gradients, nested cards, or decorative dashboard metrics.
+Editorial community software: deep obsidian charcoal surfaces, crisp light ink text, Codex purple accents, Oxanium and serif display typography paired with a clean sans-serif interface face. The interface feels active and personal without relying on glass panels, oversized gradients, nested cards, or decorative dashboard metrics.
 
 ## Information architecture
 - **Chat:** persistent server/channel navigation, direct messages, message actions, and a contextual member panel.
@@ -12,14 +12,14 @@ Editorial community software: warm ink surfaces, pale mineral text, restrained l
 - **Discover / Activity / Settings:** supporting areas, with the same typography, spacing, and interaction language.
 
 ## Color direction
-Unified Codex International Slate-Navy tonal palette (synchronized between landing portal and community application):
-- Dark: background `#111522`, deep rail `#0B0E18`, raised surface `#1E263B`, hover surface `#26314A`, border `#303D59`, strong border `#536684`, primary text `#DCE3EF`, muted `#98A9C4`, high-contrast CTA `#DCE3EF` (text `#111522`), signal accent `#6BC2FF` / `#3898EC`.
-- Light: background `#EEF2F8`, alt surface `#DCE3EF`, raised surface `#FFFFFF`, border `#C2CEE0`, strong border `#536684`, primary text `#111522`, muted `#303D59`, high-contrast CTA `#111522` (text `#FFFFFF`), signal accent `#1659A8`.
+Unified Codex International Obsidian Black & Codex Purple palette (synchronized between landing portal and community application):
+- Dark: background `#121115`, deep rail `#0A0A0C`, raised surface `#1A191F`, hover surface `#24212B`, border `#2D2936`, strong border `#463E54`, primary text `#F5F4F7`, muted `#B4B0BC`, quiet `#9690A2`, solid CTA fill `#8A30A6` (hover `#9C38BC`, text `#FFFFFF`), foreground purple ink `#D994F2`.
+- Light: background `#F7F6F9`, alt surface `#EFEBF3`, raised surface `#FFFFFF`, hover surface `#EAE5F0`, border `#D5CEE0`, strong border `#6E627D`, primary text `#121114`, muted `#4A4352`, quiet `#635B6E`, solid CTA fill `#73268F` (hover `#8A30A6`, text `#FFFFFF`), foreground purple ink `#73268F`.
 - Semantic status only: success green `#00BA7C` (dark) / `#008A5C` (light) and danger red `#F4212E` (dark) / `#D91B27` (light).
 - Radius: `14px 14px 14px 3px` signature asymmetric corner for primary cards and CTAs; `6px`–`10px` for standard controls.
 - Spacing: 4px base rhythm, with 8 / 12 / 16 / 24 / 32px steps.
-- Typography: system sans for interface and body copy; Georgia for editorial display headlines.
-- Motion: short state transitions; respect reduced-motion preferences.
+- Typography: Oxanium display headings, Plus Jakarta Sans / system sans for interface and body copy, Space Mono for technical labels and codes, Georgia for editorial timeline headlines.
+- Motion: short state transitions and radial View Transition theme switch; respect reduced-motion preferences.
 
 ## Interaction rules
 - Every visible control has a real local action or a clear disabled state.

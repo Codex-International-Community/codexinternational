@@ -264,7 +264,7 @@ dialog.bot-reveal-modal {
 }
 
 .token-box--secret {
-  border-color: rgba(29, 155, 240, 0.45);
+  border-color: var(--accent-border);
 }
 
 .token-box-actions {
@@ -289,8 +289,8 @@ dialog.bot-reveal-modal {
 }
 
 .token-box button.accent-btn {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
   color: #fff;
 }
 
@@ -327,8 +327,8 @@ dialog.bot-reveal-modal {
   gap: 12px;
   height: 100dvh;
   padding: 24px;
-  background: #000;
-  color: #e7e9ea;
+  background: #0A0A0C;
+  color: #F5F4F7;
   text-align: center;
   font-size: 0.9375rem;
 }
@@ -340,7 +340,7 @@ dialog.bot-reveal-modal {
   height: 48px;
   margin-bottom: 8px;
   border-radius: 15px 15px 15px 5px;
-  background: #1d9bf0;
+  background: #8A30A6;
   color: #fff;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 1.75rem;
@@ -351,20 +351,20 @@ dialog.bot-reveal-modal {
 .app-boot-spinner {
   width: 22px;
   height: 22px;
-  border: 2px solid rgba(231, 233, 234, .22);
-  border-top-color: #1d9bf0;
+  border: 2px solid rgba(245, 244, 247, .22);
+  border-top-color: #D994F2;
   border-radius: 50%;
   animation: app-boot-spin .8s linear infinite;
 }
 
 .app-boot-screen strong {
-  color: #e7e9ea;
+  color: #F5F4F7;
   font-size: 1rem;
 }
 
 .app-boot-screen p {
   margin: 0;
-  color: #aab0b6;
+  color: #B4B0BC;
   font-size: .8125rem;
 }
 
@@ -393,7 +393,7 @@ dialog.bot-reveal-modal {
   width: 52px;
   height: 52px;
   margin-bottom: 26px;
-  border: 1px solid rgba(29, 155, 240, .28);
+  border: 1px solid var(--accent-border);
   border-radius: 17px 17px 17px 6px;
   background: var(--accent-bg);
   color: var(--accent);
@@ -503,8 +503,8 @@ dialog.bot-reveal-modal {
 }
 
 .session-warning-actions button:first-child {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
   color: #fff;
 }
 
