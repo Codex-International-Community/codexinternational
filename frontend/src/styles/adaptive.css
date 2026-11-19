@@ -2467,3 +2467,89 @@ dialog.bot-reveal-modal {
     pointer-events: auto;
   }
 }
+
+/* -- X1 mobile drawer bounds: one consistent width and no viewport overflow -- */
+@media (max-width: 767px) {
+  .app-shell:not(.view-discover) > .server-rail,
+  .app-shell.view-discover > .server-rail {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    height: 100dvh;
+    width: 64px !important;
+    min-width: 64px !important;
+    max-width: 64px !important;
+    box-sizing: border-box;
+    z-index: 52;
+  }
+
+  .app-shell:not(.view-discover) > .channel-sidebar,
+  .app-shell.view-discover > .channel-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    height: 100dvh;
+    width: min(246px, calc(100vw - 76px)) !important;
+    min-width: 0 !important;
+    max-width: min(246px, calc(100vw - 76px)) !important;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    z-index: 53;
+  }
+
+  .app-shell:not(.view-discover) > .server-rail {
+    left: 0 !important;
+    right: auto !important;
+    transform: translate3d(-110%, 0, 0) !important;
+  }
+
+  .app-shell:not(.view-discover) > .channel-sidebar {
+    left: 64px !important;
+    right: auto !important;
+    transform: translate3d(-115%, 0, 0) !important;
+  }
+
+  .app-shell:not(.view-discover).drawer-open > .server-rail,
+  .app-shell:not(.view-discover).drawer-open > .channel-sidebar {
+    transform: translate3d(0, 0, 0) !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  .app-shell.view-discover > .server-rail {
+    left: auto !important;
+    right: 0 !important;
+    transform: translate3d(110%, 0, 0) !important;
+  }
+
+  .app-shell.view-discover > .channel-sidebar {
+    left: auto !important;
+    right: 64px !important;
+    transform: translate3d(115%, 0, 0) !important;
+  }
+
+  .app-shell.view-discover.drawer-open > .server-rail,
+  .app-shell.view-discover.drawer-open > .channel-sidebar {
+    transform: translate3d(0, 0, 0) !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  .app-shell > .drawer-scrim {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 51;
+  }
+
+  .app-shell:not(.drawer-open) > .drawer-scrim {
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  .app-shell.drawer-open > .drawer-scrim {
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
