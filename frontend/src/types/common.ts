@@ -64,7 +64,6 @@ export type View =
   | 'settings'
   | 'notifications'
   | 'pinned'
-  | 'threads'
   | 'social'
   | 'channels'
   | 'people'

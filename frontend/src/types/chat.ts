@@ -39,13 +39,6 @@ export interface Message {
   role?: string
 }
 
-export interface ThreadEntry {
-  id: string
-  scope: string
-  message: Message
-  createdAt: number
-}
-
 export interface Conversation {
   id: string
   userId: string
