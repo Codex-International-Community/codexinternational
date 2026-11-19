@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import '../App.css'
 import '../Redesign.css'
 import '../styles/adaptive.css'
@@ -187,7 +187,7 @@ export function WorkspacePage({
   const rocketStarsRef = useRef<HTMLDivElement>(null)
   const rocketLabelRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const previousView = previousViewRef.current
     previousViewRef.current = view
     if (previousView === view) return
@@ -201,7 +201,7 @@ export function WorkspacePage({
     }
   }, [view])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (pageTransition !== 'rocket') return
     const cover = rocketCoverRef.current
     const rocket = rocketRef.current
