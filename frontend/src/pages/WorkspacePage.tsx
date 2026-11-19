@@ -40,6 +40,7 @@ import { SettingsView } from '../components/views/SettingsView'
 import { NotificationsView } from '../components/views/NotificationsView'
 import { PinnedView } from '../components/views/PinnedView'
 import { BotsView } from '../components/views/BotsView'
+import { NotFoundView } from '../components/views/NotFoundView'
 
 interface WorkspacePageProps {
   session: AuthSession
@@ -48,6 +49,115 @@ interface WorkspacePageProps {
   onRetrySessionCheck?: () => void
   onDismissSessionWarning?: () => void
   onLogout: () => Promise<void>
+}
+
+interface WorkspaceRoute {
+  view: View
+  serverId: string
+  channelId: string
+  dmId: string
+  path?: string
+}
+
+const defaultWorkspaceRoute: WorkspaceRoute = {
+  view: 'home',
+  serverId: 'studio',
+  channelId: 'general',
+  dmId: 'mika',
+}
+
+function parseWorkspaceRoute(
+  pathname: string,
+  fallback: WorkspaceRoute = defaultWorkspaceRoute,
+): WorkspaceRoute {
+  const segments = pathname
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment)
+      } catch {
+        return segment
+      }
+    })
+
+  if (segments.length === 0) return { ...fallback, view: 'home' }
+
+  if (segments[0] === 'channels' && segments[1] === '@me') {
+    if (segments.length === 2) return { ...fallback, view: 'home' }
+    if (segments.length === 3 && segments[2]) {
+      return { ...fallback, view: 'dm', dmId: segments[2] }
+    }
+    return { ...fallback, view: 'not-found', path: pathname }
+  }
+
+  if (segments[0] === 'channels' && segments.length === 3 && segments[1] && segments[2]) {
+    return {
+      ...fallback,
+      view: 'channel',
+      serverId: segments[1],
+      channelId: segments[2],
+    }
+  }
+
+  if (segments.length === 2 && segments[0] === 'directory' && segments[1] === 'channels') {
+    return { ...fallback, view: 'channels' }
+  }
+
+  if (segments.length === 2 && segments[0] === 'directory' && segments[1] === 'people') {
+    return { ...fallback, view: 'people' }
+  }
+
+  const staticRoutes: Record<string, View> = {
+    discover: 'discover',
+    social: 'social',
+    settings: 'settings',
+    activity: 'notifications',
+    pinned: 'pinned',
+    bots: 'bots',
+  }
+  const view = segments.length === 1 ? staticRoutes[segments[0]] : undefined
+
+  return view
+    ? { ...fallback, view }
+    : { ...fallback, view: 'not-found', path: pathname }
+}
+
+function buildWorkspacePath({ view, serverId, channelId, dmId, path }: WorkspaceRoute): string {
+  switch (view) {
+    case 'home':
+      return '/channels/@me'
+    case 'dm':
+      return `/channels/@me/${encodeURIComponent(dmId)}`
+    case 'channel':
+      return `/channels/${encodeURIComponent(serverId)}/${encodeURIComponent(channelId)}`
+    case 'discover':
+      return '/discover'
+    case 'social':
+      return '/social'
+    case 'settings':
+      return '/settings'
+    case 'notifications':
+      return '/activity'
+    case 'pinned':
+      return '/pinned'
+    case 'channels':
+      return '/directory/channels'
+    case 'people':
+      return '/directory/people'
+    case 'bots':
+      return '/bots'
+    case 'not-found':
+      return path ?? '/404'
+  }
+}
+
+function mobileTabForView(view: View): MobileTab {
+  if (view === 'home') return 'home'
+  if (view === 'social') return 'social'
+  if (view === 'channels') return 'channels'
+  if (view === 'people') return 'people'
+  return 'chat'
 }
 
 export function WorkspacePage({
@@ -66,13 +176,19 @@ export function WorkspacePage({
       displayName: session.user.display_name || session.user.username || initial.displayName,
     }
   })
-  const [view, setView] = useState<View>('channel')
-  const [serverId, setServerId] = useState('studio')
-  const [channelId, setChannelId] = useState('general')
-  const [dmId, setDmId] = useState('mika')
+  const [initialRoute] = useState<WorkspaceRoute>(() =>
+    parseWorkspaceRoute(window.location.pathname),
+  )
+  const [view, setView] = useState<View>(initialRoute.view)
+  const [serverId, setServerId] = useState(initialRoute.serverId)
+  const [channelId, setChannelId] = useState(initialRoute.channelId)
+  const [dmId, setDmId] = useState(initialRoute.dmId)
+  const [notFoundPath, setNotFoundPath] = useState(initialRoute.path ?? '')
   const [membersOpen, setMembersOpen] = useState(isDesktop)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [mobileTab, setMobileTab] = useState<MobileTab>('chat')
+  const [mobileTab, setMobileTab] = useState<MobileTab>(() =>
+    mobileTabForView(initialRoute.view),
+  )
   const [composer, setComposer] = useState('')
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -99,6 +215,7 @@ export function WorkspacePage({
   const feedRef = useRef<HTMLDivElement>(null)
   const socialInputRef = useRef<HTMLTextAreaElement>(null)
   const blobUrlsRef = useRef<Set<string>>(new Set())
+  const routeSyncReadyRef = useRef(false)
 
   const revokeBlobUrl = useCallback((url?: string) => {
     if (url && url.startsWith('blob:')) {
@@ -130,6 +247,16 @@ export function WorkspacePage({
     window.setTimeout(() => setToast((curr) => (curr === text ? '' : curr)), 2600)
   }, [])
 
+  const copyCurrentLink = useCallback(async () => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
+      await navigator.clipboard.writeText(window.location.href)
+      notify('Link copied to clipboard')
+    } catch {
+      notify('Could not copy link. Check browser clipboard permissions.')
+    }
+  }, [notify])
+
   useEffect(() => {
     const ok = saveData(data)
     if (!ok) {
@@ -159,6 +286,41 @@ export function WorkspacePage({
   useEffect(() => {
     saveFollowedHandles(followedHandles)
   }, [followedHandles])
+  useEffect(() => {
+    const nextPath = buildWorkspacePath({ view, serverId, channelId, dmId, path: notFoundPath })
+    if (window.location.pathname !== nextPath) {
+      if (routeSyncReadyRef.current) {
+        window.history.pushState({ view }, '', nextPath)
+      } else {
+        window.history.replaceState({ view }, '', nextPath)
+      }
+    }
+    routeSyncReadyRef.current = true
+  }, [view, serverId, channelId, dmId, notFoundPath])
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = parseWorkspaceRoute(window.location.pathname, {
+        view,
+        serverId,
+        channelId,
+        dmId,
+      })
+      setView(route.view)
+      setServerId(route.serverId)
+      setChannelId(route.channelId)
+      setDmId(route.dmId)
+      setNotFoundPath(route.path ?? '')
+      setMobileTab(mobileTabForView(route.view))
+      setDrawerOpen(false)
+      setSearchOpen(false)
+      setProfileMenu(false)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [view, serverId, channelId, dmId])
+
 
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
@@ -227,7 +389,19 @@ export function WorkspacePage({
                     ? 'Activity'
                     : view === 'pinned'
                       ? 'Pinned messages'
-                      : 'Settings'
+                      : view === 'not-found'
+                        ? 'Page not found'
+                        : 'Settings'
+
+  useEffect(() => {
+    const pageTitle =
+      view === 'channel'
+        ? `#${channel?.name ?? 'channel'} · ${server?.name ?? 'Codex International'}`
+        : view === 'dm'
+          ? `${currentDm?.name ?? 'Direct messages'} · Codex International`
+          : `${title} · Codex International`
+    document.title = pageTitle
+  }, [channel?.name, currentDm?.name, server?.name, title, view])
 
   const initials = data.displayName
     .split(/\s+/)
@@ -444,6 +618,7 @@ export function WorkspacePage({
           }}
           onOpenInbox={() => navigateView('dm')}
           onOpenSettings={() => navigateView('settings')}
+          onCopyLink={() => void copyCurrentLink()}
         />
 
         {sessionWarning && (
@@ -477,7 +652,13 @@ export function WorkspacePage({
 
         <div className={`workspace-body ${!showMembersPanel && view !== 'social' ? 'workspace-body--single' : ''}`}>
           <section className="chat-panel">
-            {view === 'home' ? (
+            {view === 'not-found' ? (
+              <NotFoundView
+                path={notFoundPath || window.location.pathname}
+                onGoHome={() => navigateView('home')}
+                onGoBack={() => window.history.back()}
+              />
+            ) : view === 'home' ? (
               <HomeView
                 conversations={data.conversations}
                 people={people}
