@@ -1753,7 +1753,7 @@ dialog.bot-reveal-modal {
 
 .app-shell .channel-sidebar .profile-menu {
   z-index: 80;
-  bottom: calc(100% - 5px);
+  bottom: 82px;
   left: 10px;
   max-width: calc(100% - 20px);
   border-radius: 13px 13px 13px 4px;
@@ -1824,7 +1824,7 @@ dialog.bot-reveal-modal {
   }
 
   .app-shell .channel-sidebar .profile-menu {
-    bottom: calc(100% - 4px);
+    bottom: 82px;
   }
 }
 
