@@ -2765,3 +2765,264 @@ dialog.modal {
     font-size: .75rem;
   }
 }
+
+
+/* Chat workspace refresh: align the conversation view with the Home design. */
+.chat-panel {
+  min-width: 0;
+  background: var(--workspace);
+}
+
+.workspace-body {
+  min-width: 0;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) 238px;
+}
+
+.messages-scroll {
+  min-width: 0;
+  padding: clamp(18px, 2.5vw, 30px) 0 22px;
+  overscroll-behavior: contain;
+}
+
+.channel-welcome {
+  align-items: center;
+  max-width: 1040px;
+  margin: 0 auto 22px;
+  padding: 0 26px 22px;
+}
+
+.channel-welcome h1 {
+  font-family: var(--landing-display, 'Oxanium', system-ui, sans-serif);
+  font-weight: 700;
+  letter-spacing: -.035em;
+}
+
+.channel-welcome p {
+  line-height: 1.6;
+}
+
+.welcome-actions {
+  flex: 0 0 auto;
+}
+
+.welcome-actions button,
+.topbar-actions button {
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+
+.message {
+  position: relative;
+  max-width: 1092px;
+  margin: 0 auto;
+  padding: 11px 26px;
+  border-radius: 10px;
+  transition: background .16s ease;
+}
+
+.message-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.message-content > p {
+  max-width: 78ch;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+
+.message-meta {
+  flex-wrap: wrap;
+}
+
+.message-toolbar {
+  z-index: 5;
+}
+
+.composer-wrap {
+  position: relative;
+  z-index: 2;
+  padding: 14px clamp(14px, 2.5vw, 28px) max(14px, env(safe-area-inset-bottom));
+  background: var(--workspace);
+}
+
+.composer {
+  width: min(100%, 1040px);
+  margin: 0 auto;
+  border-radius: 14px;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.composer:focus-within {
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.composer-main {
+  gap: 8px;
+}
+
+.composer-input {
+  min-width: 0;
+  line-height: 1.5;
+}
+
+.composer-note {
+  width: min(100%, 1040px);
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.members-panel {
+  min-width: 0;
+  background: var(--side);
+}
+
+@media (max-width: 1100px) {
+  .workspace-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workspace-body > .members-panel {
+    display: none;
+  }
+
+  .workspace-body > .members-panel.mobile-members-open {
+    display: flex;
+  }
+}
+
+@media (max-width: 767px) {
+  .workspace-body {
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .messages-scroll {
+    padding: 15px 0 12px;
+  }
+
+  .channel-welcome {
+    align-items: flex-start;
+    gap: 11px;
+    margin: 0 13px 14px;
+    padding: 0 0 15px;
+  }
+
+  .welcome-icon {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px 14px 14px 5px;
+  }
+
+  .channel-welcome h1 {
+    font-size: clamp(1.2rem, 5vw, 1.45rem);
+    overflow-wrap: anywhere;
+  }
+
+  .channel-welcome p {
+    font-size: .8125rem;
+  }
+
+  .welcome-actions {
+    gap: 4px;
+  }
+
+  .welcome-actions button {
+    min-width: 34px;
+    min-height: 34px;
+    padding: 0 8px;
+  }
+
+  .message {
+    align-items: flex-start;
+    gap: 9px;
+    margin: 0;
+    padding: 10px 13px;
+    border-radius: 0;
+  }
+
+  .message-content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .message-meta {
+    gap: 6px;
+  }
+
+  .message-meta time {
+    font-size: .6875rem;
+  }
+
+  .message-content > p {
+    font-size: .9rem;
+    line-height: 1.62;
+  }
+
+  .message-toolbar {
+    top: -7px;
+    right: 8px;
+  }
+
+  .composer-wrap {
+    padding: 8px 10px max(9px, env(safe-area-inset-bottom));
+  }
+
+  .composer {
+    border-radius: 13px;
+  }
+
+  .composer-main {
+    min-height: 49px;
+    gap: 5px;
+    padding: 6px;
+  }
+
+  .composer-main .attach,
+  .composer-tools button {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+  }
+
+  .composer-input {
+    width: 100%;
+    min-width: 0;
+    font-size: 16px;
+  }
+
+  .composer-note {
+    padding-top: 6px;
+    font-size: .6875rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .channel-welcome {
+    gap: 9px;
+  }
+
+  .welcome-actions button {
+    min-width: 31px;
+    padding: 0 6px;
+  }
+
+  .composer-tools {
+    gap: 2px;
+  }
+
+  .composer-main .attach,
+  .composer-tools button {
+    flex-basis: 30px;
+    width: 30px;
+    height: 30px;
+  }
+
+  .composer-note span:last-child {
+    display: none;
+  }
+}
