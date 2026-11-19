@@ -345,7 +345,7 @@ export function WorkspacePage({
           id: community.id,
           name: community.name,
           abbr: community.name
-            .split(/\\s+/)
+            .split(/\s+/)
             .map((part) => part[0] ?? '')
             .join('')
             .slice(0, 3)
@@ -561,7 +561,7 @@ export function WorkspacePage({
         id: community.id,
         name: community.name,
         abbr: community.name
-          .split(/\\s+/)
+          .split(/\s+/)
           .map((part) => part[0] ?? '')
           .join('')
           .slice(0, 3)
@@ -601,7 +601,7 @@ export function WorkspacePage({
         id: community.id,
         name: community.name,
         abbr: community.name
-          .split(/\\s+/)
+          .split(/\s+/)
           .map((part) => part[0] ?? '')
           .join('')
           .slice(0, 3)
