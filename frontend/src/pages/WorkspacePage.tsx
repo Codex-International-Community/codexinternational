@@ -216,6 +216,11 @@ export function WorkspacePage({
       animations.push(animation)
       await animation.finished.catch(() => undefined)
     }
+
+    // Cover the newly selected route before the browser paints its first frame.
+    // The old slide-in exposed the destination page while the cover travelled in.
+    cover.style.transform = 'translate3d(0, 0, 0)'
+    cover.style.visibility = 'visible'
     stars.replaceChildren()
     for (let index = 0; index < 36; index += 1) {
       const star = document.createElement('i')
@@ -231,8 +236,6 @@ export function WorkspacePage({
     label.textContent = `Memuat ${view}…`
     cover.classList.add('run')
     void (async () => {
-      await animate(cover, [{ transform: 'translateX(100%)' }, { transform: 'translateX(0)' }], 550, 'cubic-bezier(.65,0,.35,1)')
-      if (cancelled) return
       await animate(rocket, [
         { transform: 'translate(110vw,-50%) rotate(-135deg)' },
         { transform: 'translate(calc(50vw - 32px),-50%) rotate(-135deg)' },
@@ -245,7 +248,7 @@ export function WorkspacePage({
         { transform: 'translate(-20vw,-50%) rotate(-135deg)' },
       ], 600, 'cubic-bezier(.55,0,1,.45)')
       if (cancelled) return
-      await animate(cover, [{ transform: 'translateX(0)' }, { transform: 'translateX(-100%)' }], 550, 'cubic-bezier(.65,0,.35,1)')
+      await animate(cover, [{ transform: 'translate3d(0, 0, 0)' }, { transform: 'translate3d(-100%, 0, 0)' }], 520, 'cubic-bezier(.65,0,.35,1)')
       if (!cancelled) setPageTransition(null)
     })()
     return () => {
@@ -626,8 +629,7 @@ export function WorkspacePage({
         onClick={() => setDrawerOpen(false)}
       />
 
-      {(!isMobile || (view !== 'channels' && view !== 'people')) && (
-        <>
+      <>
           <ServerRail
             servers={data.servers}
             activeServerId={serverId}
@@ -645,9 +647,12 @@ export function WorkspacePage({
             onNavigateView={navigateView}
           />
 
-          <ChannelSidebar
+          {view !== 'channels' && view !== 'people' && <ChannelSidebar
         currentUser={currentUser}
         view={view}
+        servers={data.servers}
+        allChannels={data.channels}
+        activeServerId={serverId}
         server={server}
         channels={channels}
         channelId={channel?.id ?? ''}
@@ -665,6 +670,20 @@ export function WorkspacePage({
         onSelectSocialTab={setSocialTab}
         onOpenQuickSearch={() => setSearchOpen(true)}
         onSelectChannel={pickChannel}
+        onSelectServer={pickServer}
+        onSelectServerChannel={(joinedServerId, joinedChannel) => {
+          setServerId(joinedServerId)
+          if (joinedChannel.type === 'voice') {
+            setVoiceId(joinedChannel.id)
+            notify(`Connected to ${joinedChannel.name} voice preview`)
+            setDrawerOpen(false)
+            return
+          }
+          setChannelId(joinedChannel.id)
+          setView('channel')
+          setMobileTab('chat')
+          setDrawerOpen(false)
+        }}
         onOpenDm={openDm}
         onCreateChannelModal={() => {
           setModal('channel')
@@ -685,9 +704,8 @@ export function WorkspacePage({
         }
             onOpenBots={() => navigateView('bots')}
             onLogout={() => void onLogout()}
-          />
-        </>
-      )}
+          />}
+      </>
 
       <main className="workspace">
         <Topbar

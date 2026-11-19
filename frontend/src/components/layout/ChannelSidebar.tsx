@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
 import type { Channel, Conversation, Server, User } from '../../types/chat'
@@ -8,6 +9,9 @@ interface ChannelSidebarProps {
   currentUser: User
   view: View
   server?: Server
+  servers: Server[]
+  allChannels: Record<string, Channel[]>
+  activeServerId: string
   channels: Channel[]
   channelId: string
   dmId: string
@@ -24,6 +28,8 @@ interface ChannelSidebarProps {
   onSelectSocialTab: (tab: SocialTab) => void
   onOpenQuickSearch: () => void
   onSelectChannel: (channel: Channel) => void
+  onSelectServer: (serverId: string) => void
+  onSelectServerChannel: (serverId: string, channel: Channel) => void
   onOpenDm: (userId: string) => void
   onCreateChannelModal: () => void
   onNewDmModal: () => void
@@ -42,6 +48,9 @@ export function ChannelSidebar({
   currentUser,
   view,
   server,
+  servers,
+  allChannels,
+  activeServerId,
   channels,
   channelId,
   dmId,
@@ -58,6 +67,8 @@ export function ChannelSidebar({
   onSelectSocialTab,
   onOpenQuickSearch,
   onSelectChannel,
+  onSelectServer,
+  onSelectServerChannel,
   onOpenDm,
   onCreateChannelModal,
   onNewDmModal,
@@ -72,6 +83,8 @@ export function ChannelSidebar({
   onLogout,
 }: ChannelSidebarProps) {
   const activeVoiceChannel = channels.find((c) => c.id === voiceId)
+  const [expandedServers, setExpandedServers] = useState<string[]>(activeServerId ? [activeServerId] : [])
+  const toggleServerExpanded = (id: string) => setExpandedServers((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
 
   const serverHeaderSub =
     view === 'social'
@@ -118,16 +131,6 @@ export function ChannelSidebar({
         <Icon name="chevron" size={16} />
       </button>
 
-      <button
-        type="button"
-        className="mobile-drawer-link"
-        onClick={onNavigateDiscover}
-      >
-        <Icon name="compass" size={16} />
-        <span>Discover communities</span>
-        <Icon name="arrow" size={14} />
-      </button>
-
       {view === 'social' && (
         <div className="social-side-nav">
           <span className="side-nav-label">YOUR TIMELINE</span>
@@ -136,7 +139,7 @@ export function ChannelSidebar({
             className={socialTab === 'for-you' ? 'selected' : ''}
             onClick={() => onSelectSocialTab('for-you')}
           >
-            <span aria-hidden="true">◉</span> For you
+            <Icon name="compass" size={16} /> For you
           </button>
           <button
             type="button"
@@ -171,6 +174,56 @@ export function ChannelSidebar({
           <span>Search</span>
           <kbd>⌘ K</kbd>
         </button>
+
+        <section className="joined-servers" aria-label="Joined communities">
+          <div className="section-label"><span>JOINED COMMUNITIES</span></div>
+          {servers.length === 0 && <p className="sidebar-empty">Joined communities will appear here.</p>}
+          {servers.map((joinedServer) => {
+            const serverChannels = allChannels[joinedServer.id] ?? []
+            const expanded = expandedServers.includes(joinedServer.id)
+            const active = activeServerId === joinedServer.id
+            return (
+              <div className={`joined-server ${active ? 'active' : ''}`} key={joinedServer.id}>
+                <div className="joined-server-heading">
+                  <button
+                    type="button"
+                    className="joined-server-select"
+                    aria-current={active ? 'page' : undefined}
+                    onClick={() => onSelectServer(joinedServer.id)}
+                  >
+                    <span className={`joined-server-mark ${joinedServer.tone}`}>{joinedServer.abbr}</span>
+                    <strong>{joinedServer.name}</strong>
+                  </button>
+                  <button
+                    type="button"
+                    className="joined-server-toggle"
+                    aria-label={`${expanded ? 'Collapse' : 'Expand'} ${joinedServer.name}`}
+                    aria-expanded={expanded}
+                    onClick={() => toggleServerExpanded(joinedServer.id)}
+                  >
+                    <Icon name="chevron" size={14} />
+                  </button>
+                </div>
+                {expanded && (
+                  <div className="joined-server-channels">
+                    {serverChannels.map((joinedChannel) => (
+                      <button
+                        type="button"
+                        key={joinedChannel.id}
+                        className={`channel-item ${active && view === 'channel' && channelId === joinedChannel.id ? 'chosen' : ''}`}
+                        onClick={() => onSelectServerChannel(joinedServer.id, joinedChannel)}
+                      >
+                        <Icon name={joinedChannel.type === 'voice' ? 'volume' : 'hash'} size={16} />
+                        <span>{joinedChannel.name}</span>
+                      </button>
+                    ))}
+                    {serverChannels.length === 0 && <p className="sidebar-empty">No channels yet.</p>}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </section>
 
         {view === 'home' || view === 'dm' ? (
           <>
@@ -341,6 +394,12 @@ export function ChannelSidebar({
           </div>
         </div>
       )}
+
+      <button type="button" className="mobile-drawer-link" onClick={onNavigateDiscover}>
+        <Icon name="compass" size={16} />
+        <span>Discover communities</span>
+        <Icon name="arrow" size={14} />
+      </button>
 
       <div className="account-panel">
         <button
