@@ -343,7 +343,6 @@ export function WorkspacePage({
     if (nextView === 'social') setMobileTab('social')
     else if (nextView === 'channels') setMobileTab('channels')
     else if (nextView === 'people') setMobileTab('people')
-    else if (nextView === 'bots') setMobileTab('bots')
     setDrawerOpen(false)
   }
 
