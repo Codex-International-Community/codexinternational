@@ -21,7 +21,6 @@ import {
 
 import { Toast } from '../components/common/Toast'
 import { ServerRail } from '../components/layout/ServerRail'
-import { ChannelSidebar } from '../components/layout/ChannelSidebar'
 import { Topbar } from '../components/layout/Topbar'
 import { SearchStrip } from '../components/layout/SearchStrip'
 import { MobileTabs, type MobileTab } from '../components/layout/MobileTabs'
@@ -297,6 +296,7 @@ export function WorkspacePage({
   const socialInputRef = useRef<HTMLTextAreaElement>(null)
   const blobUrlsRef = useRef<Set<string>>(new Set())
   const routeSyncReadyRef = useRef(false)
+  const lastDrawerTapRef = useRef(0)
 
   const revokeBlobUrl = useCallback((url?: string) => {
     if (url && url.startsWith('blob:')) {
@@ -612,6 +612,16 @@ export function WorkspacePage({
 
   return (
     <div
+      onPointerUp={(event) => {
+        if (!isMobile || !drawerOpen || (event.target as HTMLElement).closest('.server-rail')) return
+        const now = Date.now()
+        if (now - lastDrawerTapRef.current < 320) {
+          setDrawerOpen(false)
+          lastDrawerTapRef.current = 0
+        } else {
+          lastDrawerTapRef.current = now
+        }
+      }}
       className={`app-shell theme-${data.theme} ${isMobile ? 'viewport-mobile' : 'viewport-desktop'} ${
         drawerOpen ? 'drawer-open' : ''
       } ${pageTransition ? `page-transition-${pageTransition}` : ''} view-${view} ${view === 'discover' ? 'has-no-channel-sidebar' : ''}`}
@@ -629,83 +639,34 @@ export function WorkspacePage({
         onClick={() => setDrawerOpen(false)}
       />
 
-      <>
-          <ServerRail
-            servers={data.servers}
-            activeServerId={serverId}
-            activeView={view}
-            onSelectHome={() => {
-              setView('home')
-              setMobileTab('home')
-              setDrawerOpen(false)
-            }}
-            onSelectServer={pickServer}
-            onCreateServer={() => {
-              setModal('server')
-              setModalValue('')
-            }}
-            onNavigateView={navigateView}
-          />
-
-          {view !== 'discover' && view !== 'channels' && view !== 'people' && <ChannelSidebar
-        currentUser={currentUser}
-        view={view}
+      <ServerRail
         servers={data.servers}
-        allChannels={data.channels}
         activeServerId={serverId}
-        server={server}
-        channels={channels}
-        channelId={channel?.id ?? ''}
-        dmId={dmId}
-        conversations={data.conversations}
-        people={people}
+        activeView={view}
+        currentUser={currentUser}
         displayName={data.displayName}
         theme={data.theme}
-        socialTab={socialTab}
-        voiceId={voiceId}
-        muted={muted}
-        deafened={deafened}
         profileMenuOpen={profileMenu}
-        onToggleProfileMenu={() => setProfileMenu((v) => !v)}
-        onSelectSocialTab={setSocialTab}
-        onOpenQuickSearch={() => setSearchOpen(true)}
-        onSelectChannel={pickChannel}
         onSelectServer={pickServer}
-        onSelectServerChannel={(joinedServerId, joinedChannel) => {
-          setServerId(joinedServerId)
-          if (joinedChannel.type === 'voice') {
-            setVoiceId(joinedChannel.id)
-            notify(`Connected to ${joinedChannel.name} voice preview`)
-            setDrawerOpen(false)
-            return
-          }
-          setChannelId(joinedChannel.id)
-          setView('channel')
-          setMobileTab('chat')
-          setDrawerOpen(false)
-        }}
-        onOpenDm={openDm}
-        onCreateChannelModal={() => {
-          setModal('channel')
+        onCreateServer={() => {
+          setModal('server')
           setModalValue('')
         }}
-        onNewDmModal={() => {
-          setModal('dm')
-          setModalValue(people[0]?.id ?? 'mika')
+        onOpenBots={() => navigateView('bots')}
+        onToggleProfileMenu={() => setProfileMenu((open) => !open)}
+        onNavigateSettings={() => {
+          setProfileMenu(false)
+          navigateView('settings')
         }}
-        onVoiceChannelNotice={() => notify('Select any voice channel below to preview audio.')}
-        onToggleMute={() => setMuted((v) => !v)}
-        onToggleDeafen={() => setDeafened((v) => !v)}
-        onDisconnectVoice={() => setVoiceId(null)}
-        onNavigateSettings={() => navigateView('settings')}
-        onNavigateDiscover={() => navigateView('discover')}
-        onToggleTheme={() =>
+        onToggleTheme={() => {
           setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))
-        }
-            onOpenBots={() => navigateView('bots')}
-            onLogout={() => void onLogout()}
-          />}
-      </>
+          setProfileMenu(false)
+        }}
+        onLogout={() => {
+          setProfileMenu(false)
+          void onLogout()
+        }}
+      />
 
       <main className="workspace">
         <Topbar
