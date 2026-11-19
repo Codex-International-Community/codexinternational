@@ -38,7 +38,7 @@ async fn run_socket(mut socket:WebSocket,state:Arc<AppState>){
       if let Err(e)=channel_access(&state,sub.channel_id,claims.sub,PERM_VIEW_CHANNEL,false).await{let _=send(&mut socket,serde_json::json!({"type":"ERROR","channelId":sub.channel_id,"message":e.to_string()})).await;continue;}
       let(receiver,first)=state.ws_registry.subscribe(sub.channel_id).await;
       if first{let _=state.valkey_sub.subscribe(format!("pubsub:ch:{}",sub.channel_id)).await;}
-      let sender=tx.clone();jobs.push(tokio::spawn(async move{let mut receiver=receiver;loop{match receiver.recv().await{Ok(v)=>if sender.send(v).await.is_err(){break;},Err(tokio::sync::broadcast::error::RecvError::Lagged(_))=>continue,Err(tokio::sync::broadcast::error::RecvError::Closed)=>break;}}}));
+      let sender=tx.clone();jobs.push(tokio::spawn(async move{let mut receiver=receiver;loop{match receiver.recv().await{Ok(v)=>if sender.send(v).await.is_err(){break;},Err(tokio::sync::broadcast::error::RecvError::Lagged(_))=>continue,Err(tokio::sync::broadcast::error::RecvError::Closed)=>break,}}}));
       subscribed.insert(sub.channel_id);
       match history(&state,sub.channel_id,sub.last_seen_seq_id,100).await{Ok(messages)=>{let _=send(&mut socket,serde_json::json!({"type":"GAP_SYNC_BATCH","channelId":sub.channel_id,"messages":messages,"resyncRequired":false})).await;},Err(e)=>{let _=send(&mut socket,serde_json::json!({"type":"ERROR","channelId":sub.channel_id,"message":e.to_string()})).await;}}
      },
