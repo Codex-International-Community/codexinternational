@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Avatar } from '../common/Avatar'
 import { Icon } from '../common/Icon'
 import type { Server, User } from '../../types/chat'
