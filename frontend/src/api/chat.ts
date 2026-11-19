@@ -84,3 +84,16 @@ export async function postMessage(
   )
   return result.ack
 }
+
+export async function editMessage(messageId: string, content: string): Promise<ChatMessageWire> {
+  return apiRequest<ChatMessageWire>(`/api/v1/messages/${encodeURIComponent(messageId)}`, {
+    method: 'PATCH',
+    body: { content },
+  })
+}
+
+export async function deleteMessage(messageId: string): Promise<void> {
+  await apiRequest<void>(`/api/v1/messages/${encodeURIComponent(messageId)}`, {
+    method: 'DELETE',
+  })
+}

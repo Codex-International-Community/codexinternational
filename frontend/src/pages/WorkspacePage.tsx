@@ -6,7 +6,7 @@ import '../styles/adaptive.css'
 import type { AuthSession } from '../api/client'
 import { ApiError } from '../api/client'
 import { getSession } from '../api/client'
-import { listMessages, mapChatMessage, postMessage, type ChatMessageWire } from '../api/chat'
+import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, mapChatMessage, postMessage, type ChatMessageWire } from '../api/chat'
 import { createChannel as createChannelApi, createCommunity, createOrGetDm, joinCommunity, listChannels, listCommunities, listCommunityMembers } from '../api/communities'
 import type { ViewportInfo } from '../hooks/useViewport'
 import type { Attachment, View } from '../types/common'
@@ -863,7 +863,23 @@ export function WorkspacePage({
     if (!clean || !activeChatChannelId) return
 
     if (editingId) {
-      notify('Message editing is not connected yet.')
+      try {
+        const updated = await editChatMessage(editingId, clean)
+        const mapped = mapChatMessage(updated, session.user.id)
+        setData((previous) => {
+          const list = view === 'dm'
+            ? previous.dmMessages[activeChatChannelId] ?? []
+            : previous.messages[key] ?? []
+          const next = list.map((item) => item.id === mapped.id ? mapped : item)
+          return view === 'dm'
+            ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next } }
+            : { ...previous, messages: { ...previous.messages, [key]: next } }
+        })
+        setEditingId(null)
+        setComposer('')
+      } catch (error) {
+        notify(error instanceof Error ? error.message : 'Message could not be edited.')
+      }
       return
     }
 
@@ -1370,14 +1386,20 @@ export function WorkspacePage({
                   messageInputRef.current?.focus()
                 }}
                 onRemove={(m) => {
-                  revokeBlobUrl(m.attachment?.url)
-                  setData((prev) => {
-                    const list = view === 'dm' ? (prev.dmMessages[dmChannelId] ?? []) : (prev.messages[key] ?? [])
-                    const nextList = list.filter((x) => x.id !== m.id)
-                    return view === 'dm'
-                      ? { ...prev, dmMessages: { ...prev.dmMessages, [dmChannelId]: nextList } }
-                      : { ...prev, messages: { ...prev.messages, [key]: nextList } }
-                  })
+                  void (async () => {
+                    try {
+                      await deleteChatMessage(m.id)
+                      setData((prev) => {
+                        const list = view === 'dm' ? (prev.dmMessages[dmChannelId] ?? []) : (prev.messages[key] ?? [])
+                        const nextList = list.filter((item) => item.id !== m.id)
+                        return view === 'dm'
+                          ? { ...prev, dmMessages: { ...prev.dmMessages, [dmChannelId]: nextList } }
+                          : { ...prev, messages: { ...prev.messages, [key]: nextList } }
+                      })
+                    } catch (error) {
+                      notify(error instanceof Error ? error.message : 'Message could not be deleted.')
+                    }
+                  })()
                 }}
                 onTogglePin={(m) => {
                   setData((prev) => {
