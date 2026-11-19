@@ -180,19 +180,80 @@ export function WorkspacePage({
     parseWorkspaceRoute(window.location.pathname),
   )
   const [view, setView] = useState<View>(initialRoute.view)
-  const [pageTransition, setPageTransition] = useState<'rocket' | 'slide' | null>(null)
+  const [pageTransition, setPageTransition] = useState<'rocket' | 'slide-forward' | 'slide-backward' | null>(null)
   const previousViewRef = useRef<View>(initialRoute.view)
+  const rocketCoverRef = useRef<HTMLDivElement>(null)
+  const rocketRef = useRef<HTMLSpanElement>(null)
+  const rocketStarsRef = useRef<HTMLDivElement>(null)
+  const rocketLabelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const previousView = previousViewRef.current
     previousViewRef.current = view
     if (previousView === view) return
-    const navbarViews: View[] = ['home', 'channel', 'dm', 'social', 'channels', 'people']
-    const transition = navbarViews.includes(view) ? 'slide' : 'rocket'
-    setPageTransition(transition)
-    const timeout = window.setTimeout(() => setPageTransition(null), transition === 'rocket' ? 1180 : 360)
-    return () => window.clearTimeout(timeout)
+    const navbarOrder: View[] = ['home', 'channel', 'dm', 'social', 'channels', 'people']
+    const previousIndex = navbarOrder.indexOf(previousView)
+    const nextIndex = navbarOrder.indexOf(view)
+    if (previousIndex >= 0 && nextIndex >= 0) {
+      setPageTransition(nextIndex >= previousIndex ? 'slide-forward' : 'slide-backward')
+    } else {
+      setPageTransition('rocket')
+    }
   }, [view])
+
+  useEffect(() => {
+    if (pageTransition !== 'rocket') return
+    const cover = rocketCoverRef.current
+    const rocket = rocketRef.current
+    const stars = rocketStarsRef.current
+    const label = rocketLabelRef.current
+    if (!cover || !rocket || !stars || !label) return
+    let cancelled = false
+    const animations: Animation[] = []
+    const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
+    const animate = async (element: Element, frames: Keyframe[], duration: number, easing: string) => {
+      const animation = element.animate(frames, { duration, easing, fill: 'forwards' })
+      animations.push(animation)
+      await animation.finished.catch(() => undefined)
+    }
+    stars.replaceChildren()
+    for (let index = 0; index < 36; index += 1) {
+      const star = document.createElement('i')
+      const size = 2 + Math.random() * 3
+      star.style.cssText = `top:${Math.random() * 100}%;width:${size}px;height:${size}px`
+      stars.appendChild(star)
+      const starAnimation = star.animate(
+        [{ transform: 'translateX(-20px)' }, { transform: 'translateX(110vw)' }],
+        { duration: 700 + Math.random() * 900, iterations: Infinity, delay: -Math.random() * 1500, easing: 'linear' },
+      )
+      animations.push(starAnimation)
+    }
+    label.textContent = `Memuat ${title}…`
+    cover.classList.add('run')
+    void (async () => {
+      await animate(cover, [{ transform: 'translateX(100%)' }, { transform: 'translateX(0)' }], 550, 'cubic-bezier(.65,0,.35,1)')
+      if (cancelled) return
+      await animate(rocket, [
+        { transform: 'translate(110vw,-50%) rotate(-135deg)' },
+        { transform: 'translate(calc(50vw - 32px),-50%) rotate(-135deg)' },
+      ], 650, 'cubic-bezier(.22,1,.36,1)')
+      if (cancelled) return
+      await wait(450)
+      if (cancelled) return
+      await animate(rocket, [
+        { transform: 'translate(calc(50vw - 32px),-50%) rotate(-135deg)' },
+        { transform: 'translate(-20vw,-50%) rotate(-135deg)' },
+      ], 600, 'cubic-bezier(.55,0,1,.45)')
+      if (cancelled) return
+      await animate(cover, [{ transform: 'translateX(0)' }, { transform: 'translateX(-100%)' }], 550, 'cubic-bezier(.65,0,.35,1)')
+      if (!cancelled) setPageTransition(null)
+    })()
+    return () => {
+      cancelled = true
+      animations.forEach((animation) => animation.cancel())
+      cover.classList.remove('run')
+    }
+  }, [pageTransition, title])
   const [serverId, setServerId] = useState(initialRoute.serverId)
   const [channelId, setChannelId] = useState(initialRoute.channelId)
   const [dmId, setDmId] = useState(initialRoute.dmId)
@@ -549,9 +610,10 @@ export function WorkspacePage({
       } ${pageTransition ? `page-transition-${pageTransition}` : ''} view-${view}`}
     >
       {pageTransition === 'rocket' && (
-        <div className="route-transition-overlay" aria-hidden="true">
-          <span className="route-transition-stars" />
-          <span className="route-transition-rocket">🚀</span>
+        <div className="route-transition-overlay" aria-hidden="true" ref={rocketCoverRef}>
+          <div className="route-transition-stars" ref={rocketStarsRef} />
+          <span className="route-transition-rocket" ref={rocketRef}><i className="fa-solid fa-rocket" /></span>
+          <div className="route-transition-label" ref={rocketLabelRef}>Memuat…</div>
         </div>
       )}
       <button
@@ -560,7 +622,7 @@ export function WorkspacePage({
         onClick={() => setDrawerOpen(false)}
       />
 
-      {view !== 'channels' && view !== 'people' && (
+      {(!isMobile || (view !== 'channels' && view !== 'people')) && (
         <>
           <ServerRail
             servers={data.servers}
