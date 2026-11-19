@@ -81,7 +81,7 @@ export function MembersPanel({
           )}
         </>
       )}
-      <div className="member-footer"><Icon name="shield" size={14} /> Community members
+      <div className="member-footer"><Icon name="shield" size={14} /> Community members</div>
     </aside>
   )
 }
