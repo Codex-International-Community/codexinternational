@@ -12,6 +12,7 @@ interface TopbarProps {
   notificationRead: boolean
   unreadCount: number
   onOpenDrawer: () => void
+  onBack?: () => void
   onFocusSocialComposer: () => void
   onVoiceCallModal: () => void
   onVideoCallModal: () => void
@@ -34,6 +35,7 @@ export function Topbar({
   notificationRead,
   unreadCount,
   onOpenDrawer,
+  onBack,
   onFocusSocialComposer,
   onVoiceCallModal,
   onVideoCallModal,
@@ -88,7 +90,12 @@ export function Topbar({
   return (
     <header className={`topbar ${isMobile ? 'topbar--mobile' : 'topbar--desktop'}`}>
       <div className="topbar-title">
-        {isMobile && view !== 'channels' && view !== 'people' && (
+        {view === 'discover' && onBack && (
+          <button type="button" className="discover-back" onClick={onBack} aria-label="Back to previous page" title="Back">
+            <Icon name="arrow-left" />
+          </button>
+        )}
+        {isMobile && view !== 'channels' && view !== 'people' && view !== 'discover' && (
           <button
             type="button"
             className="mobile-menu"
@@ -111,7 +118,11 @@ export function Topbar({
       </div>
 
       <div className="topbar-actions">
-        {view === 'social' ? (
+        {view === 'discover' ? (
+          <button type="button" className="discover-sidebar-toggle" onClick={onOpenDrawer} aria-label="Open sidebar" title="Open sidebar">
+            <Icon name="panel-left" />
+          </button>
+        ) : view === 'social' ? (
           <button
             type="button"
             className="topbar-compose"
