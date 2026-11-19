@@ -12,6 +12,8 @@ interface ActionModalProps {
   people: User[]
   onChangeValue: (val: string) => void
   onSubmit: (e: FormEvent) => void
+  onCreateServer: () => void
+  onJoinServer: () => void
   onClose: () => void
 }
 
@@ -21,6 +23,8 @@ export function ActionModal({
   people,
   onChangeValue,
   onSubmit,
+  onCreateServer,
+  onJoinServer,
   onClose,
 }: ActionModalProps) {
   const titleId = useId()
@@ -49,9 +53,9 @@ export function ActionModal({
 
   const description =
     type === 'server'
-      ? 'Community setup is being prepared. Creation will unlock when the community API is available.'
+      ? 'Create a space for your community, friends, or team.'
       : type === 'channel'
-        ? 'Channel setup is being prepared. Creation will unlock when the channel API is available.'
+        ? 'Add a place for conversations in this server.'
         : type === 'dm'
           ? 'Choose a community member to start a private conversation.'
           : 'Invite links will unlock when community membership endpoints are available.'
@@ -68,9 +72,9 @@ export function ActionModal({
 
   const buttonText =
     type === 'server'
-      ? 'Community API pending'
+      ? 'Create Server'
       : type === 'channel'
-        ? 'Channel API pending'
+        ? 'Create Channel'
         : type === 'dm'
           ? 'Open conversation'
           : 'Invite API pending'
@@ -194,10 +198,12 @@ export function ActionModal({
                   onChange={(event) => onChangeValue(event.target.value)}
                   placeholder="Enter a server name"
                 />
-                <div className="discord-server-unavailable" role="status">
-                  Server creation is not connected yet.
-                </div>
-                <button className="discord-server-primary" type="button" disabled>
+                <button
+                  className="discord-server-primary"
+                  type="button"
+                  disabled={!value.trim()}
+                  onClick={onCreateServer}
+                >
                   Create Server
                 </button>
               </>
@@ -219,10 +225,12 @@ export function ActionModal({
                   onChange={(event) => onChangeValue(event.target.value)}
                   placeholder="Paste an invite link or code"
                 />
-                <div className="discord-server-unavailable" role="status">
-                  Joining servers is not connected yet.
-                </div>
-                <button className="discord-server-primary" type="button" disabled>
+                <button
+                  className="discord-server-primary"
+                  type="button"
+                  disabled={!value.trim()}
+                  onClick={onJoinServer}
+                >
                   Join Server
                 </button>
               </>
@@ -280,17 +288,24 @@ export function ActionModal({
                   onChange={(event) => onChangeValue(event.target.value)}
                   placeholder={placeholder}
                 />
-                <div className="modal-pending modal-pending--inline" role="status">
-                  <Icon name="info" size={16} />
-                  <span>This form is a UI preview; channel creation is not active yet.</span>
-                </div>
+
               </>
             )}
 
-            <button className="modal-primary" type="submit" disabled={type !== 'dm' || people.length === 0}>
+            <button
+              className="modal-primary"
+              type="submit"
+              disabled={
+                type === 'dm'
+                  ? people.length === 0 || !value
+                  : type === 'channel'
+                    ? !value.trim()
+                    : true
+              }
+            >
               {buttonText}
             </button>
-            <small className="modal-note">Actions will become available as their backend endpoints are integrated.</small>
+            {type === 'dm' && <small className="modal-note">Select a person to open a direct conversation.</small>}
           </>
         )}
       </form>

@@ -12,7 +12,7 @@ export interface Server {
 export interface Channel {
   id: string
   name: string
-  type: 'text' | 'voice'
+  type: 'text' | 'announcement' | 'voice'
 }
 
 export interface User {

@@ -4,6 +4,8 @@ import '../Redesign.css'
 import '../styles/adaptive.css'
 
 import type { AuthSession } from '../api/client'
+import { ApiError } from '../api/client'
+import { createChannel as createChannelApi, createCommunity, joinCommunity, listChannels, listCommunities } from '../api/communities'
 import type { ViewportInfo } from '../hooks/useViewport'
 import type { Attachment, View } from '../types/common'
 import type { Channel, Data, Message } from '../types/chat'
@@ -334,6 +336,58 @@ export function WorkspacePage({
   }, [notify])
 
   useEffect(() => {
+    let cancelled = false
+
+    const loadWorkspaceCommunities = async () => {
+      try {
+        const communities = await listCommunities()
+        const mappedServers = communities.map((community) => ({
+          id: community.id,
+          name: community.name,
+          abbr: community.name
+            .split(/\\s+/)
+            .map((part) => part[0] ?? '')
+            .join('')
+            .slice(0, 3)
+            .toUpperCase(),
+          tone: 'community',
+        }))
+        const channelEntries = await Promise.all(
+          communities.map(async (community) => {
+            const channelRows = await listChannels(community.id)
+            return [
+              community.id,
+              channelRows.map((item) => ({
+                id: item.id,
+                name: item.name ?? 'unnamed',
+                type: item.channel_type === 'announcement' ? 'announcement' as const : 'text' as const,
+              })),
+            ] as const
+          }),
+        )
+        if (cancelled) return
+        setData((previous) => ({
+          ...previous,
+          servers: mappedServers,
+          channels: {
+            ...previous.channels,
+            ...Object.fromEntries(channelEntries),
+          },
+        }))
+      } catch (error) {
+        if (cancelled) return
+        if (error instanceof ApiError && error.status === 401) return
+        notify(error instanceof Error ? error.message : 'Could not load your communities.')
+      }
+    }
+
+    void loadWorkspaceCommunities()
+    return () => {
+      cancelled = true
+    }
+  }, [session.user.id, notify])
+
+  useEffect(() => {
     const ok = saveData(data)
     if (!ok) {
       window.setTimeout(
@@ -496,6 +550,88 @@ export function WorkspacePage({
     }),
     [session.user.id, session.user.display_name, session.user.username, data.displayName, initials],
   )
+
+  const handleCreateCommunity = async () => {
+    const name = modalValue.trim()
+    if (!name) return
+    try {
+      const result = await createCommunity({ name })
+      const community = result.community
+      const server = {
+        id: community.id,
+        name: community.name,
+        abbr: community.name
+          .split(/\\s+/)
+          .map((part) => part[0] ?? '')
+          .join('')
+          .slice(0, 3)
+          .toUpperCase(),
+        tone: 'community',
+      }
+      setData((previous) => ({
+        ...previous,
+        servers: [...previous.servers.filter((item) => item.id !== server.id), server],
+        channels: {
+          ...previous.channels,
+          [server.id]: [{ id: result.general_channel_id, name: 'general', type: 'text' }],
+        },
+      }))
+      setServerId(server.id)
+      setChannelId(result.general_channel_id)
+      setView('channel')
+      setMobileTab('chat')
+      setModal(null)
+      setModalValue('')
+      notify(`Created ${community.name}. Invite code: ${result.invite_code}`)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not create community.')
+    }
+  }
+
+  const handleJoinCommunity = async () => {
+    const raw = modalValue.trim()
+    const inviteCode = raw.split(/[/?#]/).filter(Boolean).at(-1) ?? raw
+    if (!inviteCode) return
+    try {
+      const joined = await joinCommunity(inviteCode)
+      const community = (await listCommunities()).find((item) => item.id === joined.community_id)
+      if (!community) throw new Error('Joined, but the community could not be loaded.')
+      const rows = await listChannels(community.id)
+      const server = {
+        id: community.id,
+        name: community.name,
+        abbr: community.name
+          .split(/\\s+/)
+          .map((part) => part[0] ?? '')
+          .join('')
+          .slice(0, 3)
+          .toUpperCase(),
+        tone: 'community',
+      }
+      setData((previous) => ({
+        ...previous,
+        servers: [...previous.servers.filter((item) => item.id !== server.id), server],
+        channels: {
+          ...previous.channels,
+          [server.id]: rows.map((item) => ({
+            id: item.id,
+            name: item.name ?? 'unnamed',
+            type: item.channel_type === 'announcement' ? 'announcement' as const : 'text' as const,
+          })),
+        },
+      }))
+      setServerId(server.id)
+      const firstChannel = rows[0]
+      if (firstChannel) setChannelId(firstChannel.id)
+      setView('channel')
+      setMobileTab('chat')
+      setModal(null)
+      setModalValue('')
+      notify(joined.already_member ? `Opened ${community.name}` : `Joined ${community.name}`)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not join community.')
+    }
+  }
 
   const sendMessage = (e?: FormEvent) => {
     e?.preventDefault()
@@ -1091,6 +1227,8 @@ export function WorkspacePage({
           value={modalValue}
           people={people}
           onChangeValue={setModalValue}
+          onCreateServer={() => void handleCreateCommunity()}
+          onJoinServer={() => void handleJoinCommunity()}
           onSubmit={(e) => {
             e.preventDefault()
             if (modal === 'invite') {
@@ -1108,14 +1246,39 @@ export function WorkspacePage({
               setModalValue('')
               return
             }
-            if (modal === 'server' || modal === 'channel') {
-              notify(
-                modal === 'server'
-                  ? 'Community creation will be enabled when the community API is ready.'
-                  : 'Channel creation will be enabled when the channel API is ready.',
-              )
-              setModal(null)
-              setModalValue('')
+            if (modal === 'channel') {
+              if (!server?.id) {
+                notify('Select a server before creating a channel.')
+                return
+              }
+              void (async () => {
+                try {
+                  const result = await createChannelApi(server.id, { name: modalValue.trim() })
+                  const created = result.channel
+                  setData((previous) => ({
+                    ...previous,
+                    channels: {
+                      ...previous.channels,
+                      [server.id]: [
+                        ...(previous.channels[server.id] ?? []),
+                        {
+                          id: created.id,
+                          name: created.name ?? modalValue.trim(),
+                          type: created.channel_type === 'announcement' ? 'announcement' : 'text',
+                        },
+                      ],
+                    },
+                  }))
+                  setChannelId(created.id)
+                  setView('channel')
+                  setMobileTab('chat')
+                  setModal(null)
+                  setModalValue('')
+                  notify(`Created #${created.name ?? modalValue.trim()}`)
+                } catch (error) {
+                  notify(error instanceof Error ? error.message : 'Could not create channel.')
+                }
+              })()
               return
             }
           }}
