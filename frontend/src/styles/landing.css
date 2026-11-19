@@ -1,5 +1,7 @@
-/* Adaptive Auth Landing: Split two-column card on Desktop Web, native full-screen steps on Mobile */
+/* Adaptive Auth Landing — gaya CodexCo. (Oxanium + Space Mono, ungu, sudut tegas) */
+@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
+/* --design-tokens-- */
 .landing-shell {
   --lp-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
   --lp-mono: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -23,6 +25,7 @@
   display: none;
 }
 
+/* ── Logo & label ── */
 .landing-brand-mark {
   display: block;
   flex: 0 0 auto;
@@ -38,18 +41,18 @@
   z-index: 1;
   width: min(1040px, 100%);
   margin: auto;
-  padding: 2rem;
+  padding: 32px;
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(380px, 440px);
-  gap: 3rem;
+  gap: 56px;
   align-items: center;
-  animation: landing-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: landing-enter 0.45s var(--ease) both;
 }
 
 .landing-showcase {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 22px;
 }
 
 .landing-badge-row {
@@ -108,6 +111,7 @@
   line-height: 1.5;
 }
 
+/* ── Kartu auth ── */
 .landing-card {
   padding: 1.75rem;
   border-radius: 14px 14px 14px 3px;
@@ -116,7 +120,7 @@
   box-shadow: 0 24px 60px rgba(4, 7, 15, 0.55);
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 16px;
 }
 
 .landing-card-head h2 {
@@ -141,9 +145,8 @@
   border: 1px solid #303D59;
 }
 
-.landing-mode-tabs [role="tab"] {
-  position: relative;
-  min-height: 2.375rem;
+.landing-mode-tabs button {
+  height: 38px;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -183,15 +186,8 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding: 0 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
-  animation: landing-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.landing-mobile-step {
-  margin-top: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
+  padding: 0 20px calc(28px + env(safe-area-inset-bottom, 0px));
+  animation: landing-enter 0.4s var(--ease) both;
 }
 
 .landing-hero {
@@ -200,8 +196,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.25rem;
-  padding: calc(1.5rem + env(safe-area-inset-top, 0px)) 0 1.125rem;
+  gap: 22px;
+  padding: calc(40px + env(safe-area-inset-top, 0px)) 0 24px;
   text-align: center;
 }
 
@@ -300,7 +296,7 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  height: 3.5rem;
+  height: 64px;
   margin-top: env(safe-area-inset-top, 0px);
   border-bottom: 1px solid #303D59;
   font-size: 1rem;
@@ -338,9 +334,7 @@
   position: relative;
   display: flex;
   align-items: center;
-}
-
-.landing-input {
+  justify-content: center;
   width: 100%;
   min-height: 3rem;
   padding: 0 0.875rem;
@@ -381,11 +375,26 @@
   color: #DCE3EF;
 }
 
-.landing-otp-input {
-  text-align: center;
-  font-size: 1.375rem;
-  font-weight: 700;
-  letter-spacing: 0.35em;
+.oauth-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.oauth-icon {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+}
+
+.landing-oauth-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.landing-oauth-row .oauth-btn {
+  font-size: 12px;
 }
 
 .landing-continue {
@@ -416,196 +425,214 @@
 
 .landing-continue:disabled {
   cursor: not-allowed;
-  opacity: 0.65;
+}
+
+.landing-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.landing-or::before,
+.landing-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* ── Form ── */
+.landing-form {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.landing-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.landing-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  outline: none;
+}
+
+.landing-input::placeholder {
+  color: #5f5f5f;
+}
+
+.landing-input:focus {
+  border-color: var(--purple);
+}
+
+.landing-otp-input {
+  text-align: center;
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+}
+
+.landing-error,
+.landing-info {
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: 6px;
+  border: 1px solid;
+  border-left-width: 4px;
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 .landing-error {
-  margin: 0;
-  padding: 0.625rem 0.75rem;
-  border-radius: 10px;
-  border: 1px solid rgba(244, 33, 46, 0.35);
-  background: rgba(244, 33, 46, 0.12);
-  color: #ff8e96;
-  font-size: 0.8125rem;
-  line-height: 1.45;
+  border-color: #e5484d;
+  background: rgba(229, 72, 77, 0.1);
+  color: #ff9a9e;
 }
 
 .landing-info {
-  margin: 0;
-  padding: 0.625rem 0.75rem;
-  border-radius: 10px;
-  border: 1px solid rgba(29, 155, 240, 0.35);
-  background: rgba(29, 155, 240, 0.11);
-  color: #8fd0ff;
-  font-size: 0.8125rem;
-  line-height: 1.45;
+  border-color: var(--purple);
+  background: rgba(180, 79, 211, 0.12);
+  color: #e3a8f3;
 }
 
 .landing-help {
-  margin: 0.25rem 0 0;
+  margin: 4px 0 0;
   text-align: center;
-  color: #9397a0;
-  font-size: 0.8125rem;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .landing-help button {
   border: 0;
   padding: 0;
   background: transparent;
-  color: #6bc2ff;
+  color: var(--purple);
   font: inherit;
-  font-weight: 600;
-  cursor: pointer;
+  font-weight: 700;
   text-decoration: underline;
+  cursor: pointer;
 }
 
 .landing-help button:disabled {
-  color: #6b6f78;
+  color: #5f5f5f;
   text-decoration: none;
   cursor: not-allowed;
 }
 
-@keyframes landing-enter {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .landing-desktop-frame,
-  .landing-screen {
-    animation-duration: 0.01ms !important;
-  }
-}
-
-
-/* ══════════════════════════════════════════════
-   POLISH: smooth step transition + button motion
-   (blok ini menimpa transisi lama, UI lain tidak berubah)
-   ══════════════════════════════════════════════ */
-
-
-/* --smooth-step-transition-- */
-
-/* Konten tiap step masuk dari kanan (maju ke form email/password/register) */
-.landing-screen > div {
-  -webkit-animation: landing-step-in-right 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  animation: landing-step-in-right 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-}
-
-/* Kembali ke welcome (topbar hilang): konten masuk dari kiri */
-.landing-screen:not(:has(> .landing-topbar)) > div {
-  -webkit-animation-name: landing-step-in-left;
-  animation-name: landing-step-in-left;
-}
-
-.landing-screen > .landing-actions {
-  -webkit-animation-delay: 0.06s;
-  animation-delay: 0.06s;
-}
-
-.landing-screen > .landing-topbar {
-  -webkit-animation: landing-fade-down 0.32s ease backwards;
-  animation: landing-fade-down 0.32s ease backwards;
-}
-
-
-/* --smooth-form-stagger-- */
-
-/* Field form muncul berurutan, halus (mobile & tab desktop) */
-.landing-form > * {
-  -webkit-animation: landing-rise 0.38s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  animation: landing-rise 0.38s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-}
-
-.landing-form > *:nth-child(2) { -webkit-animation-delay: 0.04s; animation-delay: 0.04s; }
-.landing-form > *:nth-child(3) { -webkit-animation-delay: 0.08s; animation-delay: 0.08s; }
-.landing-form > *:nth-child(4) { -webkit-animation-delay: 0.12s; animation-delay: 0.12s; }
-.landing-form > *:nth-child(5) { -webkit-animation-delay: 0.16s; animation-delay: 0.16s; }
-.landing-form > *:nth-child(n + 6) { -webkit-animation-delay: 0.2s; animation-delay: 0.2s; }
-
-.landing-error,
-.landing-info {
-  -webkit-animation: landing-rise 0.28s ease backwards;
-  animation: landing-rise 0.28s ease backwards;
-}
-
-
-/* --button-motion-- */
-
+/* ── Motion ── */
 .oauth-btn,
 .landing-continue,
 .landing-mode-tabs button,
 .landing-back,
 .landing-help button {
-  -webkit-tap-highlight-color: transparent;
-  -webkit-transition:
-    background 0.22s ease,
-    color 0.22s ease,
-    border-color 0.22s ease,
-    opacity 0.2s ease,
-    -webkit-transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
   transition:
-    background 0.22s ease,
-    color 0.22s ease,
-    border-color 0.22s ease,
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
     opacity 0.2s ease,
-    transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+    transform 0.2s var(--ease);
 }
 
 .landing-input {
-  -webkit-transition: border-color 0.2s ease, background 0.2s ease;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: border-color 0.2s ease;
 }
 
-/* Hover angkat tipis (hanya device yang punya hover) */
 @media (hover: hover) {
-  .oauth-btn:hover:not(:disabled),
+  .oauth-btn:hover:not(:disabled) {
+    border-color: var(--purple);
+    transform: translateY(-2px);
+  }
+
   .landing-continue.is-ready:hover:not(:disabled) {
-    -webkit-transform: translateY(-1px);
-    transform: translateY(-1px);
+    background: var(--purple-hover);
+    transform: translateY(-2px);
+  }
+
+  .landing-back:hover {
+    background: var(--purple-hover);
+  }
+
+  .landing-mode-tabs button:not(.active):hover {
+    color: var(--text);
+  }
+
+  .landing-pillar:hover {
+    border-color: var(--purple);
+    transform: translateY(-3px);
   }
 }
 
-/* Press feedback */
 .oauth-btn:active:not(:disabled),
 .landing-continue:active:not(:disabled) {
-  -webkit-transform: scale(0.97);
   transform: scale(0.97);
 }
 
 .landing-mode-tabs button:active {
-  -webkit-transform: scale(0.96);
   transform: scale(0.96);
 }
 
 .landing-back:active {
-  -webkit-transform: translateX(-3px) scale(0.92);
-  transform: translateX(-3px) scale(0.92);
-  opacity: 0.7;
+  transform: scale(0.92);
 }
 
 .landing-help button:active:not(:disabled) {
   opacity: 0.65;
 }
 
-/* Tombol lanjut "pop" kecil saat berubah jadi ready */
-.landing-continue.is-ready {
-  -webkit-animation: landing-ready-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1);
-  animation: landing-ready-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+/* Transisi antar-step (arah dari data-dir) */
+.landing-screen > div {
+  animation: landing-step-in-right 0.4s var(--ease) backwards;
 }
 
+.landing-screen[data-dir='back'] > div {
+  animation-name: landing-step-in-left;
+}
 
-/* --polish-keyframes-- */
+.landing-screen > .landing-actions {
+  animation-delay: 0.06s;
+}
 
-@-webkit-keyframes landing-step-in-right {
-  from { opacity: 0; -webkit-transform: translateX(28px); transform: translateX(28px); }
-  to   { opacity: 1; -webkit-transform: translateX(0); transform: translateX(0); }
+.landing-screen > .landing-topbar {
+  animation: landing-fade-down 0.32s ease backwards;
+}
+
+.landing-form > * {
+  animation: landing-rise 0.38s var(--ease) backwards;
+}
+
+.landing-form > *:nth-child(2) { animation-delay: 0.04s; }
+.landing-form > *:nth-child(3) { animation-delay: 0.08s; }
+.landing-form > *:nth-child(4) { animation-delay: 0.12s; }
+.landing-form > *:nth-child(5) { animation-delay: 0.16s; }
+.landing-form > *:nth-child(n + 6) { animation-delay: 0.2s; }
+
+.landing-error,
+.landing-info {
+  animation: landing-rise 0.28s ease backwards;
+}
+
+.landing-continue.is-ready {
+  animation: landing-ready-pop 0.32s var(--ease);
+}
+
+@keyframes landing-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes landing-step-in-right {
@@ -613,19 +640,9 @@
   to   { opacity: 1; transform: translateX(0); }
 }
 
-@-webkit-keyframes landing-step-in-left {
-  from { opacity: 0; -webkit-transform: translateX(-28px); transform: translateX(-28px); }
-  to   { opacity: 1; -webkit-transform: translateX(0); transform: translateX(0); }
-}
-
 @keyframes landing-step-in-left {
   from { opacity: 0; transform: translateX(-28px); }
   to   { opacity: 1; transform: translateX(0); }
-}
-
-@-webkit-keyframes landing-fade-down {
-  from { opacity: 0; -webkit-transform: translateY(-6px); transform: translateY(-6px); }
-  to   { opacity: 1; -webkit-transform: translateY(0); transform: translateY(0); }
 }
 
 @keyframes landing-fade-down {
@@ -633,20 +650,9 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-@-webkit-keyframes landing-rise {
-  from { opacity: 0; -webkit-transform: translateY(8px); transform: translateY(8px); }
-  to   { opacity: 1; -webkit-transform: translateY(0); transform: translateY(0); }
-}
-
 @keyframes landing-rise {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-
-@-webkit-keyframes landing-ready-pop {
-  0%   { -webkit-transform: scale(1); transform: scale(1); }
-  45%  { -webkit-transform: scale(1.025); transform: scale(1.025); }
-  100% { -webkit-transform: scale(1); transform: scale(1); }
 }
 
 @keyframes landing-ready-pop {
@@ -655,14 +661,56 @@
   100% { transform: scale(1); }
 }
 
+/* ── Responsif ── */
+@media (max-width: 900px) {
+  .landing-desktop-frame {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    padding: 24px 20px;
+  }
+
+  .landing-showcase h1 {
+    font-size: clamp(24px, 5.2vw, 34px);
+  }
+}
+
+@media (max-width: 360px) {
+  .landing-screen {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .landing-hero {
+    gap: 16px;
+  }
+
+  .landing-card {
+    padding: 20px 16px;
+  }
+
+  .landing-oauth-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 640px) {
+  .landing-hero {
+    justify-content: flex-start;
+    gap: 14px;
+    padding-top: calc(20px + env(safe-area-inset-top, 0px));
+  }
+}
+
+/* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
+  .landing-desktop-frame,
+  .landing-screen,
   .landing-screen > div,
   .landing-screen > .landing-topbar,
   .landing-form > *,
   .landing-error,
   .landing-info,
   .landing-continue.is-ready {
-    -webkit-animation: none !important;
     animation: none !important;
   }
 
@@ -670,22 +718,8 @@
   .landing-continue,
   .landing-mode-tabs button,
   .landing-back,
-  .landing-help button {
-    -webkit-transition: none !important;
+  .landing-help button,
+  .landing-pillar {
     transition: none !important;
   }
-}
-
-
-/* --slide-direction-- */
-
-/* Arah slide dari state React (data-dir), menimpa tebakan :has di atas */
-.landing-screen[data-dir='forward'] > div {
-  -webkit-animation-name: landing-step-in-right;
-  animation-name: landing-step-in-right;
-}
-
-.landing-screen[data-dir='back'] > div {
-  -webkit-animation-name: landing-step-in-left;
-  animation-name: landing-step-in-left;
 }
