@@ -41,7 +41,7 @@ export function SocialComposer({
         <div className="social-compose-footer">
           <span>{draft.length}/500</span>
           <button type="submit" disabled={!draft.trim() || !canPublish}>
-            <Icon name="arrowUp" size={15} /> Publish
+            <Icon name="arrowUp" size={15} /> Post
           </button>
         </div>
         {!canPublish && (
