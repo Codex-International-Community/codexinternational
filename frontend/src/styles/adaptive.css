@@ -3125,3 +3125,82 @@ button:hover > .gf-icon { opacity: 1; }
     animation-duration: .01ms !important;
   }
 }
+
+/* Final mobile drawer behavior: closed on entry, persistent across routes,
+   opened from every page, and closed only by the double-tap handler. */
+@media (max-width: 767px) {
+  .app-shell > .server-rail,
+  .app-shell.view-discover > .server-rail {
+    display: flex !important;
+    position: fixed !important;
+    z-index: 62 !important;
+    inset: 0 auto 0 0 !important;
+    width: 68px !important;
+    min-width: 68px !important;
+    max-width: 68px !important;
+    height: 100dvh !important;
+    transform: translate3d(-105%, 0, 0) !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transition: transform .28s cubic-bezier(.22,.8,.22,1), visibility .28s !important;
+  }
+  .app-shell.drawer-open > .server-rail,
+  .app-shell.view-discover.drawer-open > .server-rail {
+    transform: translate3d(0,0,0) !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+  .app-shell > .channel-sidebar,
+  .app-shell > .drawer-scrim,
+  .app-shell.view-discover > .channel-sidebar {
+    display: none !important;
+  }
+  .app-shell > .workspace {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    margin: 0;
+  }
+  .app-shell .topbar {
+    position: relative;
+    z-index: 3;
+  }
+  .app-shell .drawer-scrim {
+    display: block;
+    position: fixed;
+    z-index: 2;
+    inset: 56px 0 calc(62px + env(safe-area-inset-bottom, 0px)) 0;
+    border: 0;
+    background: rgba(0,0,0,.34);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .22s ease, visibility .22s ease;
+  }
+  .app-shell.drawer-open .drawer-scrim {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .app-shell .server-rail .rail-profile-wrap {
+    margin-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+  }
+  .app-shell .server-rail {
+    padding-bottom: max(13px, env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (min-width: 768px) {
+  .app-shell > .server-rail,
+  .app-shell.view-discover > .server-rail {
+    display: flex !important;
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 1 !important;
+  }
+  .app-shell .mobile-menu { display: none !important; }
+  .app-shell > .drawer-scrim { display: none !important; }
+}
