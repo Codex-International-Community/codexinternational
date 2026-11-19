@@ -1,20 +1,20 @@
-/* Adaptive Auth Landing: CodexCo. Obsidian Black & Codex Purple (Oxanium + Plus Jakarta Sans + Space Mono) */
+/* Adaptive Auth Landing: CodexCo. Obsidian Black & Signal Blue (Oxanium + Plus Jakarta Sans + Space Mono) */
 @import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
 
 /* --design-tokens-- */
 .landing-shell {
-  --bg: #121115;
-  --black: #0A0A0C;
-  --surface: #1B1921;
-  --surface-hover: #24212B;
-  --line: #2D2936;
-  --line-strong: #463E54;
-  --text: #F5F4F7;
-  --muted: #B4B0BC;
-  --purple: #8A30A6;
-  --purple-hover: #9C38BC;
-  --purple-ink: #D994F2;
-  --purple-soft: rgba(180, 79, 211, 0.16);
+  --bg: #111113;
+  --black: #08080A;
+  --surface: #18181B;
+  --surface-hover: #222226;
+  --line: #2A2A2E;
+  --line-strong: #424248;
+  --text: #F4F4F6;
+  --muted: #A8A8B2;
+  --purple: #1458AD;
+  --purple-hover: #1868C4;
+  --purple-ink: #6BC2FF;
+  --purple-soft: rgba(107, 194, 255, 0.14);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --display: 'Oxanium', 'Segoe UI', system-ui, sans-serif;
   --sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -465,7 +465,7 @@
 .landing-info {
   border-color: var(--purple-ink);
   background: var(--purple-soft);
-  color: #EFC7FF;
+  color: #D2ECFF;
 }
 
 .landing-help {

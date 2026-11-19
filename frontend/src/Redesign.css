@@ -1,19 +1,19 @@
 :root {
   color-scheme: light dark;
-  --rail: #0A0A0C;
-  --side: #121115;
-  --workspace: #121115;
-  --surface: #1A191F;
-  --surface2: #24212B;
-  --line: #2D2936;
-  --text: #F5F4F7;
-  --muted: #B4B0BC;
-  --quiet: #9690A2;
-  --accent: #D994F2;
-  --accent-solid: #8A30A6;
-  --accent-solid-hover: #9C38BC;
-  --accent-bg: rgba(180, 79, 211, .16);
-  --accent-border: rgba(217, 148, 242, .38);
+  --rail: #08080A;
+  --side: #111113;
+  --workspace: #111113;
+  --surface: #18181B;
+  --surface2: #222226;
+  --line: #2A2A2E;
+  --text: #F4F4F6;
+  --muted: #A8A8B2;
+  --quiet: #8B8B96;
+  --accent: #6BC2FF;
+  --accent-solid: #1458AD;
+  --accent-solid-hover: #1868C4;
+  --accent-bg: rgba(107, 194, 255, .14);
+  --accent-border: rgba(107, 194, 255, .36);
   --green: #00ba7c;
   --danger: #f4212e;
   --serif: Georgia, "Times New Roman", serif;
@@ -25,20 +25,20 @@
 
 .theme-light {
   color-scheme: light;
-  --rail: #EFEBF3;
-  --side: #F7F6F9;
-  --workspace: #F7F6F9;
+  --rail: #EAEAEF;
+  --side: #F7F7F8;
+  --workspace: #F7F7F8;
   --surface: #FFFFFF;
-  --surface2: #EAE5F0;
-  --line: #D5CEE0;
-  --text: #121114;
-  --muted: #4A4352;
-  --quiet: #635B6E;
-  --accent: #73268F;
-  --accent-solid: #73268F;
-  --accent-solid-hover: #8A30A6;
-  --accent-bg: rgba(115, 38, 143, .11);
-  --accent-border: rgba(115, 38, 143, .35);
+  --surface2: #E8E8ED;
+  --line: #D4D4DC;
+  --text: #111113;
+  --muted: #4A4A52;
+  --quiet: #60606A;
+  --accent: #1659A8;
+  --accent-solid: #1659A8;
+  --accent-solid-hover: #1868C4;
+  --accent-bg: rgba(22, 89, 168, .11);
+  --accent-border: rgba(22, 89, 168, .35);
   --green: #008a5c;
   --danger: #d91b27;
 }
@@ -720,7 +720,7 @@ button:active {
 }
 
 .avatar.self {
-  background: linear-gradient(140deg, #8A30A6, #5C1F70);
+  background: linear-gradient(140deg, #1868C4, #103A70);
   color: #fff;
 }
 
@@ -844,7 +844,7 @@ button:active {
 .discover-art.card-blue,
 .discover-art.card-orange,
 .discover-art.card-green {
-  background: linear-gradient(135deg, #8A30A6, #3E154B);
+  background: linear-gradient(135deg, #1868C4, #0E294D);
 }
 
 .discover-art span {

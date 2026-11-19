@@ -4,7 +4,7 @@
 A community workspace that brings group chat, a public social timeline, channel discovery, and member discovery into one coherent place. The frontend preview runs locally in the browser; account identity, feeds, voice/video, and cross-device sync are not backed by a server.
 
 ## Visual direction
-Editorial community software: deep obsidian charcoal surfaces, crisp light ink text, Codex purple accents, Oxanium and serif display typography paired with a clean sans-serif interface face. The interface feels active and personal without relying on glass panels, oversized gradients, nested cards, or decorative dashboard metrics.
+Editorial community software: neutral obsidian black surfaces, crisp light text, focused signal-blue accents, Oxanium and serif display typography paired with a clean sans-serif interface face. The interface feels active and personal without relying on glass panels, oversized gradients, nested cards, or decorative dashboard metrics.
 
 ## Information architecture
 - **Chat:** persistent server/channel navigation, direct messages, message actions, and a contextual member panel.
@@ -12,9 +12,9 @@ Editorial community software: deep obsidian charcoal surfaces, crisp light ink t
 - **Discover / Activity / Settings:** supporting areas, with the same typography, spacing, and interaction language.
 
 ## Color direction
-Unified Codex International Obsidian Black & Codex Purple palette (synchronized between landing portal and community application):
-- Dark: background `#121115`, deep rail `#0A0A0C`, raised surface `#1A191F`, hover surface `#24212B`, border `#2D2936`, strong border `#463E54`, primary text `#F5F4F7`, muted `#B4B0BC`, quiet `#9690A2`, solid CTA fill `#8A30A6` (hover `#9C38BC`, text `#FFFFFF`), foreground purple ink `#D994F2`.
-- Light: background `#F7F6F9`, alt surface `#EFEBF3`, raised surface `#FFFFFF`, hover surface `#EAE5F0`, border `#D5CEE0`, strong border `#6E627D`, primary text `#121114`, muted `#4A4352`, quiet `#635B6E`, solid CTA fill `#73268F` (hover `#8A30A6`, text `#FFFFFF`), foreground purple ink `#73268F`.
+Unified Codex International Obsidian Black & Signal Blue palette (synchronized between landing portal and community application):
+- Dark: background `#111113`, deep rail `#08080A`, raised surface `#18181B`, hover surface `#222226`, border `#2A2A2E`, strong border `#424248`, primary text `#F4F4F6`, muted `#A8A8B2`, quiet `#8B8B96`, solid CTA fill `#1458AD` (hover `#1868C4`, text `#FFFFFF`), foreground blue ink `#6BC2FF`.
+- Light: background `#F7F7F8`, alt surface `#EAEAEF`, raised surface `#FFFFFF`, hover surface `#E8E8ED`, border `#D4D4DC`, strong border `#6E6E78`, primary text `#111113`, muted `#4A4A52`, quiet `#60606A`, solid CTA fill `#1659A8` (hover `#1868C4`, text `#FFFFFF`), foreground blue ink `#1659A8`.
 - Semantic status only: success green `#00BA7C` (dark) / `#008A5C` (light) and danger red `#F4212E` (dark) / `#D91B27` (light).
 - Radius: `14px 14px 14px 3px` signature asymmetric corner for primary cards and CTAs; `6px`–`10px` for standard controls.
 - Spacing: 4px base rhythm, with 8 / 12 / 16 / 24 / 32px steps.

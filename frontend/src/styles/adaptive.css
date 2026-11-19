@@ -327,8 +327,8 @@ dialog.bot-reveal-modal {
   gap: 12px;
   height: 100dvh;
   padding: 24px;
-  background: #0A0A0C;
-  color: #F5F4F7;
+  background: #08080A;
+  color: #F4F4F6;
   text-align: center;
   font-size: 0.9375rem;
 }
@@ -340,7 +340,7 @@ dialog.bot-reveal-modal {
   height: 48px;
   margin-bottom: 8px;
   border-radius: 15px 15px 15px 5px;
-  background: #8A30A6;
+  background: #1458AD;
   color: #fff;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 1.75rem;
@@ -351,20 +351,20 @@ dialog.bot-reveal-modal {
 .app-boot-spinner {
   width: 22px;
   height: 22px;
-  border: 2px solid rgba(245, 244, 247, .22);
-  border-top-color: #D994F2;
+  border: 2px solid rgba(244, 244, 246, .22);
+  border-top-color: #6BC2FF;
   border-radius: 50%;
   animation: app-boot-spin .8s linear infinite;
 }
 
 .app-boot-screen strong {
-  color: #F5F4F7;
+  color: #F4F4F6;
   font-size: 1rem;
 }
 
 .app-boot-screen p {
   margin: 0;
-  color: #B4B0BC;
+  color: #A8A8B2;
   font-size: .8125rem;
 }
 
