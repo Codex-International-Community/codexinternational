@@ -3,6 +3,7 @@ import type { IconName } from '../types/common'
 export const iconPaths: Record<IconName, string> = {
   home: 'M3 10.5 12 3l9 7.5V21H3V10.5ZM9 21v-7h6v7',
   compass: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm4 6-2.2 5.8L8 16l2.2-5.8L16 8Z',
+  rocket: 'M12 2c3 2 5 5 5 9l-5 5-5-5c0-4 2-7 5-9ZM7 11l-3 2-1 5 5-2M17 11l3 2 1 5-5-2M10 16l-1 5 3-2 3 2-1-5',
   plus: 'M12 5v14M5 12h14',
   chevron: 'm9 18 6-6-6-6',
   hash: 'M4 9h16M4 15h16M10 3 8 21M16 3l-2 18',
