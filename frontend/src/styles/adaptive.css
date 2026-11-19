@@ -2307,7 +2307,24 @@ dialog.bot-reveal-modal {
 .app-shell.view-discover {
   width: 100%;
   max-width: 100vw;
-  overflow: clip;
+  overflow: visible;
+}
+
+/* Keep the Discover drawer visible outside the workspace clipping context. */
+.app-shell.view-discover > .server-rail,
+.app-shell.view-discover > .channel-sidebar {
+  position: fixed !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  max-height: 100dvh;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.app-shell.view-discover.drawer-open > .server-rail,
+.app-shell.view-discover.drawer-open > .channel-sidebar {
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .app-shell.view-discover > .server-rail,
