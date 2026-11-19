@@ -174,8 +174,6 @@ export function ChannelSidebar({
               </button>
               <button
                 type="button"
-                className={view === 'social' ? 'selected' : ''}
-                aria-current={view === 'social' ? 'page' : undefined}
                 onClick={onNavigateThreads}
               >
                 <Icon name="thread" size={18} />

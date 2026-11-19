@@ -56,8 +56,6 @@ export function Topbar({
             ? 'shield'
             : view === 'home'
               ? 'users'
-              : view === 'threads'
-                ? 'thread'
               : view === 'dm'
               ? 'message'
               : view === 'discover'
@@ -75,7 +73,7 @@ export function Topbar({
                         : 'hash'
 
   const topicText =
-    view === 'home' || view === 'threads'
+    view === 'home'
       ? ''
       : view === 'channel'
       ? 'A place to share ideas and catch up.'

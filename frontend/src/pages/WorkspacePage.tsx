@@ -5,8 +5,7 @@ import '../styles/adaptive.css'
 
 import type { AuthSession } from '../api/client'
 import { ApiError } from '../api/client'
-import { getSession } from '../api/client'
-import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, mapChatMessage, postMessage, type ChatMessageWire } from '../api/chat'
+import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, listPinnedMessages, mapChatMessage, pinMessage, postMessage, toggleMessageReaction, unpinMessage, type ChatMessageWire } from '../api/chat'
 import { createChannel as createChannelApi, createCommunity, createOrGetDm, joinCommunity, listChannels, listCommunities, listCommunityMembers } from '../api/communities'
 import type { ViewportInfo } from '../hooks/useViewport'
 import type { Attachment, View } from '../types/common'
@@ -660,6 +659,7 @@ export function WorkspacePage({
           code?: string
           messageText?: string
           messageId?: string
+          pinned?: boolean
           reactions?: Record<string, string[]>
           userId?: string
         }
@@ -1026,7 +1026,6 @@ export function WorkspacePage({
   }
 
   const pickServer = (id: string) => {
-    setActiveThread(null)
     setServerId(id)
     const first = (data.channels[id] ?? []).find((c) => c.type === 'text') ?? data.channels[id]?.[0]
     if (first) setChannelId(first.id)
@@ -1036,7 +1035,6 @@ export function WorkspacePage({
   }
 
   const pickChannel = (c: Channel) => {
-    setActiveThread(null)
     if (c.type === 'voice') {
       notify(`Connected to ${c.name} voice preview`)
       
@@ -1078,8 +1076,7 @@ export function WorkspacePage({
           ],
         }
       })
-      setActiveThread(null)
-      setDmId(recipientId)
+        setDmId(recipientId)
       setView('dm')
       setMobileTab('chat')
     } catch (error) {
