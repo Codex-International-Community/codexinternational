@@ -64,7 +64,10 @@ const defaultWorkspaceRoute: WorkspaceRoute = {
   dmId: 'mika',
 }
 
-function parseWorkspaceRoute(pathname: string): WorkspaceRoute {
+function parseWorkspaceRoute(
+  pathname: string,
+  fallback: WorkspaceRoute = defaultWorkspaceRoute,
+): WorkspaceRoute {
   const segments = pathname
     .split('/')
     .filter(Boolean)
@@ -78,13 +81,13 @@ function parseWorkspaceRoute(pathname: string): WorkspaceRoute {
 
   if (segments[0] === 'channels' && segments[1] === '@me') {
     return segments[2]
-      ? { ...defaultWorkspaceRoute, view: 'dm', dmId: segments[2] }
-      : defaultWorkspaceRoute
+      ? { ...fallback, view: 'dm', dmId: segments[2] }
+      : { ...fallback, view: 'home' }
   }
 
   if (segments[0] === 'channels' && segments[1] && segments[2]) {
     return {
-      ...defaultWorkspaceRoute,
+      ...fallback,
       view: 'channel',
       serverId: segments[1],
       channelId: segments[2],
@@ -92,11 +95,11 @@ function parseWorkspaceRoute(pathname: string): WorkspaceRoute {
   }
 
   if (segments[0] === 'directory' && segments[1] === 'channels') {
-    return { ...defaultWorkspaceRoute, view: 'channels' }
+    return { ...fallback, view: 'channels' }
   }
 
   if (segments[0] === 'directory' && segments[1] === 'people') {
-    return { ...defaultWorkspaceRoute, view: 'people' }
+    return { ...fallback, view: 'people' }
   }
 
   const staticRoutes: Record<string, View> = {
@@ -109,7 +112,7 @@ function parseWorkspaceRoute(pathname: string): WorkspaceRoute {
   }
   const view = staticRoutes[segments[0] ?? '']
 
-  return view ? { ...defaultWorkspaceRoute, view } : defaultWorkspaceRoute
+  return view ? { ...fallback, view } : { ...fallback, view: 'home' }
 }
 
 function buildWorkspacePath({ view, serverId, channelId, dmId }: WorkspaceRoute): string {
@@ -139,6 +142,14 @@ function buildWorkspacePath({ view, serverId, channelId, dmId }: WorkspaceRoute)
   }
 }
 
+function mobileTabForView(view: View): MobileTab {
+  if (view === 'home') return 'home'
+  if (view === 'social') return 'social'
+  if (view === 'channels') return 'channels'
+  if (view === 'people') return 'people'
+  return 'chat'
+}
+
 export function WorkspacePage({
   session,
   viewport,
@@ -164,7 +175,9 @@ export function WorkspacePage({
   const [dmId, setDmId] = useState(initialRoute.dmId)
   const [membersOpen, setMembersOpen] = useState(isDesktop)
   const [drawerOpen, setDrawerOpen] = useState(false)
-  const [mobileTab, setMobileTab] = useState<MobileTab>('chat')
+  const [mobileTab, setMobileTab] = useState<MobileTab>(() =>
+    mobileTabForView(initialRoute.view),
+  )
   const [composer, setComposer] = useState('')
   const [replyTo, setReplyTo] = useState<Message | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -266,22 +279,17 @@ export function WorkspacePage({
 
   useEffect(() => {
     const handlePopState = () => {
-      const route = parseWorkspaceRoute(window.location.pathname)
+      const route = parseWorkspaceRoute(window.location.pathname, {
+        view,
+        serverId,
+        channelId,
+        dmId,
+      })
       setView(route.view)
       setServerId(route.serverId)
       setChannelId(route.channelId)
       setDmId(route.dmId)
-      setMobileTab(
-        route.view === 'home'
-          ? 'home'
-          : route.view === 'social'
-            ? 'social'
-            : route.view === 'channels'
-              ? 'channels'
-              : route.view === 'people'
-                ? 'people'
-                : 'chat',
-      )
+      setMobileTab(mobileTabForView(route.view))
       setDrawerOpen(false)
       setSearchOpen(false)
       setProfileMenu(false)
@@ -289,7 +297,7 @@ export function WorkspacePage({
 
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [])
+  }, [view, serverId, channelId, dmId])
 
 
   useEffect(() => {
