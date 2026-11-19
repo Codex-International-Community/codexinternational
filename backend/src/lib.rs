@@ -19,6 +19,8 @@ use crate::{
 };
 
 pub mod auth;
+pub mod communities;
+pub mod gamification;
 pub mod config;
 pub mod error;
 pub mod health;
