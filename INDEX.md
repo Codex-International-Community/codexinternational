@@ -10,7 +10,7 @@ Perlakukan dokumen di bawah ini sebagai modul independen dengan pemisahan tanggu
 
 | Dokumen | Peran & Tanggung Jawab Utama | Rujukan Kunci |
 | :--- | :--- | :--- |
-| **[`backend/PRD.md`](backend/PRD.md)** | Hukum teknis tertinggi sisi backend: arsitektur sistem, Valkey state schema, PostgreSQL DDL, invariants (`INV-1..16`), decision log (`DEC-1..16`), dan gotchas. | `P§1.2` (Valkey State Schema), `P§1.3` (PostgreSQL DDL), `P§5` (`INV-1..16`), `P§6` (`DEC-1..16`), `P§7` (Gotchas) |
+| **[`backend/PRD.md`](backend/PRD.md)** | Hukum teknis tertinggi sisi backend: arsitektur sistem, Valkey state schema, PostgreSQL DDL, invariants (`INV-1..16`), decision log (`DEC-1..17`), dan gotchas. | `P§1.2` (Valkey State Schema), `P§1.3` (PostgreSQL DDL), `P§5` (`INV-1..16`), `P§6` (`DEC-1..17`), `P§7` (Gotchas) |
 | **[`backend/TASKS.md`](backend/TASKS.md)** | Roadmap implementasi teknis TDD Rust per-fase (`Fase 0`–`Fase 6`). Wajib lolos *Phase Gate* sebelum melangkah ke fase berikutnya. | `Fase 0` (Infra & Workspace), `Fase 1` (Auth & Core), `Fase 2` (Chat & Write-Behind), `Fase 3` (Media Pipeline), `Fase 4` (Stories, Gamification & FCM), `Fase 5` (Load Test & Hardening) |
 
 ---
@@ -31,7 +31,7 @@ Jika terdapat pertentangan antar-dokumen, selesaikan dengan urutan prioritas ber
 | Prefix | Domain Rujukan | Contoh |
 | :--- | :--- | :--- |
 | `P§x.y` | [`backend/PRD.md`](backend/PRD.md) | `P§1.2` (Valkey State Schema), `P§5` (Invariants), `P§7` (Gotchas) |
-| *Bare* | Invariant, Keputusan Arsitektur, Task, Gate | `INV-1`..`16`, `DEC-1`..`16`, `Task 2.1`, `Gate 2` |
+| *Bare* | Invariant, Keputusan Arsitektur, Task, Gate | `INV-1`..`16`, `DEC-1`..`17`, `Task 2.1`, `Gate 2` |
 
 ---
 

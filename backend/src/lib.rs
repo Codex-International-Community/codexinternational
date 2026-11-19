@@ -60,6 +60,14 @@ pub fn app_router(state: Arc<AppState>) -> Router {
         .nest("/api/v1/auth", auth::router())
         .nest("/api/v1/bots", auth::bots_router())
         .route("/api/v1/dev/bots/{id}/review", post(auth::bots::review_bot))
+        .route(
+            "/api/v1/dev/uid-slots",
+            get(auth::uid::list_reserved_uid_slots),
+        )
+        .route(
+            "/api/v1/dev/users/{id}/assign-uid",
+            post(auth::uid::assign_reserved_uid),
+        )
         .route("/api/v1/devices/fcm", put(auth::devices::register_fcm))
         .layer(DefaultBodyLimit::max(REST_BODY_LIMIT_BYTES))
         .layer(middleware::from_fn(rest_timeout_middleware))

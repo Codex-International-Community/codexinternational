@@ -10,12 +10,13 @@ pub mod oauth;
 pub mod otp;
 pub mod password;
 pub mod repo;
+pub mod uid;
 
 use std::sync::Arc;
 
 use axum::{
     Router,
-    routing::{delete, get, post},
+    routing::{delete, get, patch, post, put},
 };
 
 use crate::state::AppState;
@@ -26,6 +27,8 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/register", post(handlers::register))
         .route("/login", post(handlers::login))
         .route("/me", get(handlers::me))
+        .route("/password", put(uid::set_or_change_password))
+        .route("/uid-login", patch(uid::toggle_uid_login))
         .route("/refresh", post(devices::refresh))
         .route("/logout", post(devices::logout))
         .route("/otp/send", post(otp::send_otp))

@@ -11,6 +11,9 @@ use crate::error::AppError;
 #[derive(Debug, Clone, Serialize, FromRow)]
 pub struct UserProfile {
     pub id: Uuid,
+    pub uid: String,
+    pub uid_login_enabled: bool,
+    pub has_password: bool,
     pub username: String,
     pub display_name: String,
     pub email: String,
@@ -27,6 +30,8 @@ pub struct UserProfile {
 #[derive(Debug, Clone, FromRow)]
 pub struct UserAuthRecord {
     pub id: Uuid,
+    pub uid: String,
+    pub uid_login_enabled: bool,
     pub username: String,
     pub display_name: String,
     pub email: String,
@@ -46,6 +51,9 @@ impl From<UserAuthRecord> for UserProfile {
     fn from(r: UserAuthRecord) -> Self {
         Self {
             id: r.id,
+            uid: r.uid,
+            uid_login_enabled: r.uid_login_enabled,
+            has_password: r.password_hash.is_some(),
             username: r.username,
             display_name: r.display_name,
             email: r.email,
@@ -83,7 +91,8 @@ pub async fn create_user_with_device(
     let profile = sqlx::query_as::<_, UserProfile>(
         "INSERT INTO users (id, username, display_name, email, password_hash)
          VALUES ($1, $2, $3, $4, $5)
-         RETURNING id, username, display_name, email, email_verified_at, bio,
+         RETURNING id, uid, uid_login_enabled, (password_hash IS NOT NULL) AS has_password,
+                   username, display_name, email, email_verified_at, bio,
                    platform_role, can_bypass_compress, global_xp, global_level, created_at",
     )
     .bind(p.user_id)
@@ -111,17 +120,19 @@ pub async fn create_user_with_device(
     Ok(profile)
 }
 
-/// Looks up a user by email or username (case-insensitive) for password login.
+/// Looks up a user by email, username (case-insensitive), or opt-in UID for password login.
 pub async fn find_user_by_identifier(
     pool: &PgPool,
     identifier: &str,
 ) -> Result<Option<UserAuthRecord>, AppError> {
     let rec = sqlx::query_as::<_, UserAuthRecord>(
-        "SELECT id, username, display_name, email, email_verified_at, password_hash, bio,
-                platform_role, can_bypass_compress, suspended_until, suspended_reason,
-                global_xp, global_level, created_at
+        "SELECT id, uid, uid_login_enabled, username, display_name, email, email_verified_at,
+                password_hash, bio, platform_role, can_bypass_compress, suspended_until,
+                suspended_reason, global_xp, global_level, created_at
          FROM users
-         WHERE LOWER(email) = LOWER($1) OR LOWER(username) = LOWER($1)
+         WHERE LOWER(email) = LOWER($1)
+            OR LOWER(username) = LOWER($1)
+            OR (uid = $1 AND uid_login_enabled = TRUE)
          LIMIT 1",
     )
     .bind(identifier)
@@ -171,9 +182,9 @@ pub async fn find_user_by_id(
     user_id: Uuid,
 ) -> Result<Option<UserAuthRecord>, AppError> {
     let rec = sqlx::query_as::<_, UserAuthRecord>(
-        "SELECT id, username, display_name, email, email_verified_at, password_hash, bio,
-                platform_role, can_bypass_compress, suspended_until, suspended_reason,
-                global_xp, global_level, created_at
+        "SELECT id, uid, uid_login_enabled, username, display_name, email, email_verified_at,
+                password_hash, bio, platform_role, can_bypass_compress, suspended_until,
+                suspended_reason, global_xp, global_level, created_at
          FROM users
          WHERE id = $1",
     )

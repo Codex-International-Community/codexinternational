@@ -218,9 +218,11 @@ fn validate_username(raw: &str) -> Result<String, AppError> {
     let valid_chars = trimmed
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '.');
-    if !valid_len || !valid_chars {
+    let has_letter = trimmed.chars().any(|c| c.is_ascii_alphabetic());
+    if !valid_len || !valid_chars || !has_letter {
         return Err(AppError::BadRequest(
-            "username must be 3-32 chars (alphanumeric, '_' or '.')".to_string(),
+            "username must be 3-32 chars (alphanumeric, '_' or '.') with at least one letter"
+                .to_string(),
         ));
     }
     Ok(trimmed.to_ascii_lowercase())
@@ -283,7 +285,7 @@ pub(crate) fn validate_email(raw: &str) -> Result<String, AppError> {
     Ok(trimmed)
 }
 
-fn validate_password(raw: &str) -> Result<(), AppError> {
+pub(crate) fn validate_password(raw: &str) -> Result<(), AppError> {
     if raw.len() < 8 || raw.len() > 128 {
         return Err(AppError::BadRequest(
             "password must be 8-128 characters".to_string(),

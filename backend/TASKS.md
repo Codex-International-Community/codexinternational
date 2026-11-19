@@ -404,3 +404,21 @@ codexinternational/
 ### Phase Gate 5 (Release Readiness Fase 1)
 
 - [ ] `cargo fmt --check`, `cargo clippy --workspace --all-targets --all-features -- -D warnings`, `cargo test --workspace`, dan hasil load test `>= 2.000 MPS` tercatat lulus penuh.
+
+---
+
+## FASE 6 — ADD-ON & MONETISASI: MANAGED BOT HOSTING VIA PTERODACTYL (Task 6.1)
+
+**Fokus Utama:** Provisioning otomatis container bot berbayar melalui **Pterodactyl Application API** pada VPS/node Wings yang terpisah dari VPS inti (`DEC-17`).
+
+### Task 6.1 — Integrasi Pterodactyl Application API (`create` / `suspend` / `delete`)
+
+- **Goal:** Menyediakan modul backend untuk membuat, men-suspend, dan menghapus server bot di panel Pterodactyl secara idempoten (`external_id = bot_id`) bagi bot yang sudah berstatus `APPROVED` (`INV-15`) dan memiliki langganan add-on aktif.
+- **Files:** `backend/migrations/0003_managed_bots.sql`, `backend/src/bots/pterodactyl.rs`, `backend/tests/pterodactyl_test.rs`.
+- **Dependencies:** `Phase Gate 5` (atau setelah billing/entitlement add-on siap).
+- **Steps:**
+  1. **Schema:** Buat tabel `managed_bot_deployments` (`bot_id` PK/FK, `pterodactyl_server_id` BIGINT UNIQUE, `pterodactyl_identifier` VARCHAR, `plan_tier`, `status` [`PROVISIONING` | `ACTIVE` | `SUSPENDED` | `DELETED`], `created_at`, `updated_at`) tanpa menyimpan plaintext `CODEXTER_BOT_TOKEN`.
+  2. **Red:** Tulis integration test dengan mock HTTP server Pterodactyl: bot `PENDING`/`REJECTED` ditolak `403` (`INV-15`), `PTERODACTYL_APP_KEY` tidak pernah bocor di `Debug`/log, dan retry provisioning dengan `bot_id` sama bersifat idempoten.
+  3. **Green:** Implementasikan `PterodactylClient` (`reqwest`, `Authorization: Bearer <PTERODACTYL_APP_KEY>`) untuk `POST /api/application/servers`, `POST /api/application/servers/{id}/suspend`, `unsuspend`, dan `DELETE /api/application/servers/{id}`, plus injeksi env `CODEXTER_BOT_TOKEN` & `CODEXTER_BOT_ID` langsung ke container saat pembuatan.
+- **DoD:**
+  - [ ] Node Wings berada di VPS terpisah dengan isolasi network (blokir loopback/IP privat/metadata `169.254.169.254`) serta limit CPU/RAM/Disk/PID aktif, dan seluruh test `pterodactyl_test` lulus.
