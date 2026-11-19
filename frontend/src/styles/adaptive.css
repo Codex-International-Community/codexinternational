@@ -3860,6 +3860,17 @@ dialog.modal--discord-server::backdrop {
   background: rgba(6, 8, 12, .68);
   backdrop-filter: blur(7px);
 }
+.discord-server-error {
+  margin: 10px 0 0 !important;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, #e5484d 35%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, #e5484d 9%, transparent);
+  color: #ff8589 !important;
+  font-size: 12px !important;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
 .theme-light dialog.modal--discord-server::backdrop { background: rgba(20, 24, 32, .34); }
 .modal--discord-server .discord-server-form {
   position: relative;

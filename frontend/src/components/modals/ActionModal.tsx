@@ -10,6 +10,8 @@ interface ActionModalProps {
   type: ActionModalType
   value: string
   people: User[]
+  serverError?: string
+  creatingServer?: boolean
   onChangeValue: (val: string) => void
   onSubmit: (e: FormEvent) => void
   onCreateServer: () => void
@@ -21,6 +23,8 @@ export function ActionModal({
   type,
   value,
   people,
+  serverError = '',
+  creatingServer = false,
   onChangeValue,
   onSubmit,
   onCreateServer,
@@ -198,13 +202,15 @@ export function ActionModal({
                   onChange={(event) => onChangeValue(event.target.value)}
                   placeholder="Enter a server name"
                 />
+                {serverError && <p className="discord-server-error" role="alert">{serverError}</p>}
                 <button
                   className="discord-server-primary"
                   type="button"
-                  disabled={!value.trim()}
+                  disabled={!value.trim() || creatingServer}
+                  aria-busy={creatingServer}
                   onClick={onCreateServer}
                 >
-                  Create Server
+                  {creatingServer ? 'Creating…' : 'Create Server'}
                 </button>
               </>
             ) : (

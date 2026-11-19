@@ -279,6 +279,8 @@ export function WorkspacePage({
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState<ActionModalType | 'call' | null>(null)
   const [modalValue, setModalValue] = useState('')
+  const [serverCreateError, setServerCreateError] = useState('')
+  const [serverCreating, setServerCreating] = useState(false)
   const [toast, setToast] = useState('')
   const [attachment, setAttachment] = useState<Attachment | null>(null)
   const [muted, setMuted] = useState(false)
@@ -874,7 +876,9 @@ export function WorkspacePage({
 
   const handleCreateCommunity = async () => {
     const name = modalValue.trim()
-    if (!name) return
+    if (!name || serverCreating) return
+    setServerCreateError('')
+    setServerCreating(true)
     try {
       const result = await createCommunity({ name })
       const community = result.community
@@ -903,9 +907,12 @@ export function WorkspacePage({
       setMobileTab('chat')
       setModal(null)
       setModalValue('')
+      setServerCreateError('')
       notify(`Created ${community.name}. Invite code: ${result.invite_code}`)
     } catch (error) {
-      notify(error instanceof Error ? error.message : 'Could not create community.')
+      setServerCreateError(error instanceof Error ? error.message : 'Could not create community.')
+    } finally {
+      setServerCreating(false)
     }
   }
 
@@ -1122,6 +1129,7 @@ export function WorkspacePage({
         }}
         onSelectServer={pickServer}
         onCreateServer={() => {
+          setServerCreateError('')
           setModal('server')
           setModalValue('')
         }}
@@ -1383,6 +1391,7 @@ export function WorkspacePage({
             ) : view === 'discover' ? (
               <DiscoverView
                 onCreateCommunity={() => {
+                  setServerCreateError('')
                   setModal('server')
                   setModalValue('')
                 }}
@@ -1610,7 +1619,12 @@ export function WorkspacePage({
           type={modal}
           value={modalValue}
           people={people}
-          onChangeValue={setModalValue}
+          serverError={modal === 'server' ? serverCreateError : ''}
+          creatingServer={modal === 'server' && serverCreating}
+          onChangeValue={(value) => {
+            setModalValue(value)
+            if (modal === 'server') setServerCreateError('')
+          }}
           onCreateServer={() => void handleCreateCommunity()}
           onJoinServer={() => void handleJoinCommunity()}
           onSubmit={(e) => {
