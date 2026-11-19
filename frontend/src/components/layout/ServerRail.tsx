@@ -84,7 +84,7 @@ export function ServerRail({
         title="Social timeline"
         onClick={() => onNavigateView('social')}
       >
-        <span aria-hidden="true">＠</span>
+        <Icon name="at" />
       </button>
 
       <button
