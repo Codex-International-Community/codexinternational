@@ -2553,3 +2553,48 @@ dialog.bot-reveal-modal {
     pointer-events: auto !important;
   }
 }
+
+/* -- X1 final mobile drawer alignment: sidebar flush to screen edge -- */
+@media (max-width: 767px) {
+  .app-shell > .server-rail {
+    display: none !important;
+  }
+
+  .app-shell:not(.view-discover) > .channel-sidebar {
+    display: flex !important;
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    width: min(230px, 82vw) !important;
+    min-width: 0 !important;
+    max-width: min(230px, 82vw) !important;
+    height: 100dvh !important;
+    box-sizing: border-box !important;
+    transform: translate3d(-105%, 0, 0) !important;
+    z-index: 53 !important;
+  }
+
+  .app-shell:not(.view-discover).drawer-open > .channel-sidebar {
+    transform: translate3d(0, 0, 0) !important;
+  }
+
+  .app-shell.view-discover > .channel-sidebar {
+    display: flex !important;
+    position: fixed !important;
+    inset: 0 0 0 auto !important;
+    width: min(230px, 82vw) !important;
+    min-width: 0 !important;
+    max-width: min(230px, 82vw) !important;
+    height: 100dvh !important;
+    box-sizing: border-box !important;
+    transform: translate3d(105%, 0, 0) !important;
+    z-index: 53 !important;
+  }
+
+  .app-shell.view-discover.drawer-open > .channel-sidebar {
+    transform: translate3d(0, 0, 0) !important;
+  }
+
+  .app-shell > .drawer-scrim {
+    z-index: 52 !important;
+  }
+}
