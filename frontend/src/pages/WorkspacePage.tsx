@@ -260,6 +260,10 @@ export function WorkspacePage({
   const [notFoundPath, setNotFoundPath] = useState(initialRoute.path ?? '')
   const [membersOpen, setMembersOpen] = useState(isDesktop)
   const [drawerOpen, setDrawerOpen] = useState(false)
+
+  useEffect(() => {
+    setDrawerOpen(false)
+  }, [view])
   const [mobileTab, setMobileTab] = useState<MobileTab>(() =>
     mobileTabForView(initialRoute.view),
   )
