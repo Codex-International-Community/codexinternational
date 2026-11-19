@@ -70,7 +70,7 @@ async fn member_permissions(
     community_id: Uuid,
     user_id: Uuid,
 ) -> Result<(bool, i64), AppError> {
-    let access = sqlx::query_as::<_, (Uuid, Option<i64>)>(
+    let access = sqlx::query_as::<_, (Option<Uuid>, Option<i64>)>(
         "SELECT c.owner_id, r.permissions
          FROM communities c
          LEFT JOIN community_members m
