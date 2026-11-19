@@ -1,6 +1,7 @@
-import { type FormEvent, type RefObject, useState } from 'react'
+import { useMemo, useState, type FormEvent, type RefObject } from 'react'
 import { SocialComposer } from './SocialComposer'
 import { SocialPostCard } from './SocialPostCard'
+import type { User } from '../../types/chat'
 import type { SocialPost, SocialTab } from '../../types/social'
 
 const tabs: { id: SocialTab; label: string }[] = [
@@ -11,6 +12,7 @@ const tabs: { id: SocialTab; label: string }[] = [
 ]
 
 interface SocialFeedProps {
+  currentUser: User
   posts: SocialPost[]
   socialTab: SocialTab
   followedHandles: string[]
@@ -26,6 +28,7 @@ interface SocialFeedProps {
 }
 
 export function SocialFeed({
+  currentUser,
   posts,
   socialTab,
   followedHandles,
@@ -41,6 +44,19 @@ export function SocialFeed({
 }: SocialFeedProps) {
   const [replyForId, setReplyForId] = useState<string | null>(null)
   const [replyDraft, setReplyDraft] = useState('')
+
+  const visiblePosts = useMemo(() => {
+    if (socialTab === 'following') {
+      return posts.filter((post) => followedHandles.includes(post.handle))
+    }
+    if (socialTab === 'saved') {
+      return posts.filter((post) => post.saved)
+    }
+    if (socialTab === 'latest') {
+      return posts.toSorted((a, b) => b.createdAt - a.createdAt)
+    }
+    return posts
+  }, [posts, socialTab, followedHandles])
 
   const handleToggleReplyForm = (id: string) => {
     setReplyForId((current) => (current === id ? null : id))
@@ -72,15 +88,19 @@ export function SocialFeed({
         </div>
 
         <SocialComposer
+          currentUser={currentUser}
           inputRef={composerRef}
           draft={draft}
           onChange={onDraftChange}
           onSubmit={onPublish}
         />
 
-        <div className="social-feed-tabs">
+        <div className="social-feed-tabs" role="tablist" aria-label="Timeline filter">
           {tabs.map((tab) => (
             <button
+              type="button"
+              role="tab"
+              aria-selected={socialTab === tab.id}
               key={tab.id}
               className={socialTab === tab.id ? 'active' : ''}
               onClick={() => onTabChange(tab.id)}
@@ -91,9 +111,10 @@ export function SocialFeed({
         </div>
 
         <div className="social-post-list">
-          {posts.map((post) => (
+          {visiblePosts.map((post) => (
             <SocialPostCard
               key={post.id}
+              currentUser={currentUser}
               post={post}
               isFollowed={followedHandles.includes(post.handle)}
               isReplying={replyForId === post.id}
@@ -107,9 +128,9 @@ export function SocialFeed({
             />
           ))}
 
-          {posts.length === 0 && (
+          {visiblePosts.length === 0 && (
             <div className="social-empty">
-              <span>◎</span>
+              <span aria-hidden="true">◎</span>
               <strong>
                 {socialTab === 'following'
                   ? 'Your Following feed is quiet.'
@@ -120,9 +141,13 @@ export function SocialFeed({
               <p>
                 {socialTab === 'following'
                   ? 'Follow a few people to bring their conversations into this feed.'
-                  : 'Save posts you want to come back to.'}
+                  : socialTab === 'saved'
+                    ? 'Save posts you want to come back to.'
+                    : 'Publish a thought above to start the local timeline.'}
               </p>
-              <button onClick={() => onTabChange('for-you')}>Explore the timeline</button>
+              <button type="button" onClick={() => onTabChange('for-you')}>
+                Explore the timeline
+              </button>
             </div>
           )}
         </div>

@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Icon } from '../common/Icon'
+import { useModalDialog } from '../../hooks/useModalDialog'
 import type { CreateBotTokenResponse } from '../../api/bots'
 
 interface BotTokenRevealModalProps {
@@ -10,9 +11,9 @@ interface BotTokenRevealModalProps {
 }
 
 /**
- * One-time reveal dialog/sheet for newly issued bot tokens.
- * The plaintext token exists only in memory until this modal closes, matching
- * standard secret-manager/PAT security (`PRD.md` gotcha #12).
+ * One-time reveal native `<dialog>` for newly issued bot tokens.
+ * Dismissing via Escape or backdrop is blocked until the user copies or acknowledges
+ * saving the credential (`closedby="none"` + `cancel` guard).
  */
 export function BotTokenRevealModal({
   tokenInfo,
@@ -22,22 +23,20 @@ export function BotTokenRevealModal({
 }: BotTokenRevealModalProps) {
   const [revealed, setRevealed] = useState(false)
   const [acknowledged, setAcknowledged] = useState(false)
+  const ackId = useId()
+  const dialogRef = useModalDialog({ onClose, dismissible: acknowledged })
 
   const envSnippet = `CODEX_BOT_TOKEN=${tokenInfo.token}\nCODEX_BOT_ID=${tokenInfo.bot_id}`
   const maskedToken = `${tokenInfo.token.slice(0, 8)}${'•'.repeat(24)}${tokenInfo.token.slice(-4)}`
 
   return (
-    <div
-      className={`modal-backdrop ${isMobile ? 'modal-backdrop--sheet' : ''}`}
-      onMouseDown={acknowledged ? onClose : undefined}
+    <dialog
+      ref={dialogRef}
+      className={`modal bot-reveal-modal ${isMobile ? 'modal--sheet' : ''}`}
+      aria-labelledby="bot-reveal-title"
+      {...({ closedby: acknowledged ? 'any' : 'none' } as Record<string, string>)}
     >
-      <div
-        className={`modal bot-reveal-modal ${isMobile ? 'modal--sheet' : ''}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="bot-reveal-title"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+      <div className="modal-form">
         <div className="modal-icon">
           <Icon name="shield" size={22} />
         </div>
@@ -48,7 +47,7 @@ export function BotTokenRevealModal({
           Copy and store it in your VPS <code>.env</code>, Notepad, or secret manager — we only keep its SHA-256 hash.
         </p>
 
-        <label>TOKEN ID (SAVE FOR REVOCATION)</label>
+        <span className="modal-field-label">TOKEN ID (SAVE FOR REVOCATION)</span>
         <div className="token-box">
           <code>{tokenInfo.token_id}</code>
           <button
@@ -59,11 +58,15 @@ export function BotTokenRevealModal({
           </button>
         </div>
 
-        <label>BOT TOKEN (AUTHORIZATION: BOT &lt;TOKEN&gt;)</label>
+        <span className="modal-field-label">BOT TOKEN (AUTHORIZATION: BOT &lt;TOKEN&gt;)</span>
         <div className="token-box token-box--secret">
           <code>{revealed ? tokenInfo.token : maskedToken}</code>
           <div className="token-box-actions">
-            <button type="button" onClick={() => setRevealed((v) => !v)}>
+            <button
+              type="button"
+              aria-pressed={revealed}
+              onClick={() => setRevealed((v) => !v)}
+            >
               {revealed ? 'Hide' : 'Reveal'}
             </button>
             <button
@@ -79,7 +82,7 @@ export function BotTokenRevealModal({
           </div>
         </div>
 
-        <label>.ENV SNIPPET</label>
+        <span className="modal-field-label">.ENV SNIPPET</span>
         <div className="token-box">
           <code>{revealed ? envSnippet : 'CODEX_BOT_TOKEN=bot_********'}</code>
           <button
@@ -93,8 +96,9 @@ export function BotTokenRevealModal({
           </button>
         </div>
 
-        <label className="ack-checkbox">
+        <label htmlFor={ackId} className="ack-checkbox">
           <input
+            id={ackId}
             type="checkbox"
             checked={acknowledged}
             onChange={(e) => setAcknowledged(e.target.checked)}
@@ -106,12 +110,12 @@ export function BotTokenRevealModal({
           type="button"
           className="modal-primary"
           disabled={!acknowledged}
-          onClick={onClose}
+          onClick={() => dialogRef.current?.close()}
         >
-          Done & clear from screen
+          Done &amp; clear from screen
         </button>
-        <small>If lost later, revoke this token and generate a new one.</small>
+        <small className="modal-note">If lost later, revoke this token and generate a new one.</small>
       </div>
-    </div>
+    </dialog>
   )
 }

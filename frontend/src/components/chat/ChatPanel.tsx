@@ -105,7 +105,12 @@ export function ChatPanel({
               <Icon name={isDm ? 'more' : 'users'} size={15} />
               {isDm ? 'Options' : 'Invite'}
             </button>
-            <button onClick={onOpenPinnedView} title="Pinned messages">
+            <button
+              type="button"
+              onClick={onOpenPinnedView}
+              aria-label="Pinned messages"
+              title="Pinned messages"
+            >
               <Icon name="pin" size={15} />
             </button>
           </div>

@@ -89,6 +89,32 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
   const searchInputRef = useRef<HTMLInputElement>(null)
   const feedRef = useRef<HTMLDivElement>(null)
   const socialInputRef = useRef<HTMLTextAreaElement>(null)
+  const blobUrlsRef = useRef<Set<string>>(new Set())
+
+  const revokeBlobUrl = useCallback((url?: string) => {
+    if (url && url.startsWith('blob:')) {
+      URL.revokeObjectURL(url)
+      blobUrlsRef.current.delete(url)
+    }
+  }, [])
+
+  useEffect(() => {
+    const urls = blobUrlsRef.current
+    return () => {
+      for (const url of urls) {
+        URL.revokeObjectURL(url)
+      }
+      urls.clear()
+    }
+  }, [])
+
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="color-scheme"]')
+    meta?.setAttribute('content', data.theme)
+    return () => {
+      meta?.setAttribute('content', 'light dark')
+    }
+  }, [data.theme])
 
   const notify = useCallback((text: string) => {
     setToast(text)
@@ -131,8 +157,7 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
         e.preventDefault()
         setSearchOpen(true)
       }
-      if (e.key === 'Escape') {
-        setModal(null)
+      if (e.key === 'Escape' && !document.querySelector('dialog:modal')) {
         setDrawerOpen(false)
         setSearchOpen(false)
         setProfileMenu(false)
@@ -199,6 +224,17 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
     .join('')
     .slice(0, 2)
     .toUpperCase() || 'ME'
+
+  const currentUser = useMemo(
+    () => ({
+      id: session.user.id,
+      name: data.displayName || session.user.display_name || session.user.username,
+      initials,
+      tone: 'self',
+      status: 'online' as const,
+    }),
+    [session.user.id, session.user.display_name, session.user.username, data.displayName, initials],
+  )
 
   const sendMessage = (e?: FormEvent) => {
     e?.preventDefault()
@@ -333,6 +369,7 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
       />
 
       <ChannelSidebar
+        currentUser={currentUser}
         view={view}
         server={server}
         channels={channels}
@@ -414,6 +451,7 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
           <section className="chat-panel">
             {view === 'social' ? (
               <SocialFeed
+                currentUser={currentUser}
                 posts={socialPosts}
                 socialTab={socialTab}
                 followedHandles={followedHandles}
@@ -604,9 +642,19 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
                 }}
                 onAttachmentSelect={(file) => {
                   if (!file) return
-                  setAttachment({ name: file.name, type: file.type, url: URL.createObjectURL(file) })
+                  const url = URL.createObjectURL(file)
+                  blobUrlsRef.current.add(url)
+                  setAttachment((prev) => {
+                    revokeBlobUrl(prev?.url)
+                    return { name: file.name, type: file.type, url }
+                  })
                 }}
-                onRemoveAttachment={() => setAttachment(null)}
+                onRemoveAttachment={() => {
+                  setAttachment((prev) => {
+                    revokeBlobUrl(prev?.url)
+                    return null
+                  })
+                }}
                 onAddEmoji={(emoji) => setComposer((v) => `${v} ${emoji}`)}
                 onReact={(id, emoji) => {
                   setData((prev) => {
@@ -633,6 +681,7 @@ export function WorkspacePage({ session, viewport, onLogout }: WorkspacePageProp
                   messageInputRef.current?.focus()
                 }}
                 onRemove={(m) => {
+                  revokeBlobUrl(m.attachment?.url)
                   setData((prev) => {
                     const list = view === 'dm' ? (prev.dmMessages[dmId] ?? []) : (prev.messages[key] ?? [])
                     const nextList = list.filter((x) => x.id !== m.id)

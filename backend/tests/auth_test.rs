@@ -8,7 +8,7 @@ use axum::{
     http::{Request, StatusCode, header::AUTHORIZATION},
 };
 use backend::{
-    app_router,
+    REST_BODY_LIMIT_BYTES, app_router,
     auth::{
         jwt::{decode_access_token, encode_access_token, generate_refresh_token},
         password::PasswordHasher,
@@ -17,6 +17,7 @@ use backend::{
     error::AppError,
     shared::db::run_migrations,
     state::AppState,
+    timeout_middleware_with,
 };
 use http_body_util::BodyExt;
 use serde_json::{Value, json};
@@ -256,4 +257,113 @@ async fn test_register_login_and_me_flow() {
         .execute(&pool)
         .await
         .unwrap();
+}
+
+#[tokio::test]
+async fn test_dummy_argon2_verify_runs_when_hash_missing() {
+    let hasher = PasswordHasher::default();
+    let start = std::time::Instant::now();
+    let matched = hasher
+        .verify_password_or_dummy("any-candidate-password".to_string(), None)
+        .await
+        .expect("dummy verify must not error");
+    assert!(!matched);
+    assert!(
+        start.elapsed() >= Duration::from_millis(5),
+        "dummy verify must actually execute Argon2id work to prevent timing oracle"
+    );
+}
+
+#[tokio::test]
+async fn test_register_and_otp_reject_quoted_or_control_emails() {
+    let cfg = AppConfig::from_map(&HashMap::new()).expect("dev config");
+    let state = Arc::new(AppState::connect_lazy(cfg).expect("lazy state"));
+    let app = app_router(state);
+
+    for bad_email in [
+        "\"quoted\"@example.com",
+        "user\\@example.com",
+        "bad<angle>@example.com",
+        "crlf\r\n@example.com",
+        "double..dot@example.com",
+    ] {
+        let res = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/auth/register")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        json!({
+                            "username": "valid_user",
+                            "display_name": "Valid User",
+                            "email": bad_email,
+                            "password": "StrongPassword123!"
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            res.status(),
+            StatusCode::BAD_REQUEST,
+            "expected 400 for malformed email {bad_email:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn test_rest_body_limit_rejects_oversized_auth_payload() {
+    let cfg = AppConfig::from_map(&HashMap::new()).expect("dev config");
+    let state = Arc::new(AppState::connect_lazy(cfg).expect("lazy state"));
+    let app = app_router(state);
+
+    let oversized = "a".repeat(REST_BODY_LIMIT_BYTES + 1024);
+    let res = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/auth/login")
+                .header("content-type", "application/json")
+                .body(Body::from(
+                    json!({
+                        "identifier": oversized,
+                        "password": "StrongPassword123!"
+                    })
+                    .to_string(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::PAYLOAD_TOO_LARGE);
+}
+
+#[tokio::test]
+async fn test_rest_timeout_middleware_returns_408_json_envelope() {
+    use axum::{Router, middleware, routing::get};
+
+    let app = Router::new()
+        .route(
+            "/slow",
+            get(|| async {
+                tokio::time::sleep(Duration::from_millis(80)).await;
+                StatusCode::OK
+            }),
+        )
+        .layer(middleware::from_fn(|req, next| {
+            timeout_middleware_with(Duration::from_millis(15), req, next)
+        }));
+
+    let res = app
+        .oneshot(Request::builder().uri("/slow").body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(res.status(), StatusCode::REQUEST_TIMEOUT);
+    let body: Value =
+        serde_json::from_slice(&res.into_body().collect().await.unwrap().to_bytes()).unwrap();
+    assert_eq!(body["error"]["code"], "REQUEST_TIMEOUT");
 }

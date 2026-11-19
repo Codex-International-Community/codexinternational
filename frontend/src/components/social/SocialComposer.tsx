@@ -1,9 +1,10 @@
-import { type FormEvent, type RefObject } from 'react'
+import { useId, type FormEvent, type RefObject } from 'react'
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
-import { me } from '../../constants/seedData'
+import type { User } from '../../types/chat'
 
 interface SocialComposerProps {
+  currentUser: User
   inputRef: RefObject<HTMLTextAreaElement | null>
   draft: string
   onChange: (value: string) => void
@@ -11,16 +12,23 @@ interface SocialComposerProps {
 }
 
 export function SocialComposer({
+  currentUser,
   inputRef,
   draft,
   onChange,
   onSubmit,
 }: SocialComposerProps) {
+  const textareaId = useId()
+
   return (
     <form className="social-composer" onSubmit={onSubmit}>
-      <Avatar user={me} size="large" />
+      <Avatar user={currentUser} size="large" />
       <div className="social-compose-body">
+        <label htmlFor={textareaId} className="visually-hidden">
+          Write a social post
+        </label>
         <textarea
+          id={textareaId}
           ref={inputRef}
           value={draft}
           onChange={(e) => onChange(e.target.value)}
@@ -30,7 +38,7 @@ export function SocialComposer({
         />
         <div className="social-compose-footer">
           <span>{draft.length}/500</span>
-          <button disabled={!draft.trim()}>
+          <button type="submit" disabled={!draft.trim()}>
             <Icon name="arrowUp" size={15} /> Publish
           </button>
         </div>

@@ -124,19 +124,19 @@ pub async fn login(
     }
     let platform = normalize_platform(req.platform.as_deref())?;
 
-    let record = find_user_by_identifier(&state.pg, identifier)
-        .await?
-        .ok_or_else(|| AppError::Unauthorized("invalid credentials".to_string()))?;
-
-    let stored_hash = record
-        .password_hash
-        .clone()
-        .ok_or_else(|| AppError::Unauthorized("invalid credentials".to_string()))?;
+    let maybe_record = find_user_by_identifier(&state.pg, identifier).await?;
+    let maybe_hash = maybe_record
+        .as_ref()
+        .and_then(|record| record.password_hash.clone());
 
     let matched = state
         .password_hasher
-        .verify_password(req.password, stored_hash)
+        .verify_password_or_dummy(req.password, maybe_hash)
         .await?;
+
+    let Some(record) = maybe_record else {
+        return Err(AppError::Unauthorized("invalid credentials".to_string()));
+    };
     if !matched {
         return Err(AppError::Unauthorized("invalid credentials".to_string()));
     }
@@ -238,10 +238,46 @@ fn validate_display_name(raw: &str) -> Result<String, AppError> {
 
 pub(crate) fn validate_email(raw: &str) -> Result<String, AppError> {
     let trimmed = raw.trim().to_ascii_lowercase();
+    if trimmed.is_empty() || trimmed.len() > 255 {
+        return Err(AppError::BadRequest("invalid email address".to_string()));
+    }
+    if trimmed.chars().any(|c| {
+        c.is_control()
+            || c.is_whitespace()
+            || matches!(
+                c,
+                '"' | '\\' | '<' | '>' | ',' | ';' | '(' | ')' | '[' | ']'
+            )
+    }) {
+        return Err(AppError::BadRequest("invalid email address".to_string()));
+    }
     let Some((local, domain)) = trimmed.split_once('@') else {
         return Err(AppError::BadRequest("invalid email address".to_string()));
     };
-    if local.is_empty() || !domain.contains('.') || trimmed.len() > 255 || trimmed.contains(' ') {
+    if local.is_empty()
+        || local.len() > 64
+        || local.starts_with('.')
+        || local.ends_with('.')
+        || local.contains("..")
+        || domain.is_empty()
+        || domain.contains('@')
+        || !domain.contains('.')
+        || domain.starts_with('.')
+        || domain.ends_with('.')
+        || domain.contains("..")
+    {
+        return Err(AppError::BadRequest("invalid email address".to_string()));
+    }
+    let valid_local = local
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-' | '+'));
+    let valid_domain = domain.split('.').all(|label| {
+        !label.is_empty()
+            && !label.starts_with('-')
+            && !label.ends_with('-')
+            && label.chars().all(|c| c.is_ascii_alphanumeric() || c == '-')
+    });
+    if !valid_local || !valid_domain {
         return Err(AppError::BadRequest("invalid email address".to_string()));
     }
     Ok(trimmed)

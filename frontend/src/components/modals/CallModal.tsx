@@ -1,4 +1,6 @@
+import { useId } from 'react'
 import { Icon } from '../common/Icon'
+import { useModalDialog } from '../../hooks/useModalDialog'
 
 interface CallModalProps {
   muted: boolean
@@ -19,24 +21,30 @@ export function CallModal({
   onToggleScreenShare,
   onClose,
 }: CallModalProps) {
+  const titleId = useId()
+  const dialogRef = useModalDialog({ onClose, dismissible: true })
+
   return (
-    <div className="modal-backdrop" onMouseDown={onClose}>
-      <form
-        className="modal"
-        onSubmit={(e) => {
-          e.preventDefault()
-          onClose()
-        }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <button type="button" className="modal-x" onClick={onClose} aria-label="Close">
+    <dialog
+      ref={dialogRef}
+      className="modal"
+      aria-labelledby={titleId}
+      {...({ closedby: 'any' } as Record<string, string>)}
+    >
+      <div className="modal-form">
+        <button
+          type="button"
+          className="modal-x"
+          onClick={() => dialogRef.current?.close()}
+          aria-label="Close"
+        >
           <Icon name="close" />
         </button>
 
         <div className="modal-icon">
           <Icon name="video" size={22} />
         </div>
-        <h2>Call preview</h2>
+        <h2 id={titleId}>Call preview</h2>
         <p>
           This is a local interface simulation. No microphone, camera or network
           connection is started.
@@ -45,6 +53,7 @@ export function CallModal({
         <div className="call-controls">
           <button
             type="button"
+            aria-pressed={muted}
             className={muted ? 'active' : ''}
             onClick={onToggleMute}
           >
@@ -52,6 +61,7 @@ export function CallModal({
           </button>
           <button
             type="button"
+            aria-pressed={cameraOn}
             className={cameraOn ? 'active' : ''}
             onClick={onToggleCamera}
           >
@@ -59,6 +69,7 @@ export function CallModal({
           </button>
           <button
             type="button"
+            aria-pressed={screenSharing}
             className={screenSharing ? 'active' : ''}
             onClick={onToggleScreenShare}
           >
@@ -68,12 +79,13 @@ export function CallModal({
 
         <button
           type="button"
+          autoFocus
           className="modal-primary danger-bg"
-          onClick={onClose}
+          onClick={() => dialogRef.current?.close()}
         >
           End preview call
         </button>
-      </form>
-    </div>
+      </div>
+    </dialog>
   )
 }

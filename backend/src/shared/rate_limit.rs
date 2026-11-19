@@ -18,7 +18,7 @@ use axum::{
     response::Response,
 };
 use chrono::Utc;
-use fred::interfaces::LuaInterface;
+use fred::interfaces::{KeysInterface, LuaInterface};
 
 use crate::{auth::jwt::hash_token, error::AppError, state::AppState};
 
@@ -174,6 +174,55 @@ pub async fn check_rate_limit(
     Ok(())
 }
 
+/// Resolves the rate-limit policy and caller bucket key for an incoming API request.
+///
+/// Security:
+/// - Public/auth endpoints (`/api/v1/auth/*`) NEVER use the `bot` policy or `bot:` key,
+///   preventing unauthenticated callers from rotating arbitrary `Authorization: Bot <rand>`
+///   headers to bypass IP rate limits and `INV-16` backoff.
+/// - Non-auth routes only switch to the `bot:` bucket when the presented bot token is
+///   verified in Valkey's `bot:token:{hash}` cache; unknown/unverified `Bot` headers
+///   fall back to the caller IP bucket.
+pub async fn resolve_caller_bucket(
+    state: &AppState,
+    path: &str,
+    auth_header: &str,
+    client_ip: &str,
+) -> (RateLimitPolicy, String) {
+    let bot_token = (!path.starts_with("/api/v1/auth/"))
+        .then(|| {
+            auth_header
+                .strip_prefix("Bot ")
+                .or_else(|| auth_header.strip_prefix("bot "))
+                .map(str::trim)
+                .filter(|t| !t.is_empty())
+        })
+        .flatten();
+
+    if let Some(tok) = bot_token {
+        let token_hash = hash_token(tok);
+        let cache_key = format!("bot:token:{token_hash}");
+        let is_cached_valid_bot = state.valkey_initialized
+            && matches!(
+                tokio::time::timeout(
+                    std::time::Duration::from_millis(100),
+                    state.valkey.get::<Option<String>, _>(&cache_key),
+                )
+                .await,
+                Ok(Ok(Some(_)))
+            );
+
+        if is_cached_valid_bot {
+            return (
+                policy_for_request(path, true),
+                format!("bot:{}", &token_hash[..16]),
+            );
+        }
+    }
+
+    (policy_for_request(path, false), client_ip.to_string())
+}
+
 /// Axum middleware applying global exponential-backoff rate limiting to `/api/v1/*`.
 /// Excludes `/health/*` probes and `/ws` upgrade (`INV-14`).
 pub async fn rate_limit_middleware(
@@ -191,20 +240,8 @@ pub async fn rate_limit_middleware(
         .get(AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-
-    let bot_token = auth_header
-        .strip_prefix("Bot ")
-        .or_else(|| auth_header.strip_prefix("bot "))
-        .map(str::trim)
-        .filter(|t| !t.is_empty());
-
-    let policy = policy_for_request(path, bot_token.is_some());
-
-    let caller_key = if let Some(tok) = bot_token {
-        format!("bot:{}", &hash_token(tok)[..16])
-    } else {
-        extract_client_ip(&req)
-    };
+    let client_ip = extract_client_ip(&req);
+    let (policy, caller_key) = resolve_caller_bucket(&state, path, auth_header, &client_ip).await;
 
     match tokio::time::timeout(
         std::time::Duration::from_millis(250),

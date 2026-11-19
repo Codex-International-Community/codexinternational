@@ -1,11 +1,28 @@
 # Caddy reverse proxy & static SPA server on port 8080 (Cloudflare Tunnel target).
+# Requires BIND_ADDR=127.0.0.1:8081 in VPS .env (local dev uses :8080 without Caddy).
 # Copy or symlink to /etc/caddy/Caddyfile on the VPS.
+#
+# Production VPS notes:
+# - Ensure Caddy binary is >= v2.11.5 (patches CVE-2026-55458 hop-by-hop /ws header leak).
+# - When enabling Cloudflare Tunnel, configure `servers { trusted_proxies static <cloudflare-cidrs> }`
+#   (or `private_ranges` for local tunnel daemon) so X-Forwarded-For cannot be spoofed.
+# - Narrow CSP `connect-src` from `https:` to `'self'` + your public R2 domain once configured.
 {
 	auto_https off
 }
 
 :8080 {
 	encode gzip zstd
+
+	header {
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https: wss:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), geolocation=(), microphone=(), focus-without-user-activation=()"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
 
 	handle /api/* {
 		reverse_proxy 127.0.0.1:8081

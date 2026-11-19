@@ -8,6 +8,8 @@ After=network.target docker.service
 Type=simple
 User=rallc
 WorkingDirectory=/home/rallc/projects/codexinternational/backend
+# Default to :8081 behind Caddy (:8080); VPS .env may still override BIND_ADDR explicitly.
+Environment=BIND_ADDR=127.0.0.1:8081
 EnvironmentFile=/home/rallc/projects/codexinternational/.env
 ExecStart=/home/rallc/projects/codexinternational/backend/target/release/backend
 Restart=always

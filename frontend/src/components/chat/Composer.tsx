@@ -1,7 +1,7 @@
 import {
+  useId,
   useRef,
   type FormEvent,
-  type KeyboardEvent,
   type RefObject,
 } from 'react'
 import { Icon } from '../common/Icon'
@@ -39,13 +39,7 @@ export function Composer({
   onAddEmoji,
 }: ComposerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      onSubmit()
-    }
-  }
+  const inputId = useId()
 
   const handleFileChange = (file?: File) => {
     onAttachmentSelect(file)
@@ -91,23 +85,27 @@ export function Composer({
           <button
             type="button"
             className="attach"
+            aria-label="Attach file"
             title="Attach file"
             onClick={() => fileInputRef.current?.click()}
           >
             <Icon name="plus" size={20} />
           </button>
+          <label htmlFor={inputId} className="visually-hidden">
+            Write a message
+          </label>
           <input
+            id={inputId}
             ref={inputRef}
             className="composer-input"
-            aria-label="Write a message"
             placeholder={placeholder}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            onKeyDown={handleKeyDown}
           />
           <div className="composer-tools">
             <button
               type="button"
+              aria-label="Attach image"
               title="Attach image"
               onClick={() => fileInputRef.current?.click()}
             >
@@ -115,13 +113,16 @@ export function Composer({
             </button>
             <button
               type="button"
+              aria-label="Add emoji"
               title="Add emoji"
               onClick={() => onAddEmoji('✨')}
             >
               <Icon name="smile" size={18} />
             </button>
             <button
+              type="submit"
               className="send"
+              aria-label={editingId ? 'Save edit' : 'Send message'}
               title={editingId ? 'Save edit' : 'Send message'}
               disabled={!value.trim() && !attachment}
             >

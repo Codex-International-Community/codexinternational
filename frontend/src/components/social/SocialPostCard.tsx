@@ -1,10 +1,11 @@
-import type { FormEvent } from 'react'
+import { useId, type FormEvent } from 'react'
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
-import { me } from '../../constants/seedData'
+import type { User } from '../../types/chat'
 import type { SocialPost } from '../../types/social'
 
 interface SocialPostCardProps {
+  currentUser: User
   post: SocialPost
   isFollowed: boolean
   isReplying: boolean
@@ -18,6 +19,7 @@ interface SocialPostCardProps {
 }
 
 export function SocialPostCard({
+  currentUser,
   post,
   isFollowed,
   isReplying,
@@ -29,6 +31,8 @@ export function SocialPostCard({
   onSubmitReply,
   onShare,
 }: SocialPostCardProps) {
+  const replyInputId = useId()
+
   return (
     <article className="social-post" id={`post-${post.id}`}>
       <div className="social-post-avatar">
@@ -47,12 +51,18 @@ export function SocialPostCard({
         <div className="social-post-meta">
           <div>
             <strong>{post.author}</strong>
-            {post.verified && <span className="social-verified" title="Community verified">✓</span>}
+            {post.verified && (
+              <span className="social-verified" title="Community verified" aria-label="Verified">
+                ✓
+              </span>
+            )}
             <span>@{post.handle}</span>
-            <i>·</i>
+            <i aria-hidden="true">·</i>
             <time>{post.time}</time>
           </div>
           <button
+            type="button"
+            aria-pressed={isFollowed}
             className={`social-follow-inline ${isFollowed ? 'following' : ''}`}
             title={isFollowed ? 'Unfollow' : 'Follow'}
             onClick={() => onToggleFollow(post.handle)}
@@ -74,6 +84,9 @@ export function SocialPostCard({
 
         <div className="social-post-actions">
           <button
+            type="button"
+            aria-label={`Reply (${post.replies.length})`}
+            aria-expanded={isReplying}
             className={isReplying ? 'active' : ''}
             onClick={() => onToggleReplyForm(post.id)}
             title="Reply"
@@ -83,15 +96,21 @@ export function SocialPostCard({
           </button>
 
           <button
+            type="button"
+            aria-label={`Repost (${post.reposts + (post.reposted ? 1 : 0)})`}
+            aria-pressed={post.reposted}
             className={post.reposted ? 'is-reposted' : ''}
             onClick={() => onToggleAction(post.id, 'reposted')}
             title="Repost"
           >
-            <span className="social-repost-mark">↻</span>
+            <span className="social-repost-mark" aria-hidden="true">↻</span>
             <span>{post.reposts + (post.reposted ? 1 : 0)}</span>
           </button>
 
           <button
+            type="button"
+            aria-label={`Like (${post.likes + (post.liked ? 1 : 0)})`}
+            aria-pressed={post.liked}
             className={post.liked ? 'is-liked' : ''}
             onClick={() => onToggleAction(post.id, 'liked')}
             title="Like"
@@ -100,12 +119,20 @@ export function SocialPostCard({
             <span>{(post.likes + (post.liked ? 1 : 0)).toLocaleString()}</span>
           </button>
 
-          <button onClick={() => onShare(post.id)} title="Share">
+          <button
+            type="button"
+            aria-label="Share post"
+            onClick={() => onShare(post.id)}
+            title="Share"
+          >
             <Icon name="share" size={16} />
             <span>Share</span>
           </button>
 
           <button
+            type="button"
+            aria-label={post.saved ? 'Remove bookmark' : 'Save post'}
+            aria-pressed={post.saved}
             className={`social-save ${post.saved ? 'is-saved' : ''}`}
             onClick={() => onToggleAction(post.id, 'saved')}
             title={post.saved ? 'Remove bookmark' : 'Save post'}
@@ -116,14 +143,20 @@ export function SocialPostCard({
 
         {isReplying && (
           <form className="social-reply-form" onSubmit={(e) => onSubmitReply(e, post.id)}>
-            <Avatar user={me} size="small" />
+            <Avatar user={currentUser} size="small" />
+            <label htmlFor={replyInputId} className="visually-hidden">
+              Reply to @{post.handle}
+            </label>
             <input
+              id={replyInputId}
               autoFocus
               value={replyDraft}
               onChange={(e) => onReplyDraftChange(e.target.value)}
               placeholder={`Reply to @${post.handle}`}
             />
-            <button disabled={!replyDraft.trim()}>Reply</button>
+            <button type="submit" disabled={!replyDraft.trim()}>
+              Reply
+            </button>
           </form>
         )}
 
