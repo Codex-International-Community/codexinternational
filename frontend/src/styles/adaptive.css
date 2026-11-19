@@ -2825,7 +2825,81 @@ button:hover > .gf-icon { opacity: 1; }
     width: calc(100vw - 52px);
   }
 }
-.route-transition-rocket .gf-icon {
-  width: 32px;
-  height: 32px;
+
+/* Discover is a focused directory page: no server rail or channel drawer. */
+.app-shell.view-discover > .server-rail,
+.app-shell.view-discover > .channel-sidebar {
+  display: none !important;
+}
+.app-shell.view-discover > .drawer-scrim {
+  display: none !important;
+}
+.app-shell.view-discover .discover-sidebar-toggle {
+  display: none !important;
+}
+
+/* Responsive workspace proportions for compact laptop and tablet widths. */
+@media (min-width: 768px) and (max-width: 1120px) {
+  .app-shell:not(.view-discover) {
+    grid-template-columns: 60px minmax(210px, 226px) minmax(0, 1fr) !important;
+  }
+  .app-shell:not(.view-discover) .channel-sidebar {
+    min-width: 0;
+  }
+  .app-shell:not(.view-discover) .page-scroll {
+    padding-inline: clamp(16px, 2.8vw, 30px);
+  }
+}
+
+/* Keep drawer content and joined-server rows inside narrow phone viewports. */
+@media (max-width: 767px) {
+  .app-shell:not(.view-discover) > .channel-sidebar {
+    width: min(270px, calc(100vw - 72px)) !important;
+    max-width: calc(100vw - 72px) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .app-shell:not(.view-discover) .joined-server-select strong,
+  .app-shell:not(.view-discover) .channel-item span,
+  .app-shell:not(.view-discover) .dm-row span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .app-shell .page-scroll {
+    min-width: 0;
+    overflow-x: hidden;
+    padding-inline: clamp(13px, 4vw, 22px);
+  }
+  .app-shell .discover-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  }
+  .app-shell .discover-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .app-shell .discover-heading > div {
+    min-width: 0;
+  }
+  .app-shell .discover-heading h1 {
+    overflow-wrap: anywhere;
+    font-size: clamp(1.35rem, 6vw, 1.9rem);
+  }
+}
+
+/* Consistent, reduced-jank expand and drawer motion. */
+.joined-server,
+.joined-server-heading,
+.joined-server-toggle,
+.joined-server-select,
+.channel-sidebar,
+.server-rail {
+  transition-timing-function: cubic-bezier(.22, .8, .22, 1);
+}
+.joined-server-channels {
+  transform-origin: top;
+}
+@media (prefers-reduced-motion: reduce) {
+  .joined-server-channels {
+    animation: none !important;
+  }
 }
