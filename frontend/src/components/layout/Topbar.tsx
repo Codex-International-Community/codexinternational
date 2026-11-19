@@ -88,7 +88,7 @@ export function Topbar({
   return (
     <header className={`topbar ${isMobile ? 'topbar--mobile' : 'topbar--desktop'}`}>
       <div className="topbar-title">
-        {isMobile && (
+        {isMobile && view !== 'channels' && view !== 'people' && (
           <button
             type="button"
             className="mobile-menu"
