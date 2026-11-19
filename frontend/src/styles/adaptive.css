@@ -3204,3 +3204,163 @@ button:hover > .gf-icon { opacity: 1; }
   .app-shell .mobile-menu { display: none !important; }
   .app-shell > .drawer-scrim { display: none !important; }
 }
+
+/* Persistent Discord-style server rail on every route and viewport.
+   The workspace (including its original-height navbar) occupies only the
+   remaining grid column, so the rail never overlays or clips the topbar. */
+.app-shell {
+  display: grid !important;
+  grid-template-columns: 68px minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  overflow: hidden;
+}
+.app-shell > .server-rail {
+  display: flex !important;
+  position: relative !important;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  inset: auto !important;
+  width: 68px !important;
+  min-width: 68px !important;
+  max-width: 68px !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  transform: none !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 4 !important;
+  border-right: 1px solid var(--line);
+  box-shadow: none !important;
+}
+.app-shell > .workspace {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+  overflow: hidden;
+}
+.app-shell > .channel-sidebar,
+.app-shell > .drawer-scrim {
+  display: none !important;
+}
+.app-shell .mobile-menu {
+  display: none !important;
+}
+
+/* Match the directory pages' clean content spacing across Home, Chat and Social. */
+.app-shell.view-home .page-scroll,
+.app-shell.view-social .page-scroll,
+.app-shell.view-dm .page-scroll {
+  min-width: 0;
+  padding-inline: clamp(20px, 3.2vw, 48px);
+}
+.app-shell.view-home .topbar,
+.app-shell.view-social .topbar,
+.app-shell.view-dm .topbar,
+.app-shell.view-channels .topbar,
+.app-shell.view-people .topbar {
+  flex: 0 0 56px;
+  width: 100%;
+  min-width: 0;
+  height: 56px;
+  min-height: 56px;
+  box-sizing: border-box;
+}
+
+/* Keep route transitions inside the content viewport; never animate the rail
+   or shift the navbar during page changes. */
+.app-shell > .route-transition-overlay {
+  position: fixed !important;
+  z-index: 110 !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+}
+.app-shell.page-transition-slide-forward > .workspace,
+.app-shell.page-transition-slide-backward > .workspace {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+.app-shell .topbar {
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .app-shell {
+    display: grid !important;
+    grid-template-columns: 58px minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+  }
+  .app-shell > .server-rail {
+    width: 58px !important;
+    min-width: 58px !important;
+    max-width: 58px !important;
+    padding-inline: 0;
+    overflow: hidden;
+  }
+  .app-shell > .workspace {
+    min-width: 0;
+    width: 100% !important;
+    height: 100dvh !important;
+    grid-template-rows: 56px minmax(0, 1fr) 54px !important;
+  }
+  .app-shell .topbar {
+    width: 100%;
+    height: 56px;
+    min-height: 56px;
+    padding-inline: clamp(9px, 2vw, 14px);
+  }
+  .app-shell .topbar-title {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+  .app-shell .topbar-title strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .app-shell .topbar-actions {
+    flex: 0 0 auto;
+  }
+  .app-shell .server-rail .rail-add,
+  .app-shell .server-rail .server-pill,
+  .app-shell .server-rail .rail-bot,
+  .app-shell .server-rail .rail-user {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+  .app-shell .server-rail .rail-list {
+    max-height: calc(100% - 170px);
+  }
+  .app-shell.view-home .page-scroll,
+  .app-shell.view-social .page-scroll,
+  .app-shell.view-dm .page-scroll {
+    padding-inline: 14px;
+  }
+}
+@media (max-width: 380px) {
+  .app-shell {
+    grid-template-columns: 52px minmax(0, 1fr) !important;
+  }
+  .app-shell > .server-rail {
+    width: 52px !important;
+    min-width: 52px !important;
+    max-width: 52px !important;
+  }
+  .app-shell .server-rail .rail-add,
+  .app-shell .server-rail .server-pill,
+  .app-shell .server-rail .rail-bot,
+  .app-shell .server-rail .rail-user {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+  }
+}
