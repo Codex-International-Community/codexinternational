@@ -35,6 +35,7 @@ import { SocialAside } from '../components/social/SocialAside'
 import { ChannelDirectory } from '../components/directories/ChannelDirectory'
 import { PeopleDirectory } from '../components/directories/PeopleDirectory'
 import { DiscoverView } from '../components/views/DiscoverView'
+import { HomeView } from '../components/views/HomeView'
 import { SettingsView } from '../components/views/SettingsView'
 import { NotificationsView } from '../components/views/NotificationsView'
 import { PinnedView } from '../components/views/PinnedView'
@@ -207,7 +208,9 @@ export function WorkspacePage({
   )
 
   const title =
-    view === 'channel'
+    view === 'home'
+      ? 'Home'
+      : view === 'channel'
       ? channel?.name ?? 'general'
       : view === 'dm'
         ? currentDm?.name ?? 'Direct messages'
@@ -365,8 +368,10 @@ export function WorkspacePage({
         activeServerId={serverId}
         activeView={view}
         onSelectHome={() => {
-          setView('channel')
+          setView('home')
           setMobileTab('chat')
+          setChannelSidebarOpen(true)
+          setDrawerOpen(false)
         }}
         onSelectServer={pickServer}
         onCreateServer={() => {
@@ -475,7 +480,14 @@ export function WorkspacePage({
 
         <div className={`workspace-body ${!showMembersPanel && view !== 'social' ? 'workspace-body--single' : ''}`}>
           <section className="chat-panel">
-            {view === 'social' ? (
+            {view === 'home' ? (
+              <HomeView
+                conversations={data.conversations}
+                people={people}
+                onOpenDm={openDm}
+                onBrowsePeople={() => navigateView('people')}
+              />
+            ) : view === 'social' ? (
               <SocialFeed
                 currentUser={currentUser}
                 posts={socialPosts}
