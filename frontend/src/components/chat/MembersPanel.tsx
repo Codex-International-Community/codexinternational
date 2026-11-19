@@ -49,7 +49,7 @@ export function MembersPanel({
         <>
           {onlinePeople.length > 0 && (
             <div className="member-section">
-              <div className="member-label">ONLINE — {onlinePeople.length}</div>
+              <div className="member-label">ONLINE ({onlinePeople.length})</div>
               {onlinePeople.map((person) => (
                 <button className="member" key={person.id} onClick={() => onOpenDm(person.id)}>
                   <Avatar user={person} />
@@ -60,7 +60,7 @@ export function MembersPanel({
           )}
           {idlePeople.length > 0 && (
             <div className="member-section">
-              <div className="member-label">AWAY — {idlePeople.length}</div>
+              <div className="member-label">AWAY ({idlePeople.length})</div>
               {idlePeople.map((person) => (
                 <button className="member" key={person.id} onClick={() => onOpenDm(person.id)}>
                   <Avatar user={person} />
