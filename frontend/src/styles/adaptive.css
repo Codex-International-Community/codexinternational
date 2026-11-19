@@ -4121,3 +4121,358 @@ dialog.modal--discord-server {
     padding-inline: 11px;
   }
 }
+
+
+/* Discord-style thread side panel and message entry points. */
+.workspace-body.workspace-body--with-thread {
+  grid-template-columns: minmax(0, 1fr) 360px !important;
+}
+
+.thread-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-left: 1px solid var(--line);
+  background: var(--side);
+}
+
+.thread-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 58px;
+  min-width: 0;
+  padding: 0 14px 0 17px;
+  border-bottom: 1px solid var(--line);
+}
+
+.thread-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--text);
+}
+
+.thread-panel-title > img {
+  flex: 0 0 auto;
+  opacity: .82;
+}
+
+.thread-panel-title > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 3px;
+}
+
+.thread-panel-title strong {
+  font-size: .9rem;
+  font-weight: 700;
+}
+
+.thread-panel-title span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: .72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thread-panel-header > button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.thread-panel-header > button:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.thread-panel-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 13px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: #41444e transparent;
+}
+
+.thread-root-label {
+  margin: 0 0 10px 2px;
+  color: var(--quiet);
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .09em;
+}
+
+.thread-root-message,
+.thread-reply {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.thread-root-message {
+  padding-bottom: 17px;
+  border-bottom: 1px solid var(--line);
+}
+
+.thread-message-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.thread-message-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  margin: 1px 0 5px;
+}
+
+.thread-message-meta strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: .8rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thread-message-meta time {
+  flex: 0 0 auto;
+  color: var(--quiet);
+  font-size: .65rem;
+}
+
+.thread-message-copy p {
+  margin: 0;
+  color: var(--text);
+  font-size: .82rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.thread-attachment {
+  display: block;
+  max-width: min(100%, 260px);
+  max-height: 220px;
+  margin-top: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.thread-attachment-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--muted);
+  font-size: .72rem;
+}
+
+.thread-replies-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 14px;
+  color: var(--muted);
+  font-size: .68rem;
+  font-weight: 750;
+}
+
+.thread-replies-divider i {
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+}
+
+.thread-reply-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.thread-reply {
+  padding: 0 1px;
+}
+
+.thread-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 30px 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.thread-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin-bottom: 5px;
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--muted);
+}
+
+.thread-empty strong {
+  color: var(--text);
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+.thread-empty span {
+  max-width: 27ch;
+  font-size: .72rem;
+  line-height: 1.5;
+}
+
+.thread-composer {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  flex: 0 0 auto;
+  padding: 12px;
+  border-top: 1px solid var(--line);
+  background: var(--side);
+}
+
+.thread-composer > .avatar {
+  flex: 0 0 auto;
+  margin-top: 5px;
+}
+
+.thread-composer-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--workspace);
+}
+
+.thread-composer-field:focus-within {
+  border-color: var(--accent-border);
+}
+
+.thread-composer textarea {
+  display: block;
+  width: 100%;
+  min-height: 54px;
+  max-height: 150px;
+  padding: 10px 10px 5px;
+  resize: vertical;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: .79rem;
+  line-height: 1.45;
+}
+
+.thread-composer textarea::placeholder {
+  color: var(--quiet);
+}
+
+.thread-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 3px 6px 6px 10px;
+}
+
+.thread-composer-footer span {
+  overflow: hidden;
+  color: var(--quiet);
+  font-size: .59rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.thread-composer-footer button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent-solid);
+  color: #fff;
+  cursor: pointer;
+}
+
+.thread-composer-footer button:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+}
+
+.thread-reply-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 24px;
+  margin: 7px 0 0;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: .72rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.thread-reply-link:hover {
+  text-decoration: underline;
+}
+
+.thread-reply-open {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+@media (max-width: 1080px) and (min-width: 768px) {
+  .workspace-body.workspace-body--with-thread {
+    grid-template-columns: minmax(0, 1fr) 320px !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .workspace-body.workspace-body--with-thread {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .thread-panel {
+    position: fixed;
+    z-index: 35;
+    top: 56px;
+    right: 0;
+    bottom: calc(54px + env(safe-area-inset-bottom, 0px));
+    left: 58px;
+    border-left: 1px solid var(--line);
+    box-shadow: -16px 0 38px rgba(0, 0, 0, .28);
+  }
+}

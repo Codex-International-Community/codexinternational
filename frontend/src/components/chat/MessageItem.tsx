@@ -8,6 +8,8 @@ interface MessageItemProps {
   isMenuOpen: boolean
   onReact: (messageId: string, emoji: string) => void
   onReply: (message: Message) => void
+  onCreateThread: (message: Message) => void
+  threadReplyCount: number
   onEdit: (message: Message) => void
   onRemove: (message: Message) => void
   onTogglePin: (message: Message) => void
@@ -21,6 +23,8 @@ export function MessageItem({
   isMenuOpen,
   onReact,
   onReply,
+  onCreateThread,
+  threadReplyCount,
   onEdit,
   onRemove,
   onTogglePin,
@@ -100,6 +104,18 @@ export function MessageItem({
           )
         )}
 
+        {threadReplyCount > 0 && (
+          <button
+            type="button"
+            className="thread-reply-link"
+            onClick={() => onCreateThread(message)}
+          >
+            <Icon name="thread" size={14} />
+            <span>{threadReplyCount} {threadReplyCount === 1 ? 'reply' : 'replies'}</span>
+            <span className="thread-reply-open">View thread</span>
+          </button>
+        )}
+
         {activeReactions.length > 0 && (
           <div className="reaction-list">
             {activeReactions.map(([emoji, users]) => (
@@ -143,6 +159,14 @@ export function MessageItem({
           </button>
           <button
             type="button"
+            aria-label="Create thread"
+            title="Create thread"
+            onClick={() => onCreateThread(message)}
+          >
+            <Icon name="thread" size={15} />
+          </button>
+          <button
+            type="button"
             aria-label="More actions"
             aria-expanded={isMenuOpen}
             title="More actions"
@@ -161,6 +185,15 @@ export function MessageItem({
                 }}
               >
                 <Icon name="reply" size={14} /> Reply
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onCreateThread(message)
+                  onToggleMenu(message.id)
+                }}
+              >
+                <Icon name="thread" size={14} /> Create Thread
               </button>
               <button type="button" onClick={() => onTogglePin(message)}>
                 <Icon name="pin" size={14} />
