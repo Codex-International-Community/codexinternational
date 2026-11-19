@@ -2126,3 +2126,142 @@ dialog.bot-reveal-modal {
   }
   .route-transition-overlay { display: none; }
 }
+
+/* Desktop directory views retain the standard navigation rail and sidebar. */
+@media (min-width: 768px) {
+  .app-shell.view-channels,
+  .app-shell.view-people {
+    grid-template-columns: 68px 246px minmax(0, 1fr);
+  }
+
+  .app-shell.view-channels > .server-rail,
+  .app-shell.view-people > .server-rail {
+    display: flex;
+    grid-column: 1;
+  }
+
+  .app-shell.view-channels > .channel-sidebar,
+  .app-shell.view-people > .channel-sidebar {
+    display: flex;
+    grid-column: 2;
+    min-width: 0;
+    width: 246px;
+  }
+
+  .app-shell.view-channels > .workspace,
+  .app-shell.view-people > .workspace {
+    grid-column: 3;
+    grid-row: 1;
+    min-width: 0;
+    width: 100%;
+    max-width: none;
+  }
+
+  .app-shell.view-channels .workspace-body,
+  .app-shell.view-people .workspace-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Mobile directory navigation stays in the bottom navbar, without side drawers. */
+@media (max-width: 767px) {
+  .app-shell.view-channels > .server-rail,
+  .app-shell.view-channels > .channel-sidebar,
+  .app-shell.view-people > .server-rail,
+  .app-shell.view-people > .channel-sidebar {
+    display: none !important;
+  }
+}
+
+/* Direction-aware navbar slides: forward enters from the right, back from the left. */
+.app-shell.page-transition-slide-forward .workspace-body,
+.app-shell.page-transition-slide-forward .topbar {
+  animation: nav-slide-forward .38s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.app-shell.page-transition-slide-backward .workspace-body,
+.app-shell.page-transition-slide-backward .topbar {
+  animation: nav-slide-backward .38s cubic-bezier(.22, 1, .36, 1) both;
+}
+
+@keyframes nav-slide-forward {
+  from { opacity: .72; transform: translate3d(34px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes nav-slide-backward {
+  from { opacity: .72; transform: translate3d(-34px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* Rocket Slide: same cover, star field, Font Awesome rocket and timing as the reference file. */
+.route-transition-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  overflow: hidden;
+  background: var(--cover, #0b1220);
+  color: var(--star, #e5e7eb);
+  transform: translateX(100%);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.route-transition-overlay.run { pointer-events: auto; }
+
+.route-transition-stars {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.route-transition-stars i {
+  position: absolute;
+  left: 0;
+  display: block;
+  border-radius: 50%;
+  background: var(--star, #e5e7eb);
+  opacity: .8;
+}
+
+.route-transition-rocket {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  color: var(--star, #e5e7eb);
+  font-size: 64px;
+  line-height: 1;
+  transform: translate(110vw, -50%) rotate(-135deg);
+  will-change: transform;
+}
+
+.route-transition-rocket .fa-rocket {
+  display: block;
+  color: inherit;
+}
+
+.route-transition-label {
+  position: absolute;
+  top: calc(50% + 70px);
+  left: 0;
+  right: 0;
+  color: var(--star, #e5e7eb);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  opacity: .8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.page-transition-slide-forward .workspace-body,
+  .app-shell.page-transition-slide-forward .topbar,
+  .app-shell.page-transition-slide-backward .workspace-body,
+  .app-shell.page-transition-slide-backward .topbar {
+    animation: none !important;
+  }
+  .route-transition-overlay { display: none !important; }
+}
