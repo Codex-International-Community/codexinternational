@@ -139,7 +139,7 @@
 .landing-pillar strong {
   display: block;
   margin-bottom: 4px;
-  color: var(--purple-ink);
+  color: var(--text);
   font-family: var(--display);
   font-size: 0.9375rem;
   font-weight: 700;
