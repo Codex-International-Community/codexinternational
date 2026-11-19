@@ -118,11 +118,7 @@ export function Topbar({
       </div>
 
       <div className="topbar-actions">
-        {view === 'discover' ? (
-          <button type="button" className="discover-sidebar-toggle" onClick={onOpenDrawer} aria-label="Open sidebar" title="Open sidebar">
-            <Icon name="menu" />
-          </button>
-        ) : view === 'social' ? (
+        {view === 'discover' ? null : view === 'social' ? (
           <button
             type="button"
             className="topbar-compose"
