@@ -1906,3 +1906,5 @@ dialog.bot-reveal-modal {
     width: min(270px, calc(100vw - 64px));
   }
 }
+
+.app-shell.view-discover .discover-back svg { transform: rotate(180deg); }
