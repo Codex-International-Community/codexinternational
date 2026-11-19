@@ -47,7 +47,7 @@ export function Topbar({
 }: TopbarProps) {
   const symbolIcon: IconName =
     view === 'social'
-      ? 'at'
+      ? 'thread'
       : view === 'channels'
         ? 'hash'
         : view === 'people'

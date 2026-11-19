@@ -18,7 +18,7 @@ export function SocialComposer({
   draft,
   onChange,
   onSubmit,
-  canPublish = false,
+  canPublish = true,
 }: SocialComposerProps) {
   const textareaId = useId()
 
@@ -27,14 +27,14 @@ export function SocialComposer({
       <Avatar user={currentUser} size="large" />
       <div className="social-compose-body">
         <label htmlFor={textareaId} className="visually-hidden">
-          Write a social post
+          Start a thread
         </label>
         <textarea
           id={textareaId}
           ref={inputRef}
           value={draft}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="What’s happening in your corner of the internet?"
+          placeholder="What’s new?"
           rows={3}
           maxLength={500}
         />

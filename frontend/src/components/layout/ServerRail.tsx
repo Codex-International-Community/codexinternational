@@ -23,7 +23,7 @@ export function ServerRail({
   onNavigateDiscover,
   onOpenBots,
 }: ServerRailProps) {
-  const homeActive = activeView === 'home' || activeView === 'dm' || activeView === 'threads'
+  const homeActive = activeView === 'home' || activeView === 'dm' || activeView === 'social'
 
   return (
     <aside className="server-rail" aria-label="Server navigation">

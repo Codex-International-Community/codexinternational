@@ -76,13 +76,13 @@ export function ChannelSidebar({
   onLogout,
 }: ChannelSidebarProps) {
   const activeVoiceChannel = channels.find((channel) => channel.id === voiceId)
-  const isDirectMessageHome = view === 'home' || view === 'dm' || view === 'threads'
+  const isDirectMessageHome = view === 'home' || view === 'dm'
   const textChannels = channels.filter((channel) => channel.type === 'text')
   const voiceChannels = channels.filter((channel) => channel.type === 'voice')
 
   const serverHeaderSub =
     view === 'social'
-      ? 'SOCIAL'
+      ? 'THREADS'
       : view === 'discover'
         ? 'EXPLORE'
         : view === 'channels'
@@ -93,7 +93,7 @@ export function ChannelSidebar({
 
   const serverHeaderTitle =
     view === 'social'
-      ? 'Social'
+      ? 'Threads'
       : view === 'discover'
         ? 'Discover communities'
         : view === 'channels'
@@ -174,8 +174,8 @@ export function ChannelSidebar({
               </button>
               <button
                 type="button"
-                className={view === 'threads' ? 'selected' : ''}
-                aria-current={view === 'threads' ? 'page' : undefined}
+                className={view === 'social' ? 'selected' : ''}
+                aria-current={view === 'social' ? 'page' : undefined}
                 onClick={onNavigateThreads}
               >
                 <Icon name="thread" size={18} />
@@ -257,18 +257,6 @@ export function ChannelSidebar({
                 ))}
               </section>
             )}
-            <section className="server-channel-group server-threads-group" aria-label="Threads">
-              <div className="section-label"><span>THREADS</span></div>
-              <button
-                type="button"
-                className={`channel-item ${view === 'threads' ? 'chosen' : ''}`}
-                aria-current={view === 'threads' ? 'page' : undefined}
-                onClick={onNavigateThreads}
-              >
-                <Icon name="thread" size={16} />
-                <span>Browse threads</span>
-              </button>
-            </section>
           </div>
         )}
       </div>
