@@ -659,6 +659,7 @@ export function WorkspacePage({
           message?: ChatMessageWire
           id?: string
           code?: string
+          message?: string
           messageText?: string
           messageId?: string
           pinned?: boolean
@@ -763,9 +764,17 @@ export function WorkspacePage({
           return
         }
 
-        if (frame.type === 'ERROR' && frame.code === 'UNAUTHORIZED') {
-          chatSocketReadyRef.current = false
-          notify('Chat connection was rejected. Please sign in again.')
+        if (frame.type === 'ERROR') {
+          if (frame.code === 'UNAUTHORIZED') {
+            chatSocketReadyRef.current = false
+            notify('Chat connection was rejected. Please sign in again.')
+          } else {
+            notify(typeof frame.message === 'string'
+              ? frame.message
+              : typeof frame.code === 'string'
+                ? `Chat error: ${frame.code}`
+                : 'The chat server rejected an event.')
+          }
         }
       }
 
@@ -992,38 +1001,27 @@ export function WorkspacePage({
     }
 
     const clientMessageId = crypto.randomUUID()
-    const frame = {
-      type: 'SEND_MESSAGE',
-      channel_id: activeChatChannelId,
-      client_msg_id: clientMessageId,
-      content: clean,
-      reply_to_id: replyTo?.id,
-    }
-
     try {
-      const socket = chatSocketRef.current
-      if (socket && socket.readyState === WebSocket.OPEN && chatSocketReadyRef.current) {
-        socket.send(JSON.stringify(frame))
-      } else {
-        const ack = await postMessage(activeChatChannelId, {
-          client_msg_id: clientMessageId,
-          content: clean,
-          reply_to_id: replyTo?.id,
-        })
-        const persisted = await listMessages(activeChatChannelId, Math.max(0, ack.seq_id - 1), 5)
-        const mapped = persisted
-        setData((previous) => {
-          const current = view === 'dm'
-            ? previous.dmMessages[activeChatChannelId] ?? []
-            : previous.messages[key] ?? []
-          const byId = new Map(current.map((message) => [message.id, message]))
-          for (const message of mapped) byId.set(message.id, message)
-          const next = [...byId.values()].sort((a, b) => (a.seqId ?? 0) - (b.seqId ?? 0))
-          return view === 'dm'
-            ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next } }
-            : { ...previous, messages: { ...previous.messages, [key]: next } }
-        })
-      }
+      // Use the acknowledged HTTP path for sends. The WebSocket is the live
+      // delivery path; relying on a fire-and-forget frame here hid server-side
+      // SEND_MESSAGE errors and cleared the composer before persistence was confirmed.
+      const ack = await postMessage(activeChatChannelId, {
+        client_msg_id: clientMessageId,
+        content: clean,
+        reply_to_id: replyTo?.id,
+      })
+      const persisted = await listMessages(activeChatChannelId, Math.max(0, ack.seq_id - 1), 5)
+      setData((previous) => {
+        const current = view === 'dm'
+          ? previous.dmMessages[activeChatChannelId] ?? []
+          : previous.messages[key] ?? []
+        const byId = new Map(current.map((message) => [message.id, message]))
+        for (const message of persisted) byId.set(message.id, message)
+        const next = [...byId.values()].sort((a, b) => (a.seqId ?? 0) - (b.seqId ?? 0))
+        return view === 'dm'
+          ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next } }
+          : { ...previous, messages: { ...previous.messages, [key]: next } }
+      })
 
       setComposer('')
       setReplyTo(null)
