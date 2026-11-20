@@ -111,6 +111,22 @@ pub fn policy_for_request(path: &str, is_bot: bool) -> RateLimitPolicy {
             base_cooldown_secs: 10,
             max_cooldown_secs: 3_600,
         }
+    } else if path.starts_with("/health/") {
+        RateLimitPolicy {
+            scope: "health",
+            max_requests: 120,
+            window_secs: 60,
+            base_cooldown_secs: 5,
+            max_cooldown_secs: 300,
+        }
+    } else if path == "/ws" {
+        RateLimitPolicy {
+            scope: "ws",
+            max_requests: 60,
+            window_secs: 60,
+            base_cooldown_secs: 10,
+            max_cooldown_secs: 600,
+        }
     } else if path.starts_with("/api/v1/media/presign") {
         RateLimitPolicy {
             scope: "media",
@@ -223,17 +239,17 @@ pub async fn resolve_caller_bucket(
     (policy_for_request(path, false), client_ip.to_string())
 }
 
-/// Axum middleware applying global exponential-backoff rate limiting to `/api/v1/*`.
-/// Excludes `/health/*` probes and `/ws` upgrade (`INV-14`).
+/// Axum middleware applying global exponential-backoff rate limiting across endpoints (`INV-14`, `INV-16`, `RL-02`).
 pub async fn rate_limit_middleware(
     State(state): State<Arc<AppState>>,
     req: Request<Body>,
     next: Next,
 ) -> Result<Response, AppError> {
-    let path = req.uri().path();
-    if path.starts_with("/health/") || path == "/ws" || !state.valkey_initialized {
+    if !state.valkey_initialized {
         return Ok(next.run(req).await);
     }
+
+    let path = req.uri().path();
 
     let auth_header = req
         .headers()

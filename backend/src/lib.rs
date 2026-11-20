@@ -83,17 +83,17 @@ pub fn app_router(state: Arc<AppState>) -> Router {
         )
         .route("/api/v1/devices/fcm", put(auth::devices::register_fcm))
         .layer(DefaultBodyLimit::max(REST_BODY_LIMIT_BYTES))
-        .layer(middleware::from_fn(rest_timeout_middleware))
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            rate_limit_middleware,
-        ));
+        .layer(middleware::from_fn(rest_timeout_middleware));
 
     Router::new()
         .route("/ws", get(chat::ws::upgrade))
         .route("/health/live", get(health::live))
         .route("/health/ready", get(health::ready))
         .merge(api)
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            rate_limit_middleware,
+        ))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             cors_middleware,
