@@ -149,6 +149,7 @@ pub struct AppConfig {
     pub msg_flush_interval_ms: u64,
     pub counter_flush_interval_ms: u64,
     pub cors_allowed_origins: Vec<String>,
+    pub trusted_proxies: Vec<String>,
     pub worker_roles: WorkerRoles,
 }
 
@@ -265,6 +266,11 @@ impl AppConfig {
             .map(|s| s.trim().trim_end_matches('/').to_string())
             .filter(|s| !s.is_empty())
             .collect(),
+            trusted_proxies: get_or("TRUSTED_PROXIES", "127.0.0.1,::1")
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
             worker_roles,
         };
 

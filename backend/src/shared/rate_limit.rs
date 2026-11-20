@@ -8,7 +8,7 @@
 //! - `rl:backoff:{scope}:{caller_key}` carries a **24-hour (`86400s`)** TTL so
 //!   callers automatically reset to default limits after 24 hours without abuse.
 
-use std::sync::Arc;
+use std::{net::IpAddr, sync::Arc};
 
 use axum::{
     body::Body,
@@ -240,7 +240,7 @@ pub async fn rate_limit_middleware(
         .get(AUTHORIZATION)
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
-    let client_ip = extract_client_ip(&req);
+    let client_ip = extract_client_ip(&req, &state.config.trusted_proxies);
     let (policy, caller_key) = resolve_caller_bucket(&state, path, auth_header, &client_ip).await;
 
     match tokio::time::timeout(
@@ -262,25 +262,159 @@ pub async fn rate_limit_middleware(
     Ok(next.run(req).await)
 }
 
-fn extract_client_ip(req: &Request<Body>) -> String {
-    if let Some(xff) = req
-        .headers()
-        .get("x-forwarded-for")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.split(',').next())
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-    {
-        return xff.to_string();
+/// Checks whether an IP address matches loopback or an entry in `trusted_proxies` (exact IP or IPv4 CIDR).
+pub fn is_trusted_proxy(ip: &IpAddr, trusted_proxies: &[String]) -> bool {
+    if ip.is_loopback() {
+        return true;
     }
+    for entry in trusted_proxies {
+        if let Ok(trusted_ip) = entry.parse::<IpAddr>()
+            && trusted_ip == *ip
+        {
+            return true;
+        }
+        if let Some((addr_str, prefix_str)) = entry.split_once('/')
+            && let (Ok(net_addr), Ok(prefix_len)) = (
+                addr_str.parse::<std::net::Ipv4Addr>(),
+                prefix_str.parse::<u32>(),
+            )
+            && let IpAddr::V4(ipv4) = ip
+            && prefix_len <= 32
+        {
+            let mask = if prefix_len == 0 {
+                0
+            } else {
+                !0u32 << (32 - prefix_len)
+            };
+            if (u32::from(*ipv4) & mask) == (u32::from(net_addr) & mask) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Safely extracts the client IP address from the request (`RL-01`).
+///
+/// Security:
+/// - If a peer IP is known via `ConnectInfo<SocketAddr>`, `X-Forwarded-For` and `X-Real-IP`
+///   are ONLY accepted if the direct socket peer is a verified trusted proxy or loopback.
+/// - If connecting through a trusted reverse proxy, the client IP is taken from `X-Real-IP`
+///   or the rightmost valid IP in `X-Forwarded-For` (where proxies append the connecting hop),
+///   preventing untrusted clients from injecting spoofed header prefixes.
+pub fn extract_client_ip(req: &Request<Body>, trusted_proxies: &[String]) -> String {
+    let peer_ip = req
+        .extensions()
+        .get::<axum::extract::ConnectInfo<std::net::SocketAddr>>()
+        .map(|ci| ci.0.ip());
+
+    if let Some(peer) = peer_ip
+        && !is_trusted_proxy(&peer, trusted_proxies)
+    {
+        return peer.to_string();
+    }
+
     if let Some(real_ip) = req
         .headers()
         .get("x-real-ip")
         .and_then(|v| v.to_str().ok())
         .map(str::trim)
-        .filter(|s| !s.is_empty())
+        .filter(|s| s.parse::<IpAddr>().is_ok())
     {
         return real_ip.to_string();
     }
+
+    if let Some(xff) = req
+        .headers()
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| {
+            s.rsplit(',')
+                .map(str::trim)
+                .find(|p| p.parse::<IpAddr>().is_ok())
+        })
+    {
+        return xff.to_string();
+    }
+
+    if let Some(peer) = peer_ip {
+        return peer.to_string();
+    }
+
     "127.0.0.1".to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::extract::ConnectInfo;
+    use std::net::SocketAddr;
+
+    #[test]
+    fn test_is_trusted_proxy() {
+        let loopback: IpAddr = "127.0.0.1".parse().unwrap();
+        let loopback_v6: IpAddr = "::1".parse().unwrap();
+        let public_ip: IpAddr = "203.0.113.1".parse().unwrap();
+        let private_ip: IpAddr = "10.1.2.3".parse().unwrap();
+
+        let trusted = vec!["10.0.0.0/8".to_string(), "198.51.100.5".to_string()];
+
+        assert!(is_trusted_proxy(&loopback, &trusted));
+        assert!(is_trusted_proxy(&loopback_v6, &trusted));
+        assert!(is_trusted_proxy(&private_ip, &trusted));
+        assert!(is_trusted_proxy(&"198.51.100.5".parse().unwrap(), &trusted));
+        assert!(!is_trusted_proxy(&public_ip, &trusted));
+        assert!(!is_trusted_proxy(&"192.168.1.1".parse().unwrap(), &trusted));
+    }
+
+    #[test]
+    fn test_extract_client_ip_untrusted_peer_cannot_spoof_headers() {
+        let peer_addr: SocketAddr = "203.0.113.55:12345".parse().unwrap();
+        let mut req = Request::builder()
+            .header("x-forwarded-for", "1.1.1.1, 8.8.8.8")
+            .header("x-real-ip", "9.9.9.9")
+            .body(Body::empty())
+            .unwrap();
+        req.extensions_mut().insert(ConnectInfo(peer_addr));
+
+        let trusted = vec!["127.0.0.1".to_string()];
+        let ip = extract_client_ip(&req, &trusted);
+        assert_eq!(
+            ip, "203.0.113.55",
+            "untrusted peer must be locked to direct socket peer IP"
+        );
+    }
+
+    #[test]
+    fn test_extract_client_ip_trusted_proxy_extracts_rightmost_forwarded_hop() {
+        let proxy_addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
+        let mut req = Request::builder()
+            // Client sent 1.1.1.1, proxy appended real client IP 198.51.100.77
+            .header("x-forwarded-for", "1.1.1.1, 198.51.100.77")
+            .body(Body::empty())
+            .unwrap();
+        req.extensions_mut().insert(ConnectInfo(proxy_addr));
+
+        let trusted = vec!["127.0.0.1".to_string()];
+        let ip = extract_client_ip(&req, &trusted);
+        assert_eq!(
+            ip, "198.51.100.77",
+            "must extract the rightmost hop appended by the trusted proxy"
+        );
+    }
+
+    #[test]
+    fn test_extract_client_ip_trusted_proxy_prefers_x_real_ip() {
+        let proxy_addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
+        let mut req = Request::builder()
+            .header("x-real-ip", "198.51.100.88")
+            .header("x-forwarded-for", "1.1.1.1")
+            .body(Body::empty())
+            .unwrap();
+        req.extensions_mut().insert(ConnectInfo(proxy_addr));
+
+        let trusted = vec!["127.0.0.1".to_string()];
+        let ip = extract_client_ip(&req, &trusted);
+        assert_eq!(ip, "198.51.100.88");
+    }
 }
