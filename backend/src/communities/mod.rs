@@ -3,10 +3,11 @@
 pub mod channels;
 pub mod handlers;
 pub mod permissions;
+pub mod server_menu;
 
 use std::sync::Arc;
 
-use axum::{Router, routing::{get, patch, post}};
+use axum::{Router, routing::{delete, get, patch, post}};
 use crate::state::AppState;
 
 /// REST routes for community membership and channels.
@@ -27,8 +28,32 @@ pub fn router() -> Router<Arc<AppState>> {
             get(handlers::get_community_invite),
         )
         .route(
+            "/{community_id}/categories",
+            get(server_menu::list_categories).post(server_menu::create_category),
+        )
+        .route(
+            "/{community_id}/categories/{category_id}",
+            delete(server_menu::delete_category),
+        )
+        .route(
+            "/{community_id}/events",
+            get(server_menu::list_events).post(server_menu::create_event),
+        )
+        .route(
+            "/{community_id}/preferences",
+            get(server_menu::get_member_settings).patch(server_menu::update_member_settings),
+        )
+        .route(
+            "/{community_id}/nickname",
+            patch(server_menu::update_nickname),
+        )
+        .route(
+            "/{community_id}/leave",
+            post(server_menu::leave_community),
+        )
+        .route(
             "/{community_id}",
-            patch(handlers::update_community),
+            patch(handlers::update_community).delete(server_menu::delete_community),
         )
 }
 
