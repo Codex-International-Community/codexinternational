@@ -121,7 +121,7 @@ async fn run_socket(mut socket: WebSocket, state: Arc<AppState>) {
            },
            ClientFrame::FocusChannel{channel_id}=>{
             if let Some(old)=focused.take(){let _:Result<i64,_>=state.valkey.del(format!("ws:active:{}:{old}",claims.sub)).await;}
-            if let Some(id)=channel_id{if channel_access(&state,id,claims.sub,PERM_VIEW_CHANNEL,false).await.is_ok(){focused=Some(id);let _:Result<(),_>=state.valkey.set(format!("ws:active:{}:{id}",claims.sub),"1",Some(fred::types::Expiration::EX(90)),None,false).await;}}
+            if let Some(id)=channel_id && channel_access(&state,id,claims.sub,PERM_VIEW_CHANNEL,false).await.is_ok(){focused=Some(id);let _:Result<(),_>=state.valkey.set(format!("ws:active:{}:{id}",claims.sub),"1",Some(fred::types::Expiration::EX(90)),None,false).await;}
            }
           }
          },
