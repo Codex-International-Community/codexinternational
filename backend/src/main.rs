@@ -8,7 +8,13 @@
 
 use std::sync::Arc;
 
-use backend::{app_router, chat::{flusher::run_message_flusher, ws::start_pubsub_dispatcher}, config::AppConfig, shared::db::run_migrations, state::AppState};
+use backend::{
+    app_router,
+    chat::{flusher::run_message_flusher, ws::start_pubsub_dispatcher},
+    config::AppConfig,
+    shared::db::run_migrations,
+    state::AppState,
+};
 use tokio::net::TcpListener;
 use tracing_subscriber::EnvFilter;
 

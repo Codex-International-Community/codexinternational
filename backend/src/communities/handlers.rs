@@ -2,17 +2,17 @@
 
 use std::sync::Arc;
 
-use axum::{Json, extract::{Path, State}, http::StatusCode};
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::StatusCode,
+};
 use rand::{Rng, distributions::Alphanumeric};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-use crate::{
-    auth::extractor::AuthUser,
-    error::AppError,
-    state::AppState,
-};
+use crate::{auth::extractor::AuthUser, error::AppError, state::AppState};
 
 #[derive(Debug, Deserialize)]
 pub struct CreateCommunityRequest {
@@ -310,7 +310,6 @@ pub async fn join_community(
     }))
 }
 
-
 #[derive(Debug, Serialize)]
 pub struct CommunityInviteResponse {
     pub invite_code: String,
@@ -353,28 +352,41 @@ pub async fn update_community(
     Path(community_id): Path<Uuid>,
     Json(request): Json<UpdateCommunityRequest>,
 ) -> Result<Json<CommunitySummary>, AppError> {
-    let owner_id = sqlx::query_scalar::<_, Option<Uuid>>(
-        "SELECT owner_id FROM communities WHERE id = $1",
-    )
-    .bind(community_id)
-    .fetch_optional(&state.pg)
-    .await?
-    .ok_or_else(|| AppError::NotFound("community not found".to_string()))?;
+    let owner_id =
+        sqlx::query_scalar::<_, Option<Uuid>>("SELECT owner_id FROM communities WHERE id = $1")
+            .bind(community_id)
+            .fetch_optional(&state.pg)
+            .await?
+            .ok_or_else(|| AppError::NotFound("community not found".to_string()))?;
 
     if owner_id != Some(auth.user_id) {
-        return Err(AppError::Forbidden("only the server owner can edit server settings".to_string()));
+        return Err(AppError::Forbidden(
+            "only the server owner can edit server settings".to_string(),
+        ));
     }
 
     let name = request.name.map(|value| value.trim().to_string());
-    if name.as_ref().is_some_and(|value| value.is_empty() || value.chars().count() > 100) {
-        return Err(AppError::BadRequest("server name must contain 1-100 characters".to_string()));
+    if name
+        .as_ref()
+        .is_some_and(|value| value.is_empty() || value.chars().count() > 100)
+    {
+        return Err(AppError::BadRequest(
+            "server name must contain 1-100 characters".to_string(),
+        ));
     }
     let description = request.description.map(|value| value.trim().to_string());
-    if description.as_ref().is_some_and(|value| value.chars().count() > 2_000) {
-        return Err(AppError::BadRequest("server description must be at most 2000 characters".to_string()));
+    if description
+        .as_ref()
+        .is_some_and(|value| value.chars().count() > 2_000)
+    {
+        return Err(AppError::BadRequest(
+            "server description must be at most 2000 characters".to_string(),
+        ));
     }
     if name.is_none() && description.is_none() && request.is_public.is_none() {
-        return Err(AppError::BadRequest("no server settings were supplied".to_string()));
+        return Err(AppError::BadRequest(
+            "no server settings were supplied".to_string(),
+        ));
     }
 
     let community = sqlx::query_as::<_, CommunitySummary>(

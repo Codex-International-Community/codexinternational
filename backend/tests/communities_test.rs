@@ -2,7 +2,10 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use axum::{body::Body, http::{Request, StatusCode, header::AUTHORIZATION}};
+use axum::{
+    body::Body,
+    http::{Request, StatusCode, header::AUTHORIZATION},
+};
 use backend::{app_router, config::AppConfig, state::AppState};
 use tower::ServiceExt;
 
@@ -16,9 +19,18 @@ async fn community_routes_require_authentication() {
         ("GET", "/api/v1/communities"),
         ("POST", "/api/v1/communities"),
         ("POST", "/api/v1/communities/join/INVALID"),
-        ("GET", "/api/v1/communities/00000000-0000-0000-0000-000000000001/channels"),
-        ("GET", "/api/v1/communities/00000000-0000-0000-0000-000000000001/members"),
-        ("POST", "/api/v1/communities/00000000-0000-0000-0000-000000000001/channels"),
+        (
+            "GET",
+            "/api/v1/communities/00000000-0000-0000-0000-000000000001/channels",
+        ),
+        (
+            "GET",
+            "/api/v1/communities/00000000-0000-0000-0000-000000000001/members",
+        ),
+        (
+            "POST",
+            "/api/v1/communities/00000000-0000-0000-0000-000000000001/channels",
+        ),
         ("POST", "/api/v1/dms/00000000-0000-0000-0000-000000000001"),
     ];
 

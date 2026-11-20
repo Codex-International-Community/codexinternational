@@ -8,22 +8,25 @@ pub mod server_menu;
 
 use std::sync::Arc;
 
-use axum::{Router, routing::{delete, get, patch, post}};
 use crate::state::AppState;
+use axum::{
+    Router,
+    routing::{delete, get, patch, post},
+};
 
 /// REST routes for community membership and channels.
 pub fn router() -> Router<Arc<AppState>> {
     Router::new()
-        .route("/", get(handlers::list_communities).post(handlers::create_community))
+        .route(
+            "/",
+            get(handlers::list_communities).post(handlers::create_community),
+        )
         .route("/join/{invite_code}", post(handlers::join_community))
         .route(
             "/{community_id}/channels",
             get(channels::list_channels).post(channels::create_channel),
         )
-        .route(
-            "/{community_id}/members",
-            get(channels::list_members),
-        )
+        .route("/{community_id}/members", get(channels::list_members))
         .route(
             "/{community_id}/invite",
             get(handlers::get_community_invite),
@@ -60,10 +63,7 @@ pub fn router() -> Router<Arc<AppState>> {
             "/{community_id}/nickname",
             patch(server_menu::update_nickname),
         )
-        .route(
-            "/{community_id}/leave",
-            post(server_menu::leave_community),
-        )
+        .route("/{community_id}/leave", post(server_menu::leave_community))
         .route(
             "/{community_id}",
             patch(handlers::update_community).delete(server_menu::delete_community),

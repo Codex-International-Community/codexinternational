@@ -16,12 +16,12 @@ use sqlx::{PgPool, postgres::PgPoolOptions};
 use thiserror::Error;
 
 use crate::{
-    chat::registry::WsRegistry,
     auth::{
         oauth::{OAuthClient, ReqwestOAuthClient},
         otp::{BrevoEmailSender, EmailSender},
         password::PasswordHasher,
     },
+    chat::registry::WsRegistry,
     config::AppConfig,
 };
 
