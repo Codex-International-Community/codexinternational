@@ -16,6 +16,7 @@ interface ActionModalProps {
   onSubmit: (e: FormEvent) => void
   onCreateServer: () => void
   onJoinServer: () => void
+  onCopyInvite: () => void
   onClose: () => void
 }
 
@@ -29,6 +30,7 @@ export function ActionModal({
   onSubmit,
   onCreateServer,
   onJoinServer,
+  onCopyInvite,
   onClose,
 }: ActionModalProps) {
   const titleId = useId()
@@ -62,7 +64,7 @@ export function ActionModal({
         ? 'Add a place for conversations in this server.'
         : type === 'dm'
           ? 'Choose a community member to start a private conversation.'
-          : 'Invite links will unlock when community membership endpoints are available.'
+          : 'Share this code with anyone you want to invite to the server.'
 
   const label =
     type === 'server'
@@ -81,7 +83,7 @@ export function ActionModal({
         ? 'Create Channel'
         : type === 'dm'
           ? 'Open conversation'
-          : 'Invite API pending'
+          : 'Done'
 
   return (
     <dialog
@@ -278,10 +280,15 @@ export function ActionModal({
                 </div>
               )
             ) : type === 'invite' ? (
-              <div className="modal-pending" role="status">
-                <Icon name="link" size={21} />
-                <strong>Invite links are not available yet</strong>
-                <span>The community invite API has not been connected.</span>
+              <div className="server-invite-content">
+                <label htmlFor={inputId}>INVITE CODE</label>
+                <div className="server-invite-code">
+                  <input id={inputId} className="modal-input" value={value} readOnly />
+                  <button type="button" onClick={onCopyInvite} disabled={!value}>
+                    <Icon name="copy" size={15} /> Copy
+                  </button>
+                </div>
+                <small>Anyone with this code can join this server.</small>
               </div>
             ) : (
               <>
@@ -306,7 +313,9 @@ export function ActionModal({
                   ? people.length === 0 || !value
                   : type === 'channel'
                     ? !value.trim()
-                    : true
+                    : type === 'invite'
+                      ? !value
+                      : true
               }
             >
               {buttonText}

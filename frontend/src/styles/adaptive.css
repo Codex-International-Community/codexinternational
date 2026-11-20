@@ -1615,54 +1615,175 @@ dialog.bot-reveal-modal {
   top: 72px;
   left: 9px;
   display: flex;
-  width: calc(100% - 18px);
+  width: 224px;
+  max-width: calc(100% - 18px);
   flex-direction: column;
-  gap: 3px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 11px;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+  border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, .32);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .38);
   font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
 }
-.app-shell > .channel-sidebar > .server-menu .server-menu-heading {
+.app-shell > .channel-sidebar > .server-menu .server-menu-item {
   display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 3px;
-  padding: 7px 9px 9px;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 3px;
-}
-.app-shell > .channel-sidebar > .server-menu .server-menu-heading strong {
-  overflow: hidden;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.app-shell > .channel-sidebar > .server-menu .server-menu-heading small {
-  color: var(--muted);
-  font-size: 11px;
-}
-.app-shell > .channel-sidebar > .server-menu > button {
-  display: flex;
-  min-height: 35px;
+  min-height: 34px;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   padding: 0 9px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 5px;
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
 }
-.app-shell > .channel-sidebar > .server-menu > button:hover {
+.app-shell > .channel-sidebar > .server-menu .server-menu-item:hover {
   background: var(--surface2);
+}
+.app-shell > .channel-sidebar > .server-menu .server-menu-item--invite {
+  color: #3ba55d;
+  font-weight: 600;
+}
+.app-shell > .channel-sidebar > .server-menu .server-menu-divider {
+  height: 1px;
+  margin: 4px 3px;
+  background: var(--line);
+}
+.server-invite-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.server-invite-content > label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+.server-invite-code {
+  display: flex;
+  gap: 7px;
+}
+.server-invite-code input {
+  flex: 1;
+  min-width: 0;
+}
+.server-invite-code button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+}
+.server-invite-content small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.server-settings-dialog {
+  position: fixed;
+  z-index: 200;
+  inset: 0;
+  width: min(430px, calc(100vw - 32px));
+  max-width: none;
+  padding: 0;
+  overflow: visible;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  margin: auto;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .48);
+}
+.server-settings-dialog::backdrop {
+  background: rgba(0, 0, 0, .62);
+  backdrop-filter: blur(3px);
+}
+.server-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px;
+}
+.server-settings-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+.server-settings-header h2 {
+  margin: 5px 0 0;
+  font-size: 20px;
+}
+.server-settings-header > button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  cursor: pointer;
+}
+.server-settings-form > label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+.server-settings-form > input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  outline: none;
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+}
+.server-settings-form > input:focus {
+  border-color: var(--accent);
+}
+.server-settings-error {
+  margin: 0;
+  color: #ed686d;
+  font-size: 12px;
+}
+.server-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+.server-settings-actions button {
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.server-settings-actions button[type="submit"] {
+  border-color: transparent;
+  background: var(--accent);
+  color: white;
+}
+.server-settings-actions button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
 }
 
 .app-shell > .channel-sidebar > .server-title small {

@@ -6,7 +6,7 @@ pub mod permissions;
 
 use std::sync::Arc;
 
-use axum::{Router, routing::{get, post}};
+use axum::{Router, routing::{get, patch, post}};
 use crate::state::AppState;
 
 /// REST routes for community membership and channels.
@@ -21,6 +21,14 @@ pub fn router() -> Router<Arc<AppState>> {
         .route(
             "/{community_id}/members",
             get(channels::list_members),
+        )
+        .route(
+            "/{community_id}/invite",
+            get(handlers::get_community_invite),
+        )
+        .route(
+            "/{community_id}",
+            patch(handlers::update_community),
         )
 }
 

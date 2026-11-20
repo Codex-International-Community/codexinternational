@@ -6,7 +6,7 @@ import '../styles/adaptive.css'
 import type { AuthSession } from '../api/client'
 import { ApiError } from '../api/client'
 import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, listPinnedMessages, mapChatMessage, pinMessage, postMessage, toggleMessageReaction, unpinMessage, type ChatMessageWire } from '../api/chat'
-import { createChannel as createChannelApi, createCommunity, createOrGetDm, joinCommunity, listChannels, listCommunities, listCommunityMembers } from '../api/communities'
+import { createChannel as createChannelApi, createCommunity, createOrGetDm, getCommunityInvite, joinCommunity, listChannels, listCommunities, listCommunityMembers, updateCommunity } from '../api/communities'
 import type { ViewportInfo } from '../hooks/useViewport'
 import type { Attachment, View } from '../types/common'
 import type { Channel, Data, Message, User } from '../types/chat'
@@ -288,6 +288,10 @@ export function WorkspacePage({
   const [screenSharing, setScreenSharing] = useState(false)
   const [profileMenu, setProfileMenu] = useState(false)
   const [serverMenuOpen, setServerMenuOpen] = useState(false)
+  const [serverSettingsOpen, setServerSettingsOpen] = useState(false)
+  const [serverSettingsName, setServerSettingsName] = useState('')
+  const [serverSettingsBusy, setServerSettingsBusy] = useState(false)
+  const [serverSettingsError, setServerSettingsError] = useState('')
   const [notificationRead, setNotificationRead] = useState(false)
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>(loadSocialPosts)
   const [socialDraft, setSocialDraft] = useState('')
@@ -935,6 +939,49 @@ export function WorkspacePage({
     }
   }
 
+  const handleOpenServerSettings = () => {
+    if (!server) return
+    setServerSettingsName(server.name)
+    setServerSettingsError('')
+    setServerSettingsOpen(true)
+  }
+
+  const handleSaveServerSettings = async () => {
+    if (!server || !serverSettingsName.trim() || serverSettingsBusy) return
+    setServerSettingsBusy(true)
+    setServerSettingsError('')
+    try {
+      const updated = await updateCommunity(server.id, { name: serverSettingsName.trim() })
+      setData((previous) => ({
+        ...previous,
+        servers: previous.servers.map((item) => item.id === server.id
+          ? {
+              ...item,
+              name: updated.name,
+              abbr: updated.name.split(/\\s+/).map((part) => part[0] ?? '').join('').slice(0, 3).toUpperCase(),
+            }
+          : item),
+      }))
+      setServerSettingsOpen(false)
+      notify('Server settings saved')
+    } catch (error) {
+      setServerSettingsError(error instanceof Error ? error.message : 'Server settings could not be saved.')
+    } finally {
+      setServerSettingsBusy(false)
+    }
+  }
+
+  const handleOpenInvite = async () => {
+    if (!server) return
+    try {
+      const result = await getCommunityInvite(server.id)
+      setModalValue(result.invite_code)
+      setModal('invite')
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not create an invite.')
+    }
+  }
+
   const handleJoinCommunity = async () => {
     const raw = modalValue.trim()
     const inviteCode = raw.split(/[/?#]/).filter(Boolean).at(-1) ?? raw
@@ -1176,6 +1223,8 @@ export function WorkspacePage({
             setProfileMenu(false)
             setServerMenuOpen((open) => !open)
           }}
+          onInvitePeople={() => void handleOpenInvite()}
+          onOpenServerSettings={handleOpenServerSettings}
           onCopyServerId={() => {
             if (!server?.id) return
             void navigator.clipboard.writeText(server.id)
@@ -1647,6 +1696,43 @@ export function WorkspacePage({
         />
       )}
 
+      {serverSettingsOpen && server && (
+        <dialog className="server-settings-dialog" open aria-labelledby="server-settings-title">
+          <form
+            className="server-settings-form"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void handleSaveServerSettings()
+            }}
+          >
+            <div className="server-settings-header">
+              <div>
+                <span className="eyebrow">SERVER SETTINGS</span>
+                <h2 id="server-settings-title">{server.name}</h2>
+              </div>
+              <button type="button" aria-label="Close server settings" onClick={() => setServerSettingsOpen(false)}>
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+            <label htmlFor="server-settings-name">SERVER NAME</label>
+            <input
+              id="server-settings-name"
+              maxLength={100}
+              value={serverSettingsName}
+              onChange={(event) => setServerSettingsName(event.target.value)}
+              autoFocus
+            />
+            {serverSettingsError && <p className="server-settings-error" role="alert">{serverSettingsError}</p>}
+            <div className="server-settings-actions">
+              <button type="button" onClick={() => setServerSettingsOpen(false)}>Cancel</button>
+              <button type="submit" disabled={!serverSettingsName.trim() || serverSettingsBusy}>
+                {serverSettingsBusy ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </dialog>
+      )}
+
       {modal && modal !== 'call' && (
         <ActionModal
           type={modal}
@@ -1660,6 +1746,11 @@ export function WorkspacePage({
           }}
           onCreateServer={() => void handleCreateCommunity()}
           onJoinServer={() => void handleJoinCommunity()}
+          onCopyInvite={() => {
+            void navigator.clipboard.writeText(modalValue)
+              .then(() => notify('Invite code copied'))
+              .catch(() => notify('Could not copy invite code.'))
+          }}
           onSubmit={(e) => {
             e.preventDefault()
             if (modal === 'invite') {

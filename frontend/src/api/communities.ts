@@ -88,3 +88,20 @@ export async function createOrGetDm(userId: string): Promise<{ channel_id: strin
     { method: 'POST' },
   )
 }
+
+
+export async function getCommunityInvite(communityId: string): Promise<{ invite_code: string }> {
+  return apiRequest<{ invite_code: string }>(
+    `/api/v1/communities/${encodeURIComponent(communityId)}/invite`,
+  )
+}
+
+export async function updateCommunity(
+  communityId: string,
+  payload: { name?: string; description?: string; is_public?: boolean },
+): Promise<CommunitySummary> {
+  return apiRequest<CommunitySummary>(
+    `/api/v1/communities/${encodeURIComponent(communityId)}`,
+    { method: 'PATCH', body: payload },
+  )
+}

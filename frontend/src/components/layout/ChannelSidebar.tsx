@@ -24,6 +24,8 @@ interface ChannelSidebarProps {
   onToggleProfileMenu: () => void
   onToggleServerMenu: () => void
   onCopyServerId: () => void
+  onInvitePeople: () => void
+  onOpenServerSettings: () => void
   onSelectSocialTab: (tab: SocialTab) => void
   onOpenQuickSearch: () => void
   onSelectChannel: (channel: Channel) => void
@@ -63,6 +65,8 @@ export function ChannelSidebar({
   onToggleProfileMenu,
   onToggleServerMenu,
   onCopyServerId,
+  onInvitePeople,
+  onOpenServerSettings,
   onSelectSocialTab,
   onOpenQuickSearch,
   onSelectChannel,
@@ -128,15 +132,19 @@ export function ChannelSidebar({
       )}
       {server && view === 'channel' && serverMenuOpen && (
         <div className="server-menu" role="menu" aria-label={`${server.name} server menu`}>
-          <div className="server-menu-heading">
-            <strong>{server.name}</strong>
-            <small>Server options</small>
-          </div>
-          <button type="button" role="menuitem" onClick={() => { onCreateChannelModal(); onToggleServerMenu() }}>
-            <Icon name="plus" size={15} /> Create Channel
+          <button className="server-menu-item server-menu-item--invite" type="button" role="menuitem" onClick={() => { onInvitePeople(); onToggleServerMenu() }}>
+            <Icon name="user-plus" size={16} /> Invite People
           </button>
-          <button type="button" role="menuitem" onClick={onCopyServerId}>
-            <Icon name="copy" size={15} /> Copy Server ID
+          <div className="server-menu-divider" />
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onOpenServerSettings(); onToggleServerMenu() }}>
+            <Icon name="settings" size={16} /> Server Settings
+          </button>
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onCreateChannelModal(); onToggleServerMenu() }}>
+            <Icon name="plus" size={16} /> Create Channel
+          </button>
+          <div className="server-menu-divider" />
+          <button className="server-menu-item" type="button" role="menuitem" onClick={onCopyServerId}>
+            <Icon name="copy" size={16} /> Copy Server ID
           </button>
         </div>
       )}

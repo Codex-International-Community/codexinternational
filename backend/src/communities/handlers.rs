@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{Json, extract::{Path, State}, http::StatusCode};
 use rand::{Rng, distributions::Alphanumeric};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -308,4 +308,90 @@ pub async fn join_community(
         community_id,
         already_member,
     }))
+}
+
+
+#[derive(Debug, Serialize)]
+pub struct CommunityInviteResponse {
+    pub invite_code: String,
+}
+
+pub async fn get_community_invite(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    Path(community_id): Path<Uuid>,
+) -> Result<Json<CommunityInviteResponse>, AppError> {
+    let invite_code = sqlx::query_scalar::<_, Option<String>>(
+        "SELECT c.invite_code
+         FROM communities c
+         WHERE c.id = $1
+           AND EXISTS (
+             SELECT 1 FROM community_members m
+             WHERE m.community_id = c.id AND m.user_id = $2
+           )",
+    )
+    .bind(community_id)
+    .bind(auth.user_id)
+    .fetch_optional(&state.pg)
+    .await?
+    .flatten()
+    .ok_or_else(|| AppError::NotFound("community invite is unavailable".to_string()))?;
+
+    Ok(Json(CommunityInviteResponse { invite_code }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateCommunityRequest {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub is_public: Option<bool>,
+}
+
+pub async fn update_community(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    Path(community_id): Path<Uuid>,
+    Json(request): Json<UpdateCommunityRequest>,
+) -> Result<Json<CommunitySummary>, AppError> {
+    let owner_id = sqlx::query_scalar::<_, Option<Uuid>>(
+        "SELECT owner_id FROM communities WHERE id = $1",
+    )
+    .bind(community_id)
+    .fetch_optional(&state.pg)
+    .await?
+    .ok_or_else(|| AppError::NotFound("community not found".to_string()))?;
+
+    if owner_id != Some(auth.user_id) {
+        return Err(AppError::Forbidden("only the server owner can edit server settings".to_string()));
+    }
+
+    let name = request.name.map(|value| value.trim().to_string());
+    if name.as_ref().is_some_and(|value| value.is_empty() || value.chars().count() > 100) {
+        return Err(AppError::BadRequest("server name must contain 1-100 characters".to_string()));
+    }
+    let description = request.description.map(|value| value.trim().to_string());
+    if description.as_ref().is_some_and(|value| value.chars().count() > 2_000) {
+        return Err(AppError::BadRequest("server description must be at most 2000 characters".to_string()));
+    }
+    if name.is_none() && description.is_none() && request.is_public.is_none() {
+        return Err(AppError::BadRequest("no server settings were supplied".to_string()));
+    }
+
+    let community = sqlx::query_as::<_, CommunitySummary>(
+        "UPDATE communities c
+         SET name = COALESCE($2, c.name),
+             description = COALESCE($3, c.description),
+             is_public = COALESCE($4, c.is_public)
+         WHERE c.id = $1
+         RETURNING c.id, c.slug, c.name, c.description, c.is_public,
+           (SELECT COUNT(*)::BIGINT FROM community_members m WHERE m.community_id = c.id) AS member_count",
+    )
+    .bind(community_id)
+    .bind(name)
+    .bind(description)
+    .bind(request.is_public)
+    .fetch_one(&state.pg)
+    .await?;
+
+    Ok(Json(community))
 }
