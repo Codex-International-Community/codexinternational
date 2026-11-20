@@ -1452,10 +1452,7 @@ export function WorkspacePage({
               <PeopleDirectory
                 people={people}
                 onOpenDm={openDm}
-                onInvite={() => {
-                  setModal('invite')
-                  setModalValue('')
-                }}
+                onInvite={() => void handleOpenInvite()}
               />
             ) : view === 'settings' ? (
               <SettingsView
@@ -1621,7 +1618,7 @@ export function WorkspacePage({
                   })()
                 }}
                 onOpenPinnedView={() => navigateView('pinned')}
-                onInvite={() => setModal('invite')}
+                onInvite={() => void handleOpenInvite()}
                 onNotify={notify}
                 onDiscoverCommunities={() => navigateView('discover')}
                 onBrowseChannels={() => navigateView('channels')}
@@ -1654,7 +1651,7 @@ export function WorkspacePage({
               people={people}
               mobileOpen={isMobile && membersOpen}
               onOpenDm={openDm}
-              onInvite={() => setModal('invite')}
+              onInvite={() => void handleOpenInvite()}
               onNotify={notify}
             />
           )}
@@ -1697,40 +1694,48 @@ export function WorkspacePage({
       )}
 
       {serverSettingsOpen && server && (
-        <dialog className="server-settings-dialog" open aria-labelledby="server-settings-title">
-          <form
-            className="server-settings-form"
-            onSubmit={(event) => {
-              event.preventDefault()
-              void handleSaveServerSettings()
-            }}
+        <div className="server-settings-overlay" onMouseDown={() => setServerSettingsOpen(false)}>
+          <section
+            className="server-settings-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="server-settings-title"
+            onMouseDown={(event) => event.stopPropagation()}
           >
-            <div className="server-settings-header">
-              <div>
-                <span className="eyebrow">SERVER SETTINGS</span>
-                <h2 id="server-settings-title">{server.name}</h2>
+            <form
+              className="server-settings-form"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void handleSaveServerSettings()
+              }}
+            >
+              <div className="server-settings-header">
+                <div>
+                  <span className="eyebrow">SERVER SETTINGS</span>
+                  <h2 id="server-settings-title">{server.name}</h2>
+                </div>
+                <button type="button" aria-label="Close server settings" onClick={() => setServerSettingsOpen(false)}>
+                  <span aria-hidden="true">×</span>
+                </button>
               </div>
-              <button type="button" aria-label="Close server settings" onClick={() => setServerSettingsOpen(false)}>
-                <span aria-hidden="true">×</span>
-              </button>
-            </div>
-            <label htmlFor="server-settings-name">SERVER NAME</label>
-            <input
-              id="server-settings-name"
-              maxLength={100}
-              value={serverSettingsName}
-              onChange={(event) => setServerSettingsName(event.target.value)}
-              autoFocus
-            />
-            {serverSettingsError && <p className="server-settings-error" role="alert">{serverSettingsError}</p>}
-            <div className="server-settings-actions">
-              <button type="button" onClick={() => setServerSettingsOpen(false)}>Cancel</button>
-              <button type="submit" disabled={!serverSettingsName.trim() || serverSettingsBusy}>
-                {serverSettingsBusy ? 'Saving…' : 'Save Changes'}
-              </button>
-            </div>
-          </form>
-        </dialog>
+              <label htmlFor="server-settings-name">SERVER NAME</label>
+              <input
+                id="server-settings-name"
+                maxLength={100}
+                value={serverSettingsName}
+                onChange={(event) => setServerSettingsName(event.target.value)}
+                autoFocus
+              />
+              {serverSettingsError && <p className="server-settings-error" role="alert">{serverSettingsError}</p>}
+              <div className="server-settings-actions">
+                <button type="button" onClick={() => setServerSettingsOpen(false)}>Cancel</button>
+                <button type="submit" disabled={!serverSettingsName.trim() || serverSettingsBusy}>
+                  {serverSettingsBusy ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
       )}
 
       {modal && modal !== 'call' && (
@@ -1754,7 +1759,6 @@ export function WorkspacePage({
           onSubmit={(e) => {
             e.preventDefault()
             if (modal === 'invite') {
-              notify('Invite links will be enabled when the community invite API is ready.')
               setModal(null)
               return
             }
