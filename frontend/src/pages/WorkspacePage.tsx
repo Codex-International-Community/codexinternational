@@ -1074,7 +1074,7 @@ export function WorkspacePage({
         setCurrentServerNickname(result.nickname ?? '')
         notify(result.nickname ? 'Server nickname saved' : 'Server nickname cleared')
       }
-      setServerOptionsMode(null)
+      if (serverOptionsMode !== 'settings') setServerOptionsMode(null)
     } catch (error) {
       setServerOptionsError(error instanceof Error ? error.message : 'Server option could not be saved.')
     } finally {
