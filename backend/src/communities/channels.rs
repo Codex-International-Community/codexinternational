@@ -22,6 +22,8 @@ pub struct ChannelSummary {
     pub name: Option<String>,
     pub topic: String,
     pub position: i32,
+    pub category_id: Option<Uuid>,
+    pub category_name: Option<String>,
     pub is_private: bool,
     pub last_seq_id: i64,
 }
@@ -35,6 +37,8 @@ pub struct CreateChannelRequest {
     pub topic: String,
     #[serde(default)]
     pub is_private: bool,
+    #[serde(default)]
+    pub category_id: Option<Uuid>,
 }
 
 #[derive(Debug, Serialize)]
@@ -113,8 +117,9 @@ pub async fn list_channels(
 
     let channels = sqlx::query_as::<_, ChannelSummary>(
         "SELECT ch.id, ch.community_id, ch.type AS channel_type, ch.name, ch.topic,
-                ch.position, ch.is_private, ch.last_seq_id
+                ch.position, ch.category_id, cat.name AS category_name, ch.is_private, ch.last_seq_id
          FROM channels ch
+         LEFT JOIN community_categories cat ON cat.id = ch.category_id
          WHERE ch.community_id = $1
            AND (
              ch.is_private = FALSE
@@ -123,7 +128,7 @@ pub async fn list_channels(
                WHERE cm.channel_id = ch.id AND cm.user_id = $2
              )
            )
-         ORDER BY ch.position ASC, ch.created_at ASC",
+         ORDER BY COALESCE(cat.position, -1) ASC, ch.position ASC, ch.created_at ASC",
     )
     .bind(community_id)
     .bind(auth.user_id)
@@ -154,6 +159,19 @@ pub async fn create_channel(
         return Err(AppError::Forbidden("missing MANAGE_CHANNELS permission".to_string()));
     }
 
+    if let Some(category_id) = request.category_id {
+        let belongs = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM community_categories WHERE id = $1 AND community_id = $2)",
+        )
+        .bind(category_id)
+        .bind(community_id)
+        .fetch_one(&state.pg)
+        .await?;
+        if !belongs {
+            return Err(AppError::BadRequest("category does not belong to this server".to_string()));
+        }
+    }
+
     let channel_id = Uuid::now_v7();
     let mut tx = state.pg.begin().await?;
     let next_position = sqlx::query_scalar::<_, i32>(
@@ -164,8 +182,8 @@ pub async fn create_channel(
     .await?;
 
     sqlx::query(
-        "INSERT INTO channels (id, community_id, type, name, topic, position, is_private)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)",
+        "INSERT INTO channels (id, community_id, type, name, topic, position, is_private, category_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
     )
     .bind(channel_id)
     .bind(community_id)
@@ -174,6 +192,7 @@ pub async fn create_channel(
     .bind(request.topic.trim())
     .bind(next_position)
     .bind(request.is_private)
+    .bind(request.category_id)
     .execute(&mut *tx)
     .await?;
 
@@ -207,6 +226,12 @@ pub async fn create_channel(
                 name: Some(name),
                 topic: request.topic.trim().to_string(),
                 position: next_position,
+                category_id: request.category_id,
+                category_name: if let Some(category_id) = request.category_id {
+                    sqlx::query_scalar::<_, String>("SELECT name FROM community_categories WHERE id = $1")
+                        .bind(category_id).fetch_one(&state.pg).await?
+                        .into()
+                } else { None },
                 is_private: request.is_private,
                 last_seq_id: 0,
             },
