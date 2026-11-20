@@ -2,7 +2,11 @@
 
 use std::sync::Arc;
 
-use axum::{Json, extract::{Path, State}, http::StatusCode};
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::StatusCode,
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -10,7 +14,7 @@ use uuid::Uuid;
 
 use crate::{
     auth::extractor::AuthUser,
-    communities::permissions::{has_permission, PERM_MANAGE_CHANNELS},
+    communities::permissions::{PERM_MANAGE_CHANNELS, has_permission},
     error::AppError,
     state::AppState,
 };
@@ -76,10 +80,7 @@ fn default_channel_type() -> String {
 
 fn validate_channel_name(raw: &str) -> Result<String, AppError> {
     let name = raw.trim().trim_start_matches('#');
-    if name.is_empty()
-        || name.chars().count() > 100
-        || name.chars().any(char::is_control)
-    {
+    if name.is_empty() || name.chars().count() > 100 || name.chars().any(char::is_control) {
         return Err(AppError::BadRequest(
             "channel name must contain 1-100 printable characters".to_string(),
         ));
@@ -109,7 +110,9 @@ async fn member_permissions(
     let is_owner = access.0 == Some(user_id);
     let permissions = access.1.unwrap_or(0);
     if !is_owner && access.1.is_none() {
-        return Err(AppError::Forbidden("community membership required".to_string()));
+        return Err(AppError::Forbidden(
+            "community membership required".to_string(),
+        ));
     }
     Ok((is_owner, permissions))
 }
@@ -120,8 +123,15 @@ pub async fn list_channels(
     Path(community_id): Path<Uuid>,
 ) -> Result<Json<Vec<ChannelSummary>>, AppError> {
     let (is_owner, permissions) = member_permissions(&state, community_id, auth.user_id).await?;
-    if !is_owner && !has_permission(permissions, crate::communities::permissions::PERM_VIEW_CHANNEL) {
-        return Err(AppError::Forbidden("missing VIEW_CHANNEL permission".to_string()));
+    if !is_owner
+        && !has_permission(
+            permissions,
+            crate::communities::permissions::PERM_VIEW_CHANNEL,
+        )
+    {
+        return Err(AppError::Forbidden(
+            "missing VIEW_CHANNEL permission".to_string(),
+        ));
     }
 
     let channels = sqlx::query_as::<_, ChannelSummary>(
@@ -160,12 +170,16 @@ pub async fn create_channel(
         ));
     }
     if request.topic.chars().count() > 1_024 {
-        return Err(AppError::BadRequest("channel topic is too long".to_string()));
+        return Err(AppError::BadRequest(
+            "channel topic is too long".to_string(),
+        ));
     }
 
     let (is_owner, permissions) = member_permissions(&state, community_id, auth.user_id).await?;
     if !is_owner && !has_permission(permissions, PERM_MANAGE_CHANNELS) {
-        return Err(AppError::Forbidden("missing MANAGE_CHANNELS permission".to_string()));
+        return Err(AppError::Forbidden(
+            "missing MANAGE_CHANNELS permission".to_string(),
+        ));
     }
 
     if let Some(category_id) = request.category_id {
@@ -177,7 +191,9 @@ pub async fn create_channel(
         .fetch_one(&state.pg)
         .await?;
         if !belongs {
-            return Err(AppError::BadRequest("category does not belong to this server".to_string()));
+            return Err(AppError::BadRequest(
+                "category does not belong to this server".to_string(),
+            ));
         }
     }
 
@@ -237,9 +253,17 @@ pub async fn create_channel(
                 position: next_position,
                 category_id: request.category_id,
                 category_name: if let Some(category_id) = request.category_id {
-                    Some(sqlx::query_scalar::<_, String>("SELECT name FROM community_categories WHERE id = $1")
-                        .bind(category_id).fetch_one(&state.pg).await?)
-                } else { None },
+                    Some(
+                        sqlx::query_scalar::<_, String>(
+                            "SELECT name FROM community_categories WHERE id = $1",
+                        )
+                        .bind(category_id)
+                        .fetch_one(&state.pg)
+                        .await?,
+                    )
+                } else {
+                    None
+                },
                 is_private: request.is_private,
                 last_seq_id: 0,
             },
@@ -259,7 +283,9 @@ pub async fn list_members(
             crate::communities::permissions::PERM_VIEW_CHANNEL,
         )
     {
-        return Err(AppError::Forbidden("missing VIEW_CHANNEL permission".to_string()));
+        return Err(AppError::Forbidden(
+            "missing VIEW_CHANNEL permission".to_string(),
+        ));
     }
 
     let members = sqlx::query_as::<_, CommunityMemberSummary>(
@@ -292,15 +318,16 @@ pub async fn create_or_get_dm(
     Path(target_user_id): Path<Uuid>,
 ) -> Result<(StatusCode, Json<DirectMessageResponse>), AppError> {
     if auth.user_id == target_user_id {
-        return Err(AppError::BadRequest("cannot create a DM with yourself".to_string()));
+        return Err(AppError::BadRequest(
+            "cannot create a DM with yourself".to_string(),
+        ));
     }
 
-    let target_exists = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)",
-    )
-    .bind(target_user_id)
-    .fetch_one(&state.pg)
-    .await?;
+    let target_exists =
+        sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)")
+            .bind(target_user_id)
+            .fetch_one(&state.pg)
+            .await?;
     if !target_exists {
         return Err(AppError::NotFound("user not found".to_string()));
     }
@@ -327,12 +354,12 @@ pub async fn create_or_get_dm(
     let created = inserted.is_some();
     let channel_id = match inserted {
         Some(id) => id,
-        None => sqlx::query_scalar::<_, Uuid>(
-            "SELECT id FROM channels WHERE dm_pair_key = $1",
-        )
-        .bind(&pair_key)
-        .fetch_one(&mut *tx)
-        .await?,
+        None => {
+            sqlx::query_scalar::<_, Uuid>("SELECT id FROM channels WHERE dm_pair_key = $1")
+                .bind(&pair_key)
+                .fetch_one(&mut *tx)
+                .await?
+        }
     };
 
     sqlx::query(
@@ -348,7 +375,14 @@ pub async fn create_or_get_dm(
 
     tx.commit().await?;
     Ok((
-        if created { StatusCode::CREATED } else { StatusCode::OK },
-        Json(DirectMessageResponse { channel_id, created }),
+        if created {
+            StatusCode::CREATED
+        } else {
+            StatusCode::OK
+        },
+        Json(DirectMessageResponse {
+            channel_id,
+            created,
+        }),
     ))
 }

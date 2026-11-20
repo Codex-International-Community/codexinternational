@@ -27,13 +27,22 @@ mod tests {
 
     #[test]
     fn checks_all_requested_permissions() {
-        assert!(has_permission(PERM_VIEW_CHANNEL | PERM_SEND_MESSAGES, PERM_VIEW_CHANNEL));
-        assert!(!has_permission(PERM_VIEW_CHANNEL, PERM_VIEW_CHANNEL | PERM_SEND_MESSAGES));
+        assert!(has_permission(
+            PERM_VIEW_CHANNEL | PERM_SEND_MESSAGES,
+            PERM_VIEW_CHANNEL
+        ));
+        assert!(!has_permission(
+            PERM_VIEW_CHANNEL,
+            PERM_VIEW_CHANNEL | PERM_SEND_MESSAGES
+        ));
     }
 
     #[test]
     fn administrator_bypasses_permission_checks() {
-        assert!(has_permission(PERM_ADMINISTRATOR, PERM_MODERATE_MEMBERS | PERM_MANAGE_ROLES));
+        assert!(has_permission(
+            PERM_ADMINISTRATOR,
+            PERM_MODERATE_MEMBERS | PERM_MANAGE_ROLES
+        ));
     }
 
     #[test]

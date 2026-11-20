@@ -1,14 +1,18 @@
 //! Community role management and member role assignment.
 use std::sync::Arc;
 
-use axum::{Json, extract::{Path, State}, http::StatusCode};
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::StatusCode,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::{
     auth::extractor::AuthUser,
-    communities::permissions::{has_permission, PERM_ADMINISTRATOR, PERM_MANAGE_ROLES},
+    communities::permissions::{PERM_ADMINISTRATOR, PERM_MANAGE_ROLES, has_permission},
     error::AppError,
     state::AppState,
 };
@@ -76,7 +80,9 @@ async fn actor_role(
 
     let is_owner = row.0 == Some(user_id);
     if !is_owner && row.1.is_none() {
-        return Err(AppError::Forbidden("server membership required".to_string()));
+        return Err(AppError::Forbidden(
+            "server membership required".to_string(),
+        ));
     }
 
     Ok(ActorRole {
@@ -88,7 +94,9 @@ async fn actor_role(
 
 fn ensure_manage_roles(actor: ActorRole) -> Result<(), AppError> {
     if !actor.is_owner && !has_permission(actor.permissions, PERM_MANAGE_ROLES) {
-        return Err(AppError::Forbidden("missing MANAGE_ROLES permission".to_string()));
+        return Err(AppError::Forbidden(
+            "missing MANAGE_ROLES permission".to_string(),
+        ));
     }
     Ok(())
 }
@@ -96,7 +104,9 @@ fn ensure_manage_roles(actor: ActorRole) -> Result<(), AppError> {
 fn validate_name(raw: &str) -> Result<String, AppError> {
     let name = raw.trim();
     if name.is_empty() || name.chars().count() > 50 || name.chars().any(char::is_control) {
-        return Err(AppError::BadRequest("role name must contain 1-50 printable characters".to_string()));
+        return Err(AppError::BadRequest(
+            "role name must contain 1-50 printable characters".to_string(),
+        ));
     }
     Ok(name.to_string())
 }
@@ -105,7 +115,9 @@ fn validate_color(raw: &str) -> Result<String, AppError> {
     let color = raw.trim();
     let bytes = color.as_bytes();
     if bytes.len() != 7 || bytes[0] != b'#' || !bytes[1..].iter().all(u8::is_ascii_hexdigit) {
-        return Err(AppError::BadRequest("role color must be a six-digit hex color".to_string()));
+        return Err(AppError::BadRequest(
+            "role color must be a six-digit hex color".to_string(),
+        ));
     }
     Ok(color.to_ascii_uppercase())
 }
@@ -113,16 +125,22 @@ fn validate_color(raw: &str) -> Result<String, AppError> {
 fn validate_permissions(actor: ActorRole, permissions: i64) -> Result<(), AppError> {
     let known_bits = (1_i64 << 9) - 1;
     if permissions < 0 || (permissions & !known_bits) != 0 {
-        return Err(AppError::BadRequest("role contains unknown permission bits".to_string()));
+        return Err(AppError::BadRequest(
+            "role contains unknown permission bits".to_string(),
+        ));
     }
     if !actor.is_owner && (permissions & PERM_ADMINISTRATOR) != 0 {
-        return Err(AppError::Forbidden("only the server owner can grant Administrator".to_string()));
+        return Err(AppError::Forbidden(
+            "only the server owner can grant Administrator".to_string(),
+        ));
     }
     if !actor.is_owner
         && !has_permission(actor.permissions, PERM_ADMINISTRATOR)
         && (permissions & !actor.permissions) != 0
     {
-        return Err(AppError::Forbidden("you cannot grant permissions you do not have".to_string()));
+        return Err(AppError::Forbidden(
+            "you cannot grant permissions you do not have".to_string(),
+        ));
     }
     Ok(())
 }
@@ -194,14 +212,24 @@ pub async fn update_role(
     .ok_or_else(|| AppError::NotFound("role not found".to_string()))?;
 
     if existing.is_default {
-        return Err(AppError::Forbidden("the default @everyone role cannot be edited".to_string()));
+        return Err(AppError::Forbidden(
+            "the default @everyone role cannot be edited".to_string(),
+        ));
     }
     if !actor.is_owner && existing.position >= actor.position {
-        return Err(AppError::Forbidden("you cannot manage a role at or above your highest role".to_string()));
+        return Err(AppError::Forbidden(
+            "you cannot manage a role at or above your highest role".to_string(),
+        ));
     }
 
-    let name = request.name.map(|value| validate_name(&value)).transpose()?;
-    let color = request.color.map(|value| validate_color(&value)).transpose()?;
+    let name = request
+        .name
+        .map(|value| validate_name(&value))
+        .transpose()?;
+    let color = request
+        .color
+        .map(|value| validate_color(&value))
+        .transpose()?;
     if let Some(permissions) = request.permissions {
         validate_permissions(actor, permissions)?;
     }
@@ -242,10 +270,14 @@ pub async fn delete_role(
     .ok_or_else(|| AppError::NotFound("role not found".to_string()))?;
 
     if role.1 {
-        return Err(AppError::Forbidden("the default @everyone role cannot be deleted".to_string()));
+        return Err(AppError::Forbidden(
+            "the default @everyone role cannot be deleted".to_string(),
+        ));
     }
     if !actor.is_owner && role.0 >= actor.position {
-        return Err(AppError::Forbidden("you cannot delete a role at or above your highest role".to_string()));
+        return Err(AppError::Forbidden(
+            "you cannot delete a role at or above your highest role".to_string(),
+        ));
     }
 
     sqlx::query("UPDATE community_members SET role_id = (SELECT id FROM community_roles WHERE community_id = $1 AND is_default = TRUE) WHERE community_id = $1 AND role_id = $2")
@@ -284,10 +316,14 @@ pub async fn assign_member_role(
     .ok_or_else(|| AppError::NotFound("server member not found".to_string()))?;
 
     if target.0 == Some(target_user_id) {
-        return Err(AppError::Forbidden("the server owner's role cannot be changed".to_string()));
+        return Err(AppError::Forbidden(
+            "the server owner's role cannot be changed".to_string(),
+        ));
     }
     if !actor.is_owner && target.1.unwrap_or(0) >= actor.position {
-        return Err(AppError::Forbidden("you cannot change a member with an equal or higher role".to_string()));
+        return Err(AppError::Forbidden(
+            "you cannot change a member with an equal or higher role".to_string(),
+        ));
     }
 
     let role_id = if let Some(role_id) = request.role_id {
@@ -312,23 +348,31 @@ pub async fn assign_member_role(
     .ok_or_else(|| AppError::BadRequest("role does not belong to this server".to_string()))?;
 
     if !actor.is_owner && role.position >= actor.position {
-        return Err(AppError::Forbidden("you cannot assign a role at or above your highest role".to_string()));
+        return Err(AppError::Forbidden(
+            "you cannot assign a role at or above your highest role".to_string(),
+        ));
     }
     if !actor.is_owner
         && !has_permission(actor.permissions, PERM_ADMINISTRATOR)
         && (role.permissions & !actor.permissions) != 0
     {
-        return Err(AppError::Forbidden("you cannot assign permissions you do not have".to_string()));
+        return Err(AppError::Forbidden(
+            "you cannot assign permissions you do not have".to_string(),
+        ));
     }
     if !actor.is_owner && (role.permissions & PERM_ADMINISTRATOR) != 0 {
-        return Err(AppError::Forbidden("only the server owner can assign Administrator".to_string()));
+        return Err(AppError::Forbidden(
+            "only the server owner can assign Administrator".to_string(),
+        ));
     }
 
-    sqlx::query("UPDATE community_members SET role_id = $3 WHERE community_id = $1 AND user_id = $2")
-        .bind(community_id)
-        .bind(target_user_id)
-        .bind(role.id)
-        .execute(&state.pg)
-        .await?;
+    sqlx::query(
+        "UPDATE community_members SET role_id = $3 WHERE community_id = $1 AND user_id = $2",
+    )
+    .bind(community_id)
+    .bind(target_user_id)
+    .bind(role.id)
+    .execute(&state.pg)
+    .await?;
     Ok(Json(role))
 }

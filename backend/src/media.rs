@@ -13,12 +13,7 @@ use serde::Serialize;
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
-use crate::{
-    auth::extractor::AuthUser,
-    config::AppConfig,
-    error::AppError,
-    state::AppState,
-};
+use crate::{auth::extractor::AuthUser, config::AppConfig, error::AppError, state::AppState};
 
 type HmacSha256 = Hmac<Sha256>;
 pub const MAX_CHAT_UPLOAD_BYTES: usize = 10 * 1024 * 1024;
@@ -117,7 +112,10 @@ pub fn presigned_r2_url(
 
 fn safe_file_name(raw: Option<&str>, fallback_extension: &str) -> String {
     let raw = raw.unwrap_or("attachment").trim();
-    let base = raw.rsplit(|ch| ch == '/' || ch == '\\').next().unwrap_or("attachment");
+    let base = raw
+        .rsplit(|ch| ch == '/' || ch == '\\')
+        .next()
+        .unwrap_or("attachment");
     let cleaned = base
         .chars()
         .map(|ch| {
@@ -130,7 +128,10 @@ fn safe_file_name(raw: Option<&str>, fallback_extension: &str) -> String {
         .take(120)
         .collect::<String>();
     let cleaned = cleaned.trim_matches(|ch| matches!(ch, '.' | '_' | '-'));
-    let stem = cleaned.rsplit_once('.').map(|(stem, _)| stem).unwrap_or(cleaned);
+    let stem = cleaned
+        .rsplit_once('.')
+        .map(|(stem, _)| stem)
+        .unwrap_or(cleaned);
     let stem = stem.trim_matches(|ch| matches!(ch, '.' | '_' | '-'));
     if stem.is_empty() {
         format!("attachment.{fallback_extension}")
@@ -150,11 +151,17 @@ fn allowed_media_type(mime: &str) -> Option<(&'static str, &'static str)> {
         "text/csv" => Some(("file", "csv")),
         "application/zip" => Some(("file", "zip")),
         "application/msword" => Some(("file", "doc")),
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => Some(("file", "docx")),
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" => {
+            Some(("file", "docx"))
+        }
         "application/vnd.ms-excel" => Some(("file", "xls")),
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => Some(("file", "xlsx")),
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" => {
+            Some(("file", "xlsx"))
+        }
         "application/vnd.ms-powerpoint" => Some(("file", "ppt")),
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation" => Some(("file", "pptx")),
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation" => {
+            Some(("file", "pptx"))
+        }
         _ => None,
     }
 }
@@ -206,14 +213,18 @@ pub async fn upload(
         return Err(AppError::BadRequest("uploaded file is empty".to_string()));
     }
     if body.len() > MAX_CHAT_UPLOAD_BYTES {
-        return Err(AppError::PayloadTooLarge("chat uploads are limited to 10 MB".to_string()));
+        return Err(AppError::PayloadTooLarge(
+            "chat uploads are limited to 10 MB".to_string(),
+        ));
     }
 
     let channel_id = headers
         .get("x-channel-id")
         .and_then(|value| value.to_str().ok())
         .and_then(|value| Uuid::parse_str(value).ok())
-        .ok_or_else(|| AppError::BadRequest("channel id is required for chat uploads".to_string()))?;
+        .ok_or_else(|| {
+            AppError::BadRequest("channel id is required for chat uploads".to_string())
+        })?;
     crate::chat::repo::channel_access(
         &state,
         channel_id,
@@ -240,20 +251,27 @@ pub async fn upload(
         "image/gif" => body.starts_with(b"GIF87a") || body.starts_with(b"GIF89a"),
         "image/webp" => body.get(8..12) == Some(&b"WEBP"[..]) && body.starts_with(b"RIFF"),
         "application/pdf" => body.starts_with(b"%PDF-"),
-        "application/zip" | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "application/zip"
+        | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        | "application/vnd.openxmlformats-officedocument.presentationml.presentation" =>
-            body.starts_with(b"PK\x03\x04"),
-        "application/msword" | "application/vnd.ms-excel" | "application/vnd.ms-powerpoint" =>
-            body.starts_with(&[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]),
+        | "application/vnd.openxmlformats-officedocument.presentationml.presentation" => {
+            body.starts_with(b"PK\x03\x04")
+        }
+        "application/msword" | "application/vnd.ms-excel" | "application/vnd.ms-powerpoint" => {
+            body.starts_with(&[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1])
+        }
         "text/plain" | "text/csv" => !body.contains(&0),
         _ => false,
     };
     if !signature_ok {
-        return Err(AppError::BadRequest("file contents do not match the selected file type".to_string()));
+        return Err(AppError::BadRequest(
+            "file contents do not match the selected file type".to_string(),
+        ));
     }
 
-    let raw_name = headers.get("x-file-name").and_then(|value| value.to_str().ok());
+    let raw_name = headers
+        .get("x-file-name")
+        .and_then(|value| value.to_str().ok());
     let file_name = safe_file_name(raw_name, extension);
     let media_id = Uuid::now_v7();
     let object_key = format!("chat/{}/{}.{}", auth.user_id, media_id, extension);
@@ -274,8 +292,7 @@ pub async fn upload(
         });
     }
 
-    let size_bytes = i64::try_from(body.len())
-        .map_err(|error| AppError::Internal(error.into()))?;
+    let size_bytes = i64::try_from(body.len()).map_err(|error| AppError::Internal(error.into()))?;
     sqlx::query(
         "INSERT INTO media_assets
          (id, uploader_id, kind, purpose, status, r2_key, mime_type, size_bytes, ready_at, file_name)
@@ -300,5 +317,8 @@ pub async fn upload(
         object_key,
     )?;
 
-    Ok((StatusCode::CREATED, Json(MediaUploadResponse { attachment })))
+    Ok((
+        StatusCode::CREATED,
+        Json(MediaUploadResponse { attachment }),
+    ))
 }
