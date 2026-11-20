@@ -1617,6 +1617,10 @@ dialog.bot-reveal-modal {
   display: flex;
   width: 224px;
   max-width: calc(100% - 18px);
+  max-height: calc(100vh - 100px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   flex-direction: column;
   gap: 2px;
   padding: 6px;

@@ -1422,6 +1422,7 @@ export function WorkspacePage({
           onCreateChannelModal={() => {
             setModal('channel')
             setModalValue('')
+            setSelectedChannelCategoryId('')
           }}
           onNewDmModal={() => {
             setModal('dm')
@@ -1976,6 +1977,7 @@ export function WorkspacePage({
           onClose={() => {
             setModal(null)
             setModalValue('')
+            setSelectedChannelCategoryId('')
           }}
         />
       )}
