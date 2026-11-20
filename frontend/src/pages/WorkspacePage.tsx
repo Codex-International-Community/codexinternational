@@ -958,7 +958,7 @@ export function WorkspacePage({
           ? {
               ...item,
               name: updated.name,
-              abbr: updated.name.split(/\\s+/).map((part) => part[0] ?? '').join('').slice(0, 3).toUpperCase(),
+              abbr: updated.name.split(/\s+/).map((part) => part[0] ?? '').join('').slice(0, 3).toUpperCase(),
             }
           : item),
       }))
