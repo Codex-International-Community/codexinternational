@@ -435,3 +435,6 @@ codexinternational/
 - [x] **30-Day Audit Logs (`GET /api/v1/dev/audit-logs`, `GET /api/v1/communities/{id}/audit-logs`):**
   - Semua log otomatis expire setelah 30 hari (`expires_at = NOW() + INTERVAL '30 days'`).
   - Member server bisa melihat log server mereka sendiri; sesama `dev` bisa melihat seluruh shared logs.
+- [ ] **Admin Panel (On-Duty Only) & Broadcast Log:**
+  - Buat Admin Panel di frontend yang hanya aktif/terbuka saat `dev` sedang dalam status **On Duty**.
+  - Saat satu `dev` mengaktifkan **On Duty**, sistem memicu **log broadcast** real-time (beserta `reason`) ke semua akun ber-role `dev` dan ke server (`community_id`) yang sedang dikunjungi/di-intercept.
