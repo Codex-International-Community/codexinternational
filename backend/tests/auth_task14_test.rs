@@ -214,7 +214,7 @@ async fn test_inv15_bot_approval_and_token_auth_lifecycle() {
     let owner_device_id = Uuid::now_v7();
     let dev_device_id = Uuid::now_v7();
 
-    sqlx::query("INSERT INTO user_devices (id, user_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')")
+    sqlx::query("INSERT INTO user_devices (id, user_id, platform, refresh_token_hash, expires_at) VALUES ($1, $2, 'web', $3, NOW() + INTERVAL '7 days')")
         .bind(owner_device_id)
         .bind(owner_id)
         .bind(format!("hash_own_{tag}"))
@@ -222,7 +222,7 @@ async fn test_inv15_bot_approval_and_token_auth_lifecycle() {
         .await
         .unwrap();
 
-    sqlx::query("INSERT INTO user_devices (id, user_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')")
+    sqlx::query("INSERT INTO user_devices (id, user_id, platform, refresh_token_hash, expires_at) VALUES ($1, $2, 'web', $3, NOW() + INTERVAL '7 days')")
         .bind(dev_device_id)
         .bind(dev_id)
         .bind(format!("hash_dev_{tag}"))
