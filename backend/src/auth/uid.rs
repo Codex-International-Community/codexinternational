@@ -253,6 +253,36 @@ pub async fn assign_reserved_uid(
         ));
     }
 
+    if auth.user_id != target_user_id {
+        let actor_badge: Option<String> =
+            sqlx::query_scalar("SELECT platform_badge FROM users WHERE id = $1")
+                .bind(auth.user_id)
+                .fetch_optional(&state.pg)
+                .await?
+                .flatten();
+        let target_row: Option<(String, Option<String>)> =
+            sqlx::query_as("SELECT platform_role, platform_badge FROM users WHERE id = $1")
+                .bind(target_user_id)
+                .fetch_optional(&state.pg)
+                .await?;
+        if let Some((target_role, target_badge)) = target_row {
+            let actor_w = crate::auth::dev_governance::platform_weight(
+                &auth.platform_role,
+                actor_badge.as_deref(),
+            );
+            let target_w = crate::auth::dev_governance::platform_weight(
+                &target_role,
+                target_badge.as_deref(),
+            );
+            if target_w >= actor_w {
+                return Err(AppError::Forbidden(
+                    "cannot modify a platform user with equal or higher hierarchy weight"
+                        .to_string(),
+                ));
+            }
+        }
+    }
+
     let next_platform_role = match req.platform_role.as_deref() {
         Some(r) => {
             let trimmed = r.trim();

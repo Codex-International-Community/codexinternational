@@ -2,6 +2,7 @@
 //! OAuth2 (GitHub/Google), extractors, and routes.
 
 pub mod bots;
+pub mod dev_governance;
 pub mod devices;
 pub mod extractor;
 pub mod handlers;

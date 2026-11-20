@@ -422,3 +422,16 @@ codexinternational/
   3. **Green:** Implementasikan `PterodactylClient` (`reqwest`, `Authorization: Bearer <PTERODACTYL_APP_KEY>`) untuk `POST /api/application/servers`, `POST /api/application/servers/{id}/suspend`, `unsuspend`, dan `DELETE /api/application/servers/{id}`, plus injeksi env `CODEXTER_BOT_TOKEN` & `CODEXTER_BOT_ID` langsung ke container saat pembuatan.
 - **DoD:**
   - [ ] Node Wings berada di VPS terpisah dengan isolasi network (blokir loopback/IP privat/metadata `169.254.169.254`) serta limit CPU/RAM/Disk/PID aktif, dan seluruh test `pterodactyl_test` lulus.
+
+---
+
+## Platform Governance, On-Duty Mode & 30-Day Audit Logs
+
+- [x] **Platform Badge & Hierarchy Weighting (`backend/src/auth/dev_governance.rs`, `backend/src/auth/uid.rs`):**
+  - Kolom `users.platform_badge` (`Founder` 100 > `Vice Founder` 80 > `Senior Admin` 60 > `Admin` 40 > `Moderator` 20 > `dev` 10).
+  - `assign_reserved_uid` memblokir `dev` dengan bobot lebih rendah/setara agar tidak bisa memodifikasi akun dengan bobot lebih tinggi.
+- [x] **Dev On-Duty Server Intercept (`POST /api/v1/dev/on-duty/start`, `POST /api/v1/dev/on-duty/stop`):**
+  - Mode On-Duty sementara (default 60 menit, max 240 menit) per `community_id` dengan `reason` wajib.
+- [x] **30-Day Audit Logs (`GET /api/v1/dev/audit-logs`, `GET /api/v1/communities/{id}/audit-logs`):**
+  - Semua log otomatis expire setelah 30 hari (`expires_at = NOW() + INTERVAL '30 days'`).
+  - Member server bisa melihat log server mereka sendiri; sesama `dev` bisa melihat seluruh shared logs.
