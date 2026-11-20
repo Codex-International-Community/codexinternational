@@ -32,11 +32,9 @@ export interface MessageAck {
 
 export function mapChatMessage(wire: ChatMessageWire, currentUserId: string): Message {
   const authorId = wire.authorId ?? wire.senderId ?? ''
-  const time = wire.time ?? (
-    wire.createdAt
-      ? new Date(wire.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      : ''
-  )
+  const time = wire.createdAt
+    ? new Date(wire.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    : wire.time ?? ''
 
   return {
     id: wire.id,

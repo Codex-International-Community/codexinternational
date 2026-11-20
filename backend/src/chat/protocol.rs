@@ -28,14 +28,14 @@ pub struct MessageStreamRecord{
 #[serde(rename_all="camelCase")]
 pub struct ClientMessage{
  pub id:String,pub channel_id:String,pub seq_id:i64,pub client_msg_id:String,pub author_id:String,
- pub author:String,pub initials:String,pub tone:String,pub time:String,pub text:String,pub reactions:Value,
+ pub author:String,pub initials:String,pub tone:String,pub time:String,pub created_at:DateTime<Utc>,pub text:String,pub reactions:Value,
  #[serde(skip_serializing_if="Option::is_none")]pub reply_to:Option<String>,pub edited:bool
 }
 impl From<MessageStreamRecord> for ClientMessage{
  fn from(m:MessageStreamRecord)->Self{Self{
   id:m.id.to_string(),channel_id:m.channel_id.to_string(),seq_id:m.seq_id,client_msg_id:m.client_msg_id.to_string(),
   author_id:m.sender_id.to_string(),author:m.author,initials:m.initials,tone:"member".into(),
-  time:m.created_at.format("%H:%M").to_string(),text:m.content.unwrap_or_default(),
+  time:m.created_at.format("%H:%M").to_string(),created_at:m.created_at,text:m.content.unwrap_or_default(),
   reactions:serde_json::json!({}),reply_to:m.reply_to_id.map(|id|id.to_string()),edited:false
  }}
 }

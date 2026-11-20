@@ -85,7 +85,7 @@ pub async fn history(state:&AppState,channel:Uuid,after:i64,limit:i64)->Result<V
  .bind(channel).bind(after.max(0)).bind(n).fetch_all(&state.pg).await?;
  let mut out=rows.into_iter().map(|r|{
   let author_id=r.sender_id.unwrap_or(Uuid::nil());let initials=r.author.split_whitespace().filter_map(|p|p.chars().next()).take(2).collect::<String>().to_uppercase();
-  ClientMessage{id:r.id.to_string(),channel_id:r.channel_id.to_string(),seq_id:r.seq_id,client_msg_id:r.client_msg_id.to_string(),author_id:author_id.to_string(),author:r.author,initials,tone:"member".into(),time:r.created_at.format("%H:%M").to_string(),text:r.content.unwrap_or_default(),reactions:serde_json::json!({}),reply_to:r.reply_to_id.map(|id|id.to_string()),edited:r.edited_at.is_some()}
+  ClientMessage{id:r.id.to_string(),channel_id:r.channel_id.to_string(),seq_id:r.seq_id,client_msg_id:r.client_msg_id.to_string(),author_id:author_id.to_string(),author:r.author,initials,tone:"member".into(),time:r.created_at.format("%H:%M").to_string(),created_at:r.created_at,text:r.content.unwrap_or_default(),reactions:serde_json::json!({}),reply_to:r.reply_to_id.map(|id|id.to_string()),edited:r.edited_at.is_some()}
  }).collect::<Vec<_>>();
  let tail:Result<Vec<(String,HashMap<String,String>)>,_>=state.valkey.xrange_values(MESSAGE_STREAM,"-","+",Some(1000)).await;
  if let Ok(entries)=tail{

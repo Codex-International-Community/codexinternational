@@ -297,6 +297,7 @@ export function WorkspacePage({
   const messageInputRef = useRef<HTMLInputElement>(null)
   const chatSocketRef = useRef<WebSocket | null>(null)
   const chatSocketReadyRef = useRef(false)
+  const sendingMessageRef = useRef(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const feedRef = useRef<HTMLDivElement>(null)
   const socialInputRef = useRef<HTMLTextAreaElement>(null)
@@ -629,9 +630,16 @@ export function WorkspacePage({
         const current = view === 'dm'
           ? previous.dmMessages[activeChatChannelId] ?? []
           : previous.messages[scopeKey] ?? []
-        const byId = new Map(current.map((message) => [message.id, message]))
-        for (const message of mapped) byId.set(message.id, message)
-        const nextMessages = [...byId.values()].sort((a, b) => (a.seqId ?? 0) - (b.seqId ?? 0))
+        // A sequence number is unique within a channel. Use it to collapse replayed
+        // history/PubSub deliveries even when the wire payload IDs differ.
+        const bySequence = new Map<string, Message>()
+        for (const message of [...current, ...mapped]) {
+          const identity = message.seqId && message.seqId > 0
+            ? `seq:${message.seqId}`
+            : `id:${message.id}`
+          bySequence.set(identity, message)
+        }
+        const nextMessages = [...bySequence.values()].sort((a, b) => (a.seqId ?? 0) - (b.seqId ?? 0))
         return view === 'dm'
           ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: nextMessages } }
           : { ...previous, messages: { ...previous.messages, [scopeKey]: nextMessages } }
@@ -1002,6 +1010,8 @@ export function WorkspacePage({
       return
     }
 
+    if (sendingMessageRef.current) return
+    sendingMessageRef.current = true
     const clientMessageId = crypto.randomUUID()
     try {
       // Use the acknowledged HTTP path for sends. The WebSocket is the live
@@ -1017,9 +1027,14 @@ export function WorkspacePage({
         const current = view === 'dm'
           ? previous.dmMessages[activeChatChannelId] ?? []
           : previous.messages[key] ?? []
-        const byId = new Map(current.map((message) => [message.id, message]))
-        for (const message of persisted) byId.set(message.id, message)
-        const next = [...byId.values()].sort((a, b) => (a.seqId ?? 0) - (b.seqId ?? 0))
+        const bySequence = new Map<string, Message>()
+        for (const message of [...current, ...persisted]) {
+          const identity = message.seqId && message.seqId > 0
+            ? `seq:${message.seqId}`
+            : `id:${message.id}`
+          bySequence.set(identity, message)
+        }
+        const next = [...bySequence.values()].sort((a, b) => (a.seqId ?? 0) - (b.seqId ?? 0))
         return view === 'dm'
           ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next } }
           : { ...previous, messages: { ...previous.messages, [key]: next } }
@@ -1029,6 +1044,8 @@ export function WorkspacePage({
       setReplyTo(null)
     } catch (error) {
       notify(error instanceof Error ? error.message : 'Message could not be sent.')
+    } finally {
+      sendingMessageRef.current = false
     }
   }
 
