@@ -228,9 +228,8 @@ pub async fn create_channel(
                 position: next_position,
                 category_id: request.category_id,
                 category_name: if let Some(category_id) = request.category_id {
-                    sqlx::query_scalar::<_, String>("SELECT name FROM community_categories WHERE id = $1")
-                        .bind(category_id).fetch_one(&state.pg).await?
-                        .into()
+                    Some(sqlx::query_scalar::<_, String>("SELECT name FROM community_categories WHERE id = $1")
+                        .bind(category_id).fetch_one(&state.pg).await?)
                 } else { None },
                 is_private: request.is_private,
                 last_seq_id: 0,

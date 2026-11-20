@@ -330,6 +330,7 @@ export function ChannelSidebar({
                       <Icon name="hash" size={16} /><span>{channel.name}</span>
                     </button>
                   ))}
+                  {group.channels.length === 0 && <p className="sidebar-empty">No channels yet.</p>}
                 </div>
               ))}
               {textChannels.length === 0 && <p className="sidebar-empty">No text channels yet.</p>}

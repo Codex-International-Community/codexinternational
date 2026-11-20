@@ -3,6 +3,7 @@ import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
 import { useModalDialog } from '../../hooks/useModalDialog'
 import type { User } from '../../types/chat'
+import type { CommunityCategory } from '../../api/communities'
 
 export type ActionModalType = 'server' | 'channel' | 'dm' | 'invite'
 
@@ -10,6 +11,9 @@ interface ActionModalProps {
   type: ActionModalType
   value: string
   people: User[]
+  categories: CommunityCategory[]
+  selectedCategoryId: string
+  onChangeCategoryId: (value: string) => void
   serverError?: string
   creatingServer?: boolean
   onChangeValue: (val: string) => void
@@ -24,6 +28,9 @@ export function ActionModal({
   type,
   value,
   people,
+  categories,
+  selectedCategoryId,
+  onChangeCategoryId,
   serverError = '',
   creatingServer = false,
   onChangeValue,
@@ -301,7 +308,22 @@ export function ActionModal({
                   onChange={(event) => onChangeValue(event.target.value)}
                   placeholder={placeholder}
                 />
-
+                {type === 'channel' && categories.length > 0 && (
+                  <>
+                    <label htmlFor="channel-category-select">CATEGORY</label>
+                    <select
+                      id="channel-category-select"
+                      className="modal-input"
+                      value={selectedCategoryId}
+                      onChange={(event) => onChangeCategoryId(event.target.value)}
+                    >
+                      <option value="">No category</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>{category.name}</option>
+                      ))}
+                    </select>
+                  </>
+                )}
               </>
             )}
 

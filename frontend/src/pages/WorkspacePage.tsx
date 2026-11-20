@@ -290,6 +290,7 @@ export function WorkspacePage({
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState<ActionModalType | 'call' | null>(null)
   const [modalValue, setModalValue] = useState('')
+  const [selectedChannelCategoryId, setSelectedChannelCategoryId] = useState('')
   const [serverCreateError, setServerCreateError] = useState('')
   const [serverCreating, setServerCreating] = useState(false)
   const [toast, setToast] = useState('')
@@ -1153,7 +1154,11 @@ export function WorkspacePage({
       const joined = await joinCommunity(inviteCode)
       const community = (await listCommunities()).find((item) => item.id === joined.community_id)
       if (!community) throw new Error('Joined, but the community could not be loaded.')
-      const rows = await listChannels(community.id)
+      const [rows, categories] = await Promise.all([
+        listChannels(community.id),
+        listCommunityCategories(community.id),
+      ])
+      setCommunityCategories((previous) => ({ ...previous, [community.id]: categories }))
       const server = {
         id: community.id,
         name: community.name,
@@ -1895,6 +1900,9 @@ export function WorkspacePage({
           type={modal}
           value={modalValue}
           people={people}
+          categories={communityCategories[serverId] ?? []}
+          selectedCategoryId={selectedChannelCategoryId}
+          onChangeCategoryId={setSelectedChannelCategoryId}
           serverError={modal === 'server' ? serverCreateError : ''}
           creatingServer={modal === 'server' && serverCreating}
           onChangeValue={(value) => {
@@ -1931,7 +1939,10 @@ export function WorkspacePage({
               }
               void (async () => {
                 try {
-                  const result = await createChannelApi(server.id, { name: modalValue.trim() })
+                  const result = await createChannelApi(server.id, {
+                    name: modalValue.trim(),
+                    category_id: selectedChannelCategoryId || null,
+                  })
                   const created = result.channel
                   setData((previous) => ({
                     ...previous,
