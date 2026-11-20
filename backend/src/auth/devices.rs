@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 use axum::{Json, extract::State, http::StatusCode};
 use chrono::{DateTime, Duration, Utc};
+use fred::interfaces::KeysInterface;
 use serde::Deserialize;
 use sqlx::FromRow;
 use uuid::Uuid;
@@ -140,6 +141,24 @@ pub async fn logout(
     .execute(&state.pg)
     .await?;
 
+    // Invalidate session valid-cache and mark as revoked so bearer tokens for this device
+    // are rejected immediately on the next request (AUTH-01).
+    if state.valkey_initialized {
+        let valid_key = format!("session:valid:{}", auth.device_id);
+        let revoked_key = format!("session:revoked:{}", auth.device_id);
+        let _ = state.valkey.del::<i64, _>(&valid_key).await;
+        let _ = state
+            .valkey
+            .set::<(), _, _>(
+                &revoked_key,
+                "1",
+                Some(fred::types::Expiration::EX(900)),
+                None,
+                false,
+            )
+            .await;
+    }
+
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -207,6 +226,14 @@ pub async fn register_fcm(
 }
 
 async fn revoke_all_user_devices(state: &AppState, user_id: Uuid) -> Result<(), AppError> {
+    // Fetch all active device IDs before revoking so we can clear their Valkey caches (AUTH-01).
+    let device_ids: Vec<Uuid> =
+        sqlx::query_scalar("SELECT id FROM user_devices WHERE user_id = $1 AND revoked_at IS NULL")
+            .bind(user_id)
+            .fetch_all(&state.pg)
+            .await
+            .unwrap_or_default();
+
     sqlx::query(
         "UPDATE user_devices
          SET revoked_at = NOW(), fcm_token = NULL
@@ -215,5 +242,24 @@ async fn revoke_all_user_devices(state: &AppState, user_id: Uuid) -> Result<(), 
     .bind(user_id)
     .execute(&state.pg)
     .await?;
+
+    if state.valkey_initialized && !device_ids.is_empty() {
+        for device_id in device_ids {
+            let valid_key = format!("session:valid:{device_id}");
+            let revoked_key = format!("session:revoked:{device_id}");
+            let _ = state.valkey.del::<i64, _>(&valid_key).await;
+            let _ = state
+                .valkey
+                .set::<(), _, _>(
+                    &revoked_key,
+                    "1",
+                    Some(fred::types::Expiration::EX(900)),
+                    None,
+                    false,
+                )
+                .await;
+        }
+    }
+
     Ok(())
 }

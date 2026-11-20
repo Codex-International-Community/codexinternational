@@ -144,10 +144,12 @@ pub struct AppConfig {
     pub r2_access_key_id: SecretString,
     pub r2_secret_access_key: SecretString,
     pub r2_bucket_name: String,
+    pub r2_public_base_url: String,
     pub aws_lambda_video_fn: String,
     pub msg_flush_interval_ms: u64,
     pub counter_flush_interval_ms: u64,
     pub cors_allowed_origins: Vec<String>,
+    pub trusted_proxies: Vec<String>,
     pub worker_roles: WorkerRoles,
 }
 
@@ -248,6 +250,7 @@ impl AppConfig {
             r2_access_key_id: SecretString::new(get_or("R2_ACCESS_KEY_ID", "")),
             r2_secret_access_key: SecretString::new(get_or("R2_SECRET_ACCESS_KEY", "")),
             r2_bucket_name: get_or("R2_BUCKET_NAME", "codexter-media"),
+            r2_public_base_url: get_or("R2_PUBLIC_BASE_URL", ""),
             aws_lambda_video_fn: get_or("AWS_LAMBDA_VIDEO_FN", "codexter-video-compressor"),
             msg_flush_interval_ms: parse_u64("MSG_FLUSH_INTERVAL_MS", 250)?,
             counter_flush_interval_ms: parse_u64("COUNTER_FLUSH_INTERVAL_MS", 500)?,
@@ -263,6 +266,11 @@ impl AppConfig {
             .map(|s| s.trim().trim_end_matches('/').to_string())
             .filter(|s| !s.is_empty())
             .collect(),
+            trusted_proxies: get_or("TRUSTED_PROXIES", "127.0.0.1,::1")
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
             worker_roles,
         };
 

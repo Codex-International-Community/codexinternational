@@ -9,6 +9,7 @@ use axum::{
     extract::{Path, State},
 };
 use chrono::{DateTime, Utc};
+use fred::interfaces::KeysInterface;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
@@ -131,6 +132,16 @@ pub async fn set_or_change_password(
 
     if had_password {
         // Revoke other active device sessions when changing an existing password.
+        // Also clear Valkey session caches for each revoked device (AUTH-01).
+        let revoked_ids: Vec<Uuid> = sqlx::query_scalar(
+            "SELECT id FROM user_devices WHERE user_id = $1 AND id <> $2 AND revoked_at IS NULL",
+        )
+        .bind(auth.user_id)
+        .bind(auth.device_id)
+        .fetch_all(&mut *tx)
+        .await
+        .unwrap_or_default();
+
         sqlx::query(
             "UPDATE user_devices
              SET revoked_at = NOW(), fcm_token = NULL
@@ -140,6 +151,24 @@ pub async fn set_or_change_password(
         .bind(auth.device_id)
         .execute(&mut *tx)
         .await?;
+
+        if state.valkey_initialized {
+            for device_id in revoked_ids {
+                let valid_key = format!("session:valid:{device_id}");
+                let revoked_key = format!("session:revoked:{device_id}");
+                let _ = state.valkey.del::<i64, _>(&valid_key).await;
+                let _ = state
+                    .valkey
+                    .set::<(), _, _>(
+                        &revoked_key,
+                        "1",
+                        Some(fred::types::Expiration::EX(900)),
+                        None,
+                        false,
+                    )
+                    .await;
+            }
+        }
     }
 
     tx.commit().await?;

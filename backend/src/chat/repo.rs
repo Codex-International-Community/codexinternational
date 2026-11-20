@@ -63,6 +63,10 @@ struct MessageRow {
     edited_at: Option<DateTime<Utc>>,
     author: String,
     role: Option<String>,
+    media_file_name: Option<String>,
+    media_mime_type: Option<String>,
+    media_size_bytes: Option<i64>,
+    media_r2_key: Option<String>,
 }
 #[derive(Debug, Deserialize)]
 pub struct SendMessageInput {
@@ -219,8 +223,15 @@ pub async fn history(
 ) -> Result<Vec<ClientMessage>, AppError> {
     let n = limit.clamp(1, 100);
     let rows=sqlx::query_as::<_,MessageRow>(
- "SELECT m.id,m.channel_id,m.seq_id,m.client_msg_id,m.sender_id,m.content,m.media_id,m.reply_to_id,m.created_at,m.edited_at,COALESCE(u.display_name,'Deleted user') AS author,r.name AS role
- FROM messages m LEFT JOIN users u ON u.id=m.sender_id LEFT JOIN channels ch ON ch.id=m.channel_id LEFT JOIN community_members cm ON cm.community_id=ch.community_id AND cm.user_id=m.sender_id LEFT JOIN community_roles r ON r.id=cm.role_id WHERE m.channel_id=$1 AND m.seq_id>$2 AND m.deleted_at IS NULL ORDER BY m.seq_id ASC LIMIT $3")
+ "SELECT m.id,m.channel_id,m.seq_id,m.client_msg_id,m.sender_id,m.content,m.media_id,m.reply_to_id,m.created_at,m.edited_at,COALESCE(u.display_name,'Deleted user') AS author,r.name AS role,
+         ma.file_name AS media_file_name,ma.mime_type AS media_mime_type,COALESCE(ma.size_bytes,0) AS media_size_bytes,ma.r2_key AS media_r2_key
+ FROM messages m
+ LEFT JOIN users u ON u.id=m.sender_id
+ LEFT JOIN channels ch ON ch.id=m.channel_id
+ LEFT JOIN community_members cm ON cm.community_id=ch.community_id AND cm.user_id=m.sender_id
+ LEFT JOIN community_roles r ON r.id=cm.role_id
+ LEFT JOIN media_assets ma ON ma.id=m.media_id AND ma.purpose='chat' AND ma.status='READY'
+ WHERE m.channel_id=$1 AND m.seq_id>$2 AND m.deleted_at IS NULL ORDER BY m.seq_id ASC LIMIT $3")
  .bind(channel).bind(after.max(0)).bind(n).fetch_all(&state.pg).await?;
     let mut out = Vec::with_capacity(rows.len());
     for r in rows {
@@ -232,10 +243,23 @@ pub async fn history(
             .take(2)
             .collect::<String>()
             .to_uppercase();
-        let attachment = if let Some(media_id) = r.media_id {
-            crate::media::attachment_for(state, media_id).await?
-        } else {
-            None
+        let attachment = match (
+            r.media_id,
+            r.media_file_name,
+            r.media_mime_type,
+            r.media_r2_key,
+        ) {
+            (Some(media_id), Some(name), Some(mime), Some(key)) => {
+                Some(crate::media::attachment_from_record(
+                    &state.config,
+                    media_id,
+                    name,
+                    mime,
+                    r.media_size_bytes.unwrap_or(0),
+                    key,
+                )?)
+            }
+            _ => None,
         };
         out.push(ClientMessage {
             id: r.id.to_string(),

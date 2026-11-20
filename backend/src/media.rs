@@ -4,12 +4,12 @@ use std::sync::Arc;
 use axum::{
     Json,
     body::Bytes,
-    extract::State,
+    extract::{Path, State},
     http::{HeaderMap, StatusCode, header::CONTENT_TYPE},
 };
 use chrono::Utc;
 use hmac::{Hmac, Mac};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use uuid::Uuid;
 
@@ -17,6 +17,8 @@ use crate::{auth::extractor::AuthUser, config::AppConfig, error::AppError, state
 
 type HmacSha256 = Hmac<Sha256>;
 pub const MAX_CHAT_UPLOAD_BYTES: usize = 10 * 1024 * 1024;
+static HTTP_CLIENT: std::sync::LazyLock<reqwest::Client> =
+    std::sync::LazyLock::new(reqwest::Client::new);
 
 #[derive(Debug, Clone, Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -112,10 +114,7 @@ pub fn presigned_r2_url(
 
 fn safe_file_name(raw: Option<&str>, fallback_extension: &str) -> String {
     let raw = raw.unwrap_or("attachment").trim();
-    let base = raw
-        .rsplit(['/', '\\'])
-        .next()
-        .unwrap_or("attachment");
+    let base = raw.rsplit(['/', '\\']).next().unwrap_or("attachment");
     let cleaned = base
         .chars()
         .map(|ch| {
@@ -166,6 +165,32 @@ fn allowed_media_type(mime: &str) -> Option<(&'static str, &'static str)> {
     }
 }
 
+pub fn generate_r2_key(
+    purpose: &str,
+    user_id: Uuid,
+    media_id: Uuid,
+    kind: &str,
+    extension: &str,
+) -> String {
+    let now = Utc::now();
+    let yyyy = now.format("%Y");
+    let mm = now.format("%m");
+    match purpose {
+        "avatar" => format!("compressed/avatars/{user_id}/{media_id}.{extension}"),
+        "community_icon" => format!("compressed/icons/{user_id}/{media_id}.{extension}"),
+        "chat" | "story" | "contribution" => {
+            if kind == "video" {
+                format!("raw/videos/{yyyy}/{mm}/{media_id}.{extension}")
+            } else if kind == "image" {
+                format!("compressed/images/{yyyy}/{mm}/{media_id}.{extension}")
+            } else {
+                format!("attachments/{user_id}/{yyyy}/{mm}/{media_id}.{extension}")
+            }
+        }
+        _ => format!("attachments/{user_id}/{yyyy}/{mm}/{media_id}.{extension}"),
+    }
+}
+
 pub fn attachment_from_record(
     config: &AppConfig,
     id: Uuid,
@@ -174,7 +199,15 @@ pub fn attachment_from_record(
     size_bytes: i64,
     r2_key: String,
 ) -> Result<ChatAttachment, AppError> {
-    let url = presigned_r2_url(config, "GET", &r2_key, 86_400)?;
+    let url = if !config.r2_public_base_url.trim().is_empty() {
+        format!(
+            "{}/{}",
+            config.r2_public_base_url.trim_end_matches('/'),
+            r2_key.trim_start_matches('/')
+        )
+    } else {
+        presigned_r2_url(config, "GET", &r2_key, 3_600)?
+    };
     Ok(ChatAttachment {
         id: id.to_string(),
         name,
@@ -269,18 +302,19 @@ pub async fn upload(
         ));
     }
 
+    let size_bytes = i64::try_from(body.len()).map_err(|error| AppError::Internal(error.into()))?;
     let raw_name = headers
         .get("x-file-name")
         .and_then(|value| value.to_str().ok());
     let file_name = safe_file_name(raw_name, extension);
     let media_id = Uuid::now_v7();
-    let object_key = format!("chat/{}/{}.{}", auth.user_id, media_id, extension);
+    let object_key = generate_r2_key("chat", auth.user_id, media_id, kind, extension);
     let upload_url = presigned_r2_url(&state.config, "PUT", &object_key, 900)?;
 
-    let response = reqwest::Client::new()
+    let response = HTTP_CLIENT
         .put(upload_url)
         .header(CONTENT_TYPE, mime_type.as_str())
-        .body(body.clone())
+        .body(body)
         .send()
         .await
         .map_err(|error| AppError::Internal(error.into()))?;
@@ -291,8 +325,6 @@ pub async fn upload(
             message: "File could not be saved to media storage".to_string(),
         });
     }
-
-    let size_bytes = i64::try_from(body.len()).map_err(|error| AppError::Internal(error.into()))?;
     sqlx::query(
         "INSERT INTO media_assets
          (id, uploader_id, kind, purpose, status, r2_key, mime_type, size_bytes, ready_at, file_name)
@@ -321,4 +353,209 @@ pub async fn upload(
         StatusCode::CREATED,
         Json(MediaUploadResponse { attachment }),
     ))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PresignMediaRequest {
+    #[serde(default = "default_chat_purpose")]
+    pub purpose: String,
+    pub channel_id: Option<Uuid>,
+    pub file_name: String,
+    pub mime_type: String,
+    pub size_bytes: i64,
+    #[serde(default)]
+    pub bypass_compress: bool,
+}
+
+fn default_chat_purpose() -> String {
+    "chat".to_string()
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PresignMediaResponse {
+    pub media_id: Uuid,
+    pub upload_url: String,
+    pub method: &'static str,
+    pub object_key: String,
+    pub max_bytes: i64,
+}
+
+pub async fn presign(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    Json(req): Json<PresignMediaRequest>,
+) -> Result<Json<PresignMediaResponse>, AppError> {
+    if req.purpose == "chat" {
+        let channel_id = req.channel_id.ok_or_else(|| {
+            AppError::BadRequest("channel_id is required for chat uploads".to_string())
+        })?;
+        crate::chat::repo::channel_access(
+            &state,
+            channel_id,
+            auth.user_id,
+            crate::communities::permissions::PERM_SEND_MESSAGES,
+            true,
+        )
+        .await?;
+    }
+
+    let mime_type = req
+        .mime_type
+        .split(';')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
+
+    let (kind, extension) = allowed_media_type(&mime_type).ok_or_else(|| {
+        AppError::BadRequest(
+            "file type is not supported. Use JPG, PNG, GIF, WEBP, PDF, TXT, CSV, ZIP, DOC/DOCX, XLS/XLSX or PPT/PPTX".to_string(),
+        )
+    })?;
+
+    let max_bytes: i64 = match kind {
+        "image" => 5 * 1024 * 1024,
+        "video" => 50 * 1024 * 1024,
+        _ => 10 * 1024 * 1024,
+    };
+
+    if req.size_bytes <= 0 || req.size_bytes > max_bytes {
+        return Err(AppError::PayloadTooLarge(format!(
+            "file exceeds maximum allowed size of {} MB",
+            max_bytes / (1024 * 1024)
+        )));
+    }
+
+    if req.bypass_compress {
+        let can_bypass =
+            sqlx::query_scalar::<_, bool>("SELECT can_bypass_compress FROM users WHERE id = $1")
+                .bind(auth.user_id)
+                .fetch_optional(&state.pg)
+                .await?
+                .unwrap_or(false);
+
+        if !can_bypass {
+            return Err(AppError::Forbidden(
+                "bypass_compress requires perk entitlement".to_string(),
+            ));
+        }
+    }
+
+    let media_id = Uuid::now_v7();
+    let file_name = safe_file_name(Some(&req.file_name), extension);
+    let object_key = generate_r2_key(&req.purpose, auth.user_id, media_id, kind, extension);
+    let upload_url = presigned_r2_url(&state.config, "PUT", &object_key, 900)?;
+
+    sqlx::query(
+        "INSERT INTO media_assets
+         (id, uploader_id, kind, purpose, status, bypass_compress, r2_key, mime_type, size_bytes, file_name, created_at)
+         VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7, $8, $9, NOW())",
+    )
+    .bind(media_id)
+    .bind(auth.user_id)
+    .bind(kind)
+    .bind(&req.purpose)
+    .bind(req.bypass_compress)
+    .bind(&object_key)
+    .bind(&mime_type)
+    .bind(req.size_bytes)
+    .bind(&file_name)
+    .execute(&state.pg)
+    .await?;
+
+    Ok(Json(PresignMediaResponse {
+        media_id,
+        upload_url,
+        method: "PUT",
+        object_key,
+        max_bytes,
+    }))
+}
+
+pub async fn complete(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    Path(media_id): Path<Uuid>,
+) -> Result<Json<MediaUploadResponse>, AppError> {
+    let row = sqlx::query_as::<_, (String, String, String, String, Option<i64>, String)>(
+        "SELECT status, r2_key, file_name, mime_type, size_bytes, kind
+         FROM media_assets
+         WHERE id = $1 AND uploader_id = $2",
+    )
+    .bind(media_id)
+    .bind(auth.user_id)
+    .fetch_optional(&state.pg)
+    .await?
+    .ok_or_else(|| AppError::NotFound("media asset not found".to_string()))?;
+
+    let (status, r2_key, file_name, mime_type, size_bytes, kind) = row;
+
+    if status == "READY" {
+        let attachment = attachment_from_record(
+            &state.config,
+            media_id,
+            file_name,
+            mime_type,
+            size_bytes.unwrap_or(0),
+            r2_key,
+        )?;
+        return Ok(Json(MediaUploadResponse { attachment }));
+    }
+
+    // Verify presence in Cloudflare R2 via HEAD request
+    let head_url = presigned_r2_url(&state.config, "HEAD", &r2_key, 60)?;
+    let head_res = HTTP_CLIENT
+        .head(head_url)
+        .send()
+        .await
+        .map_err(|e| AppError::Internal(e.into()))?;
+
+    if !head_res.status().is_success() {
+        return Err(AppError::BadRequest(
+            "uploaded file not found in storage yet. Complete upload before confirming."
+                .to_string(),
+        ));
+    }
+
+    let actual_size = head_res
+        .headers()
+        .get(reqwest::header::CONTENT_LENGTH)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(size_bytes.unwrap_or(0));
+
+    let max_bytes: i64 = match kind.as_str() {
+        "image" => 5 * 1024 * 1024,
+        "video" => 50 * 1024 * 1024,
+        _ => 10 * 1024 * 1024,
+    };
+
+    if actual_size > max_bytes {
+        return Err(AppError::PayloadTooLarge(
+            "uploaded file exceeds size limit".to_string(),
+        ));
+    }
+
+    sqlx::query(
+        "UPDATE media_assets
+         SET status = 'READY', size_bytes = $2, ready_at = NOW()
+         WHERE id = $1",
+    )
+    .bind(media_id)
+    .bind(actual_size)
+    .execute(&state.pg)
+    .await?;
+
+    let attachment = attachment_from_record(
+        &state.config,
+        media_id,
+        file_name,
+        mime_type,
+        actual_size,
+        r2_key,
+    )?;
+
+    Ok(Json(MediaUploadResponse { attachment }))
 }

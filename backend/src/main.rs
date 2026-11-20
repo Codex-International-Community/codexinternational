@@ -69,7 +69,8 @@ async fn main() {
 
     tracing::info!(bind_addr = %bind_addr, "server listening");
 
-    if let Err(err) = axum::serve(listener, app_router(state))
+    let service = app_router(state).into_make_service_with_connect_info::<std::net::SocketAddr>();
+    if let Err(err) = axum::serve(listener, service)
         .with_graceful_shutdown(shutdown_signal())
         .await
     {

@@ -293,7 +293,7 @@ pub async fn list_members(
                 COALESCE(m.nickname, u.display_name) AS display_name,
                 u.bio, u.global_xp, u.global_level, u.created_at, m.joined_at,
                 COALESCE(r.name, '@everyone') AS role_name, r.color AS role_color, m.role_id,
-                (c.owner_id = m.user_id) AS is_owner,
+                COALESCE(c.owner_id = m.user_id, FALSE) AS is_owner,
                 (u.last_seen_at > NOW() - INTERVAL '90 seconds') AS online
          FROM community_members m
          JOIN users u ON u.id = m.user_id

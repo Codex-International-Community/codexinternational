@@ -89,12 +89,51 @@ export interface ChatMediaUploadResult {
   }
 }
 
+interface PresignMediaResponse {
+  mediaId: string
+  uploadUrl: string
+  method: string
+  objectKey: string
+  maxBytes: number
+}
+
 export async function uploadChatMedia(file: File, channelId: string): Promise<ChatMediaUploadResult> {
   const safeName = file.name
     .replace(/[^a-zA-Z0-9._-]/g, '_')
     .replace(/^\.+/, '')
     .slice(0, 120) || 'attachment'
-  return apiUpload<ChatMediaUploadResult>('/api/v1/media', file, safeName, { 'X-Channel-Id': channelId })
+
+  try {
+    const presign = await apiRequest<PresignMediaResponse>('/api/v1/media/presign', {
+      method: 'POST',
+      body: {
+        purpose: 'chat',
+        channelId,
+        fileName: safeName,
+        mimeType: file.type || 'application/octet-stream',
+        sizeBytes: file.size,
+      },
+    })
+
+    const uploadRes = await fetch(presign.uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': file.type || 'application/octet-stream',
+      },
+      body: file,
+    })
+
+    if (!uploadRes.ok) {
+      throw new Error(`R2 direct upload failed with status ${uploadRes.status}`)
+    }
+
+    return await apiRequest<ChatMediaUploadResult>(`/api/v1/media/${presign.mediaId}/complete`, {
+      method: 'POST',
+    })
+  } catch (error) {
+    console.warn('Direct R2 presigned upload fallback to server proxy:', error)
+    return apiUpload<ChatMediaUploadResult>('/api/v1/media', file, safeName, { 'X-Channel-Id': channelId })
+  }
 }
 
 export async function postMessage(
