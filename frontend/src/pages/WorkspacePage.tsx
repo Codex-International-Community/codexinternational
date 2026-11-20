@@ -6,7 +6,7 @@ import '../styles/adaptive.css'
 import type { AuthSession } from '../api/client'
 import { ApiError } from '../api/client'
 import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, listPinnedMessages, mapChatMessage, pinMessage, postMessage, toggleMessageReaction, unpinMessage, type ChatMessageWire } from '../api/chat'
-import { createChannel as createChannelApi, createCommunity, createOrGetDm, getCommunityInvite, joinCommunity, listChannels, listCommunities, listCommunityMembers, updateCommunity } from '../api/communities'
+import { createChannel as createChannelApi, createCommunity, createCommunityCategory, createCommunityEvent, createOrGetDm, deleteCommunity, getCommunityInvite, getCommunityMemberSettings, joinCommunity, leaveCommunity, listChannels, listCommunities, listCommunityCategories, listCommunityMembers, updateCommunity, updateCommunityMemberSettings, updateCommunityNickname, type CommunityCategory, type CommunityMemberSettings } from '../api/communities'
 import type { ViewportInfo } from '../hooks/useViewport'
 import type { Attachment, View } from '../types/common'
 import type { Channel, Data, Message, User } from '../types/chat'
@@ -29,6 +29,7 @@ import { Topbar } from '../components/layout/Topbar'
 import { SearchStrip } from '../components/layout/SearchStrip'
 import { MobileTabs, type MobileTab } from '../components/layout/MobileTabs'
 import { ActionModal, type ActionModalType } from '../components/modals/ActionModal'
+import { ServerOptionsDialog, type ServerOptionsDialogMode } from '../components/modals/ServerOptionsDialog'
 import { CallModal } from '../components/modals/CallModal'
 
 import { ChatPanel } from '../components/chat/ChatPanel'
@@ -181,6 +182,16 @@ export function WorkspacePage({
     }
   })
   const [people, setPeople] = useState<User[]>([])
+  const [communityCategories, setCommunityCategories] = useState<Record<string, CommunityCategory[]>>({})
+  const [serverMenuPreferences, setServerMenuPreferences] = useState<CommunityMemberSettings | null>(null)
+  const [serverOptionsMode, setServerOptionsMode] = useState<ServerOptionsDialogMode | null>(null)
+  const [serverOptionsBusy, setServerOptionsBusy] = useState(false)
+  const [serverOptionsError, setServerOptionsError] = useState('')
+  const [serverOptionsForm, setServerOptionsForm] = useState({
+    name: '', description: '', isPublic: true, startsAt: '', location: '',
+    notificationMode: 'mentions' as 'all' | 'mentions' | 'none', serverMuted: false,
+    allowDirectMessages: true, allowMessageRequests: true, hideMutedChannels: false, nickname: '',
+  })
   const [initialRoute] = useState<WorkspaceRoute>(() =>
     parseWorkspaceRoute(window.location.pathname),
   )
@@ -365,7 +376,7 @@ export function WorkspacePage({
             .toUpperCase(),
           tone: 'community',
         }))
-        const [channelEntries, memberGroups] = await Promise.all([
+        const [channelEntries, categoryEntries, memberGroups] = await Promise.all([
           Promise.all(
             communities.map(async (community) => {
               const channelRows = await listChannels(community.id)
@@ -375,10 +386,13 @@ export function WorkspacePage({
                   id: item.id,
                   name: item.name ?? 'unnamed',
                   type: item.channel_type === 'announcement' ? 'announcement' as const : 'text' as const,
+                  categoryId: item.category_id,
+                  categoryName: item.category_name,
                 })),
               ] as const
             }),
           ),
+          Promise.all(communities.map(async (community) => [community.id, await listCommunityCategories(community.id)] as const)),
           Promise.all(communities.map((community) => listCommunityMembers(community.id))),
         ])
         if (cancelled) return
@@ -401,6 +415,7 @@ export function WorkspacePage({
           })
         }
         setPeople([...memberMap.values()])
+        setCommunityCategories(Object.fromEntries(categoryEntries))
         setData((previous) => ({
           ...previous,
           servers: mappedServers,
@@ -1207,6 +1222,7 @@ export function WorkspacePage({
           view={view}
           server={server}
           channels={channels}
+          categories={communityCategories[serverId] ?? []}
           channelId={channel?.id ?? ''}
           dmId={dmId}
           conversations={data.conversations}

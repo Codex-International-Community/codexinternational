@@ -1,6 +1,7 @@
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
 import type { Channel, Conversation, Server, User } from '../../types/chat'
+import type { CommunityCategory } from '../../api/communities'
 import type { View, Theme } from '../../types/common'
 import type { SocialTab } from '../../types/social'
 
@@ -9,6 +10,7 @@ interface ChannelSidebarProps {
   view: View
   server?: Server
   channels: Channel[]
+  categories: CommunityCategory[]
   channelId: string
   dmId: string
   conversations: Conversation[]
@@ -60,6 +62,7 @@ export function ChannelSidebar({
   view,
   server,
   channels,
+  categories,
   channelId,
   dmId,
   conversations,
@@ -109,7 +112,7 @@ export function ChannelSidebar({
   const isDirectMessageHome = view === 'home' || view === 'dm'
   const textChannels = channels.filter((channel) => channel.type !== 'voice')
   const voiceChannels = channels.filter((channel) => channel.type === 'voice')
-  const categoryNames = [...new Set(textChannels.map((channel) => channel.categoryName).filter((name): name is string => Boolean(name)))]
+  const categoryNames = [...new Set([...categories.map((category) => category.name), ...textChannels.map((channel) => channel.categoryName).filter((name): name is string => Boolean(name))])]
   const uncategorizedChannels = textChannels.filter((channel) => !channel.categoryName)
   const categoryChannels = categoryNames.map((name) => ({ name, channels: textChannels.filter((channel) => channel.categoryName === name) }))
 
