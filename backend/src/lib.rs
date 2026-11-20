@@ -66,6 +66,8 @@ pub fn app_router(state: Arc<AppState>) -> Router {
         .nest("/api/v1/communities", communities::router())
         .nest("/api/v1/dms", communities::dms_router())
         .nest("/api/v1", chat::router())
+        .route("/api/v1/media/presign", post(media::presign))
+        .route("/api/v1/media/{id}/complete", post(media::complete))
         .route(
             "/api/v1/media",
             post(media::upload).layer(DefaultBodyLimit::max(media::MAX_CHAT_UPLOAD_BYTES)),
