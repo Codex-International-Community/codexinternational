@@ -1,6 +1,7 @@
 export type IconName =
   | 'home'
   | 'compass'
+  | 'rocket'
   | 'plus'
   | 'chevron'
   | 'hash'
@@ -54,7 +55,6 @@ export type IconName =
   | 'share'
   | 'eye'
   | 'eyeOff'
-  | 'info'
 
 export type View =
   | 'home'
@@ -76,4 +76,5 @@ export interface Attachment {
   name: string
   type: string
   url: string
+  mediaId?: string
 }

@@ -97,7 +97,7 @@ export function SocialPostCard({
 
           <button
             type="button"
-            aria-label={`Repost (${post.reposts + (post.reposted ? 1 : 0)})`}
+            aria-label={`Repost (${post.reposts})`}
             aria-pressed={post.reposted}
             className={post.reposted ? 'is-reposted' : ''}
             onClick={() => onToggleAction(post.id, 'reposted')}
@@ -109,7 +109,7 @@ export function SocialPostCard({
 
           <button
             type="button"
-            aria-label={`Like (${post.likes + (post.liked ? 1 : 0)})`}
+            aria-label={`Like (${post.likes})`}
             aria-pressed={post.liked}
             className={post.liked ? 'is-liked' : ''}
             onClick={() => onToggleAction(post.id, 'liked')}

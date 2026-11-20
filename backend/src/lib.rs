@@ -19,9 +19,13 @@ use crate::{
 };
 
 pub mod auth;
+pub mod chat;
+pub mod communities;
+pub mod gamification;
 pub mod config;
 pub mod error;
 pub mod health;
+pub mod media;
 pub mod shared;
 pub mod state;
 
@@ -59,6 +63,10 @@ pub fn app_router(state: Arc<AppState>) -> Router {
     let api = Router::new()
         .nest("/api/v1/auth", auth::router())
         .nest("/api/v1/bots", auth::bots_router())
+        .nest("/api/v1/communities", communities::router())
+        .nest("/api/v1/dms", communities::dms_router())
+        .nest("/api/v1", chat::router())
+        .route("/api/v1/media", post(media::upload).layer(DefaultBodyLimit::max(media::MAX_CHAT_UPLOAD_BYTES)))
         .route("/api/v1/dev/bots/{id}/review", post(auth::bots::review_bot))
         .route(
             "/api/v1/dev/uid-slots",
@@ -77,6 +85,7 @@ pub fn app_router(state: Arc<AppState>) -> Router {
         ));
 
     Router::new()
+        .route("/ws", get(chat::ws::upgrade))
         .route("/health/live", get(health::live))
         .route("/health/ready", get(health::ready))
         .merge(api)

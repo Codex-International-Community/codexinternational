@@ -16,7 +16,7 @@ use axum::{
 use crate::state::AppState;
 
 const ALLOW_METHODS: &str = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
-const ALLOW_HEADERS: &str = "Authorization, Content-Type";
+const ALLOW_HEADERS: &str = "Authorization, Content-Type, X-Channel-Id, X-File-Name";
 const EXPOSE_HEADERS: &str = "Retry-After";
 
 /// Handles CORS preflight (`OPTIONS`) and appends allowlist CORS headers when

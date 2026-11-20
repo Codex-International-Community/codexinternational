@@ -1,8 +1,10 @@
 import type { IconName } from '../../types/common'
 
+// Gentleface line-round icon set, MIT licensed: https://gentleface.com/
 const gentlefaceNames: Record<IconName, string> = {
   home: 'home',
   compass: 'compass',
+  rocket: 'rocket',
   plus: 'plus',
   chevron: 'chevron-down',
   hash: 'hash',

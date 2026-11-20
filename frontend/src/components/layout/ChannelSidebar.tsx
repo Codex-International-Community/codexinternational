@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
 import type { Channel, Conversation, Server, User } from '../../types/chat'
+import type { CommunityCategory } from '../../api/communities'
 import type { View, Theme } from '../../types/common'
 import type { SocialTab } from '../../types/social'
 
@@ -9,10 +9,8 @@ interface ChannelSidebarProps {
   currentUser: User
   view: View
   server?: Server
-  servers: Server[]
-  allChannels: Record<string, Channel[]>
-  activeServerId: string
   channels: Channel[]
+  categories: CommunityCategory[]
   channelId: string
   dmId: string
   conversations: Conversation[]
@@ -24,19 +22,35 @@ interface ChannelSidebarProps {
   muted: boolean
   deafened: boolean
   profileMenuOpen: boolean
+  serverMenuOpen: boolean
   onToggleProfileMenu: () => void
+  onToggleServerMenu: () => void
+  onCopyServerId: () => void
+  onInvitePeople: () => void
+  onOpenServerSettings: () => void
+  onCreateCategory: () => void
+  onCreateEvent: () => void
+  onOpenNotificationSettings: () => void
+  onOpenPrivacySettings: () => void
+  onEditServerProfile: () => void
+  onToggleHideMutedChannels: () => void
+  hideMutedChannels: boolean
+  canDeleteServer: boolean
+  onLeaveServer: () => void
+  onDeleteServer: () => void
   onSelectSocialTab: (tab: SocialTab) => void
   onOpenQuickSearch: () => void
   onSelectChannel: (channel: Channel) => void
-  onSelectServer: (serverId: string) => void
-  onSelectServerChannel: (serverId: string, channel: Channel) => void
   onOpenDm: (userId: string) => void
   onCreateChannelModal: () => void
+  onCreateChannelInCategory: (categoryId: string) => void
   onNewDmModal: () => void
   onVoiceChannelNotice: () => void
   onToggleMute: () => void
   onToggleDeafen: () => void
   onDisconnectVoice: () => void
+  onNavigateHome: () => void
+  onNavigateThreads: () => void
   onNavigateSettings: () => void
   onNavigateDiscover: () => void
   onToggleTheme: () => void
@@ -48,10 +62,8 @@ export function ChannelSidebar({
   currentUser,
   view,
   server,
-  servers,
-  allChannels,
-  activeServerId,
   channels,
+  categories,
   channelId,
   dmId,
   conversations,
@@ -63,73 +75,142 @@ export function ChannelSidebar({
   muted,
   deafened,
   profileMenuOpen,
+  serverMenuOpen,
   onToggleProfileMenu,
+  onToggleServerMenu,
+  onCopyServerId,
+  onInvitePeople,
+  onOpenServerSettings,
+  onCreateCategory,
+  onCreateEvent,
+  onOpenNotificationSettings,
+  onOpenPrivacySettings,
+  onEditServerProfile,
+  onToggleHideMutedChannels,
+  hideMutedChannels,
+  canDeleteServer,
+  onLeaveServer,
+  onDeleteServer,
   onSelectSocialTab,
   onOpenQuickSearch,
   onSelectChannel,
-  onSelectServer,
-  onSelectServerChannel,
   onOpenDm,
   onCreateChannelModal,
+  onCreateChannelInCategory,
   onNewDmModal,
   onVoiceChannelNotice,
   onToggleMute,
   onToggleDeafen,
   onDisconnectVoice,
+  onNavigateHome,
+  onNavigateThreads,
   onNavigateSettings,
   onNavigateDiscover,
   onToggleTheme,
   onOpenBots,
   onLogout,
 }: ChannelSidebarProps) {
-  const activeVoiceChannel = channels.find((c) => c.id === voiceId)
-  const [expandedServers, setExpandedServers] = useState<string[]>(activeServerId ? [activeServerId] : [])
-  const toggleServerExpanded = (id: string) => setExpandedServers((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
+  const activeVoiceChannel = channels.find((channel) => channel.id === voiceId)
+  const isDirectMessageHome = view === 'home' || view === 'dm'
+  const textChannels = channels.filter((channel) => channel.type !== 'voice')
+  const voiceChannels = channels.filter((channel) => channel.type === 'voice')
+  const categoryNames = [...new Set([...categories.map((category) => category.name), ...textChannels.map((channel) => channel.categoryName).filter((name): name is string => Boolean(name))])]
+  const uncategorizedChannels = textChannels.filter((channel) => !channel.categoryName)
+  const categoryChannels = categoryNames.map((name) => ({ name, channels: textChannels.filter((channel) => channel.categoryName === name) }))
 
   const serverHeaderSub =
     view === 'social'
-      ? 'SOCIAL'
+      ? 'THREADS'
       : view === 'discover'
         ? 'EXPLORE'
         : view === 'channels'
-        ? 'DIRECTORY'
-        : view === 'people'
-          ? 'COMMUNITY PEOPLE'
-          : view === 'home'
-            ? 'HOME'
-            : view === 'dm'
-              ? 'DIRECT MESSAGES'
-              : 'COMMUNITY'
+          ? 'DIRECTORY'
+          : view === 'people'
+            ? 'COMMUNITY PEOPLE'
+            : 'SERVER'
 
   const serverHeaderTitle =
     view === 'social'
-      ? 'Social'
+      ? 'Threads'
       : view === 'discover'
         ? 'Discover communities'
         : view === 'channels'
-        ? 'Channels'
-        : view === 'people'
-          ? 'People'
-          : view === 'home'
-            ? 'Home'
-            : view === 'dm'
-              ? 'Messages'
-              : server?.name ?? 'Community'
+          ? 'Channels'
+          : view === 'people'
+            ? 'People'
+            : server?.name ?? 'Community'
 
   return (
-    <aside className="channel-sidebar">
-      <button
-        type="button"
-        className="server-title"
-        aria-expanded={profileMenuOpen}
-        onClick={onToggleProfileMenu}
-      >
-        <span>
-          <small>{serverHeaderSub}</small>
-          <strong>{serverHeaderTitle}</strong>
-        </span>
-        <Icon name="chevron" size={16} />
-      </button>
+    <aside className={`channel-sidebar ${isDirectMessageHome ? 'channel-sidebar--home' : ''}`}>
+      {!isDirectMessageHome && (
+        <button
+          type="button"
+          className="server-title"
+          aria-expanded={serverMenuOpen}
+          aria-haspopup={server ? 'menu' : undefined}
+          onClick={server ? onToggleServerMenu : undefined}
+          disabled={!server}
+        >
+          <span>
+            <small>{serverHeaderSub}</small>
+            <strong>{serverHeaderTitle}</strong>
+          </span>
+          <Icon name="chevron" size={16} />
+        </button>
+      )}
+      {server && view === 'channel' && serverMenuOpen && (
+        <div className="server-menu" role="menu" aria-label={`${server.name} server menu`}>
+          <button className="server-menu-item server-menu-item--disabled" type="button" role="menuitem" disabled title="Server Boost is not available in Codex yet">
+            <Icon name="sparkles" size={16} /> Server Boost <small>Unavailable</small>
+          </button>
+          <button className="server-menu-item server-menu-item--invite" type="button" role="menuitem" onClick={() => { onInvitePeople(); onToggleServerMenu() }}>
+            <Icon name="users" size={16} /> Invite People
+          </button>
+          <div className="server-menu-divider" />
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onOpenServerSettings(); onToggleServerMenu() }}>
+            <Icon name="settings" size={16} /> Server Settings
+          </button>
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onCreateChannelModal(); onToggleServerMenu() }}>
+            <Icon name="plus" size={16} /> Create Channel
+          </button>
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onCreateCategory(); onToggleServerMenu() }}>
+            <Icon name="hash" size={16} /> Create Category
+          </button>
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onCreateEvent(); onToggleServerMenu() }}>
+            <Icon name="calendar" size={16} /> Create Event
+          </button>
+          <button className="server-menu-item server-menu-item--disabled" type="button" role="menuitem" disabled title="The app directory is not available in Codex yet">
+            <Icon name="compass" size={16} /> App Directory <small>Unavailable</small>
+          </button>
+          <div className="server-menu-divider" />
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onOpenNotificationSettings(); onToggleServerMenu() }}>
+            <Icon name="bell" size={16} /> Notification Settings
+          </button>
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onOpenPrivacySettings(); onToggleServerMenu() }}>
+            <Icon name="shield" size={16} /> Privacy Settings
+          </button>
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onEditServerProfile(); onToggleServerMenu() }}>
+            <Icon name="user" size={16} /> Edit Server Profile
+          </button>
+          <button className="server-menu-item server-menu-item--toggle" type="button" role="menuitemcheckbox" aria-checked={hideMutedChannels} onClick={onToggleHideMutedChannels}>
+            <span className={`server-menu-check ${hideMutedChannels ? 'checked' : ''}`}>{hideMutedChannels ? <Icon name="check" size={12} /> : null}</span>
+            Hide Muted Channels
+          </button>
+          <div className="server-menu-divider" />
+          {canDeleteServer ? (
+            <button className="server-menu-item server-menu-item--danger" type="button" role="menuitem" onClick={() => { onDeleteServer(); onToggleServerMenu() }}>
+              <Icon name="trash" size={16} /> Delete Server
+            </button>
+          ) : (
+            <button className="server-menu-item server-menu-item--danger" type="button" role="menuitem" onClick={() => { onLeaveServer(); onToggleServerMenu() }}>
+              <Icon name="logout" size={16} /> Leave Server
+            </button>
+          )}
+          <button className="server-menu-item" type="button" role="menuitem" onClick={onCopyServerId}>
+            <Icon name="copy" size={16} /> Copy Server ID
+          </button>
+        </div>
+      )}
 
       {view === 'social' && (
         <div className="social-side-nav">
@@ -162,206 +243,134 @@ export function ChannelSidebar({
           >
             <Icon name="bookmark" size={16} /> Saved posts
           </button>
-          <div className="side-nav-divider" />
-          <span className="side-nav-label">YOUR SPACE</span>
-          <p>Short thoughts, longer conversations, and people worth following.</p>
         </div>
       )}
 
       <div className="channel-list">
         <button type="button" className="quick-search" onClick={onOpenQuickSearch}>
           <Icon name="search" size={15} />
-          <span>Search</span>
+          <span>{isDirectMessageHome ? 'Find or start a conversation' : 'Search'}</span>
           <kbd>⌘ K</kbd>
         </button>
 
-        <section className="joined-servers" aria-label="Joined communities">
-          <div className="section-label"><span>JOINED COMMUNITIES</span></div>
-          {servers.length === 0 && <p className="sidebar-empty">Joined communities will appear here.</p>}
-          {servers.map((joinedServer) => {
-            const serverChannels = allChannels[joinedServer.id] ?? []
-            const expanded = expandedServers.includes(joinedServer.id)
-            const active = activeServerId === joinedServer.id
-            return (
-              <div className={`joined-server ${active ? 'active' : ''}`} key={joinedServer.id}>
-                <div className="joined-server-heading">
-                  <button
-                    type="button"
-                    className="joined-server-select"
-                    aria-current={active ? 'page' : undefined}
-                    onClick={() => onSelectServer(joinedServer.id)}
-                  >
-                    <span className={`joined-server-mark ${joinedServer.tone}`}>{joinedServer.abbr}</span>
-                    <strong>{joinedServer.name}</strong>
-                  </button>
-                  <button
-                    type="button"
-                    className="joined-server-toggle"
-                    aria-label={`${expanded ? 'Collapse' : 'Expand'} ${joinedServer.name}`}
-                    aria-expanded={expanded}
-                    onClick={() => toggleServerExpanded(joinedServer.id)}
-                  >
-                    <Icon name="chevron" size={14} />
-                  </button>
-                </div>
-                {expanded && (
-                  <div className="joined-server-channels">
-                    {serverChannels.map((joinedChannel) => (
-                      <button
-                        type="button"
-                        key={joinedChannel.id}
-                        className={`channel-item ${active && view === 'channel' && channelId === joinedChannel.id ? 'chosen' : ''}`}
-                        onClick={() => onSelectServerChannel(joinedServer.id, joinedChannel)}
-                      >
-                        <Icon name={joinedChannel.type === 'voice' ? 'volume' : 'hash'} size={16} />
-                        <span>{joinedChannel.name}</span>
-                      </button>
-                    ))}
-                    {serverChannels.length === 0 && <p className="sidebar-empty">No channels yet.</p>}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </section>
-
-        {view === 'home' || view === 'dm' ? (
+        {isDirectMessageHome && (
           <>
-            <div className="section-label">
-              <span>DIRECT MESSAGES</span>
+            <nav className="home-sidebar-nav" aria-label="Direct message navigation">
               <button
                 type="button"
-                aria-label="New direct message"
-                title={people.length === 0 ? 'People will be available when the community API is connected.' : 'New direct message'}
-                disabled={people.length === 0}
-                onClick={onNewDmModal}
+                className={view === 'home' ? 'selected' : ''}
+                aria-current={view === 'home' ? 'page' : undefined}
+                onClick={onNavigateHome}
               >
-                <Icon name="plus" size={14} />
+                <Icon name="users" size={18} />
+                <span>Friends</span>
               </button>
-            </div>
-            {conversations.map((c) => {
-              const p = people.find((u) => u.id === c.userId)
-              if (!p) return null
-              return (
-                <button
-                  type="button"
-                  key={c.userId}
-                  className={`dm-row ${view !== 'home' && dmId === p.id ? 'chosen' : ''}`}
-                  onClick={() => onOpenDm(p.id)}
-                >
-                  <Avatar user={p} size="small" />
-                  <span>
-                    <strong>{p.name}</strong>
-                    <small>{c.lastMessage}</small>
-                  </span>
-                  {c.unread > 0 && <i className="unread-badge">{c.unread}</i>}
-                </button>
-              )
-            })}
-          </>
-        ) : (
-          <>
-            <div className="section-label">
-              <span>TEXT CHANNELS</span>
               <button
                 type="button"
-                aria-label="Create channel"
-                title={server ? 'Create channel' : 'Join a community before creating a channel.'}
-                disabled={!server}
-                onClick={onCreateChannelModal}
+                onClick={onNavigateThreads}
               >
-                <Icon name="plus" size={14} />
+                <Icon name="thread" size={18} />
+                <span>Threads</span>
               </button>
-            </div>
-            {channels
-              .filter((c) => c.type === 'text')
-              .map((c) => (
-                <button
-                  type="button"
-                  key={c.id}
-                  className={`channel-item ${
-                    channelId === c.id && view === 'channel' ? 'chosen' : ''
-                  }`}
-                  onClick={() => onSelectChannel(c)}
-                >
-                  <Icon name="hash" size={17} />
-                  <span>{c.name}</span>
-                </button>
-              ))}
-            {channels.every((c) => c.type !== 'text') && (
-              <p className="sidebar-empty">Text channels will appear here when community data is available.</p>
-            )}
-
-            <div className="section-label voice-label">
-              <span>VOICE CHANNELS</span>
-              <button
-                type="button"
-                aria-label="Voice channel info"
-                title="Voice channel info"
-                onClick={onVoiceChannelNotice}
-              >
-                <Icon name="plus" size={14} />
-              </button>
-            </div>
-            {channels
-              .filter((c) => c.type === 'voice')
-              .map((c) => (
-                <button
-                  type="button"
-                  key={c.id}
-                  className="channel-item"
-                  onClick={() => onSelectChannel(c)}
-                >
-                  <Icon name="volume" size={17} />
-                  <span>{c.name}</span>
-                </button>
-              ))}
-
-            <button type="button" className="create-channel" onClick={onCreateChannelModal} disabled={!server}>
-              <Icon name="plus" size={15} /> Create channel
-            </button>
+            </nav>
 
             <div className="section-label dm-label">
               <span>DIRECT MESSAGES</span>
               <button
                 type="button"
                 aria-label="New direct message"
-                title={people.length === 0 ? 'People will be available when the community API is connected.' : 'New direct message'}
-                disabled={people.length === 0}
+                title="New direct message"
+                aria-haspopup="dialog"
                 onClick={onNewDmModal}
               >
                 <Icon name="plus" size={14} />
               </button>
             </div>
-            {conversations.map((c) => {
-              const p = people.find((u) => u.id === c.userId)
-              if (!p) return null
+            {conversations.map((conversation) => {
+              const person = people.find((user) => user.id === conversation.userId)
+              if (!person) return null
               return (
                 <button
                   type="button"
-                  key={p.id}
-                  className="dm-row"
-                  onClick={() => onOpenDm(p.id)}
+                  key={person.id}
+                  className={`dm-row ${view === 'dm' && dmId === person.id ? 'chosen' : ''}`}
+                  onClick={() => onOpenDm(person.id)}
                 >
-                  <Avatar user={p} size="small" />
+                  <Avatar user={person} size="small" />
                   <span>
-                    <strong>{p.name}</strong>
-                    <small>{c.lastMessage}</small>
+                    <strong>{person.name}</strong>
+                    <small>{conversation.lastMessage}</small>
                   </span>
-                  {c.unread > 0 && <i className="unread-badge">{c.unread}</i>}
+                  {conversation.unread > 0 && <i className="unread-badge">{conversation.unread}</i>}
                 </button>
               )
             })}
           </>
         )}
+
+        {view === 'channel' && (
+          <div className="server-channel-groups">
+            <section className="server-channel-group" aria-label="Text channels">
+              <div className="section-label">
+                <span>TEXT CHANNELS</span>
+                <button type="button" aria-label="Create channel" title="Create channel" onClick={onCreateChannelModal}>
+                  <Icon name="plus" size={14} />
+                </button>
+              </div>
+              {uncategorizedChannels.map((channel) => (
+                <button type="button" key={channel.id} className={`channel-item ${channelId === channel.id ? 'chosen' : ''}`}
+                  aria-current={channelId === channel.id ? 'page' : undefined} onClick={() => onSelectChannel(channel)}>
+                  <Icon name="hash" size={16} /><span>{channel.name}</span>
+                </button>
+              ))}
+              {categoryChannels.map((group) => (
+                <div className="server-channel-category" key={group.name}>
+                  <div className="section-label">
+                    <span>{group.name.toUpperCase()}</span>
+                    <button
+                      type="button"
+                      aria-label={`Create channel in ${group.name}`}
+                      title={`Create channel in ${group.name}`}
+                      onClick={() => onCreateChannelInCategory(categories.find((category) => category.name === group.name)?.id ?? '')}
+                    >
+                      <Icon name="plus" size={14} />
+                    </button>
+                  </div>
+                  {group.channels.map((channel) => (
+                    <button type="button" key={channel.id} className={`channel-item ${channelId === channel.id ? 'chosen' : ''}`}
+                      aria-current={channelId === channel.id ? 'page' : undefined} onClick={() => onSelectChannel(channel)}>
+                      <Icon name="hash" size={16} /><span>{channel.name}</span>
+                    </button>
+                  ))}
+                  {group.channels.length === 0 && <p className="sidebar-empty">No channels yet.</p>}
+                </div>
+              ))}
+              {textChannels.length === 0 && <p className="sidebar-empty">No text channels yet.</p>}
+            </section>
+
+            {voiceChannels.length > 0 && (
+              <section className="server-channel-group" aria-label="Voice channels">
+                <div className="section-label"><span>VOICE CHANNELS</span></div>
+                {voiceChannels.map((channel) => (
+                  <button
+                    type="button"
+                    key={channel.id}
+                    className="channel-item"
+                    onClick={onVoiceChannelNotice}
+                  >
+                    <Icon name="volume" size={16} />
+                    <span>{channel.name}</span>
+                  </button>
+                ))}
+              </section>
+            )}
+          </div>
+        )}
       </div>
 
       {voiceId && (
         <div className="voice-card">
-          <div>
-            <i />
-            VOICE PREVIEW
-          </div>
+          <div><i /> VOICE PREVIEW</div>
           <strong>{activeVoiceChannel?.name}</strong>
           <span>Audio is not connected in this preview</span>
           <div className="voice-actions">
@@ -383,12 +392,7 @@ export function ChannelSidebar({
             >
               <Icon name="headphones" size={14} />
             </button>
-            <button
-              type="button"
-              aria-label="Disconnect voice"
-              title="Disconnect"
-              onClick={onDisconnectVoice}
-            >
+            <button type="button" aria-label="Disconnect voice" title="Disconnect" onClick={onDisconnectVoice}>
               <Icon name="logout" size={14} />
             </button>
           </div>
@@ -436,12 +440,7 @@ export function ChannelSidebar({
           >
             <Icon name="headphones" size={16} />
           </button>
-          <button
-            type="button"
-            aria-label="Settings"
-            title="Settings"
-            onClick={onNavigateSettings}
-          >
+          <button type="button" aria-label="Settings" title="Settings" onClick={onNavigateSettings}>
             <Icon name="settings" size={16} />
           </button>
         </div>
@@ -451,43 +450,19 @@ export function ChannelSidebar({
         <div className="profile-menu">
           <strong>{displayName}</strong>
           <span>Account and preferences</span>
-          <button
-            type="button"
-            onClick={() => {
-              onNavigateSettings()
-              onToggleProfileMenu()
-            }}
-          >
+          <button type="button" onClick={() => { onNavigateSettings(); onToggleProfileMenu() }}>
             <Icon name="user" size={15} /> Edit profile
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              onToggleTheme()
-              onToggleProfileMenu()
-            }}
-          >
+          <button type="button" onClick={() => { onToggleTheme(); onToggleProfileMenu() }}>
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} /> Switch theme
           </button>
           {onOpenBots && (
-            <button
-              type="button"
-              onClick={() => {
-                onOpenBots()
-                onToggleProfileMenu()
-              }}
-            >
+            <button type="button" onClick={() => { onOpenBots(); onToggleProfileMenu() }}>
               <Icon name="shield" size={15} /> Bot Portal
             </button>
           )}
           {onLogout && (
-            <button
-              type="button"
-              onClick={() => {
-                onToggleProfileMenu()
-                onLogout()
-              }}
-            >
+            <button type="button" onClick={() => { onToggleProfileMenu(); onLogout() }}>
               <Icon name="logout" size={15} /> Sign out
             </button>
           )}

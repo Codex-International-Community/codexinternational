@@ -12,7 +12,9 @@ export interface Server {
 export interface Channel {
   id: string
   name: string
-  type: 'text' | 'voice'
+  type: 'text' | 'announcement' | 'voice'
+  categoryId?: string | null
+  categoryName?: string | null
 }
 
 export interface User {
@@ -22,6 +24,14 @@ export interface User {
   tone: string
   status: 'online' | 'idle'
   role?: string
+  username?: string
+  bio?: string
+  globalXp?: number
+  globalLevel?: number
+  accountCreatedAt?: string
+  serverJoinedAt?: string
+  roleColor?: string
+  isOwner?: boolean
 }
 
 export interface Message {
@@ -31,11 +41,14 @@ export interface Message {
   initials: string
   tone: string
   time: string
+  createdAt?: string
   text: string
   reactions: Record<string, string[]>
   replyTo?: string
   attachment?: Attachment
   edited?: boolean
+  seqId?: number
+  clientMsgId?: string
   role?: string
 }
 

@@ -4,12 +4,15 @@ import '../Redesign.css'
 import '../styles/adaptive.css'
 
 import type { AuthSession } from '../api/client'
+import { ApiError } from '../api/client'
+import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, listPinnedMessages, mapChatMessage, pinMessage, postMessage, toggleMessageReaction, unpinMessage, uploadChatMedia, type ChatMessageWire } from '../api/chat'
+import { createChannel as createChannelApi, createCommunity, createCommunityCategory, createCommunityEvent, createOrGetDm, deleteCommunity, getCommunityInvite, getCommunityMemberSettings, joinCommunity, leaveCommunity, listChannels, listCommunities, listCommunityCategories, listCommunityMembers, updateCommunity, updateCommunityMemberSettings, updateCommunityNickname, type CommunityCategory, type CommunityMemberSettings } from '../api/communities'
 import type { ViewportInfo } from '../hooks/useViewport'
 import type { Attachment, View } from '../types/common'
-import type { Channel, Data, Message } from '../types/chat'
+import type { Channel, Data, Message, User } from '../types/chat'
 import type { SocialPost, SocialTab } from '../types/social'
 
-import { people, roomKey } from '../constants/seedData'
+import { roomKey } from '../constants/seedData'
 import {
   loadData,
   loadFollowedHandles,
@@ -26,10 +29,12 @@ import { Topbar } from '../components/layout/Topbar'
 import { SearchStrip } from '../components/layout/SearchStrip'
 import { MobileTabs, type MobileTab } from '../components/layout/MobileTabs'
 import { ActionModal, type ActionModalType } from '../components/modals/ActionModal'
+import { ServerOptionsDialog, type ServerOptionsDialogMode } from '../components/modals/ServerOptionsDialog'
 import { CallModal } from '../components/modals/CallModal'
 
 import { ChatPanel } from '../components/chat/ChatPanel'
 import { MembersPanel } from '../components/chat/MembersPanel'
+import { MemberProfile } from '../components/common/MemberProfile'
 import { SocialFeed } from '../components/social/SocialFeed'
 import { SocialAside } from '../components/social/SocialAside'
 import { ChannelDirectory } from '../components/directories/ChannelDirectory'
@@ -114,6 +119,7 @@ function parseWorkspaceRoute(
     settings: 'settings',
     activity: 'notifications',
     pinned: 'pinned',
+    threads: 'social',
     bots: 'bots',
   }
   const view = segments.length === 1 ? staticRoutes[segments[0]] : undefined
@@ -134,7 +140,7 @@ function buildWorkspacePath({ view, serverId, channelId, dmId, path }: Workspace
     case 'discover':
       return '/discover'
     case 'social':
-      return '/social'
+      return '/threads'
     case 'settings':
       return '/settings'
     case 'notifications':
@@ -175,6 +181,19 @@ export function WorkspacePage({
       ...initial,
       displayName: session.user.display_name || session.user.username || initial.displayName,
     }
+  })
+  const [people, setPeople] = useState<User[]>([])
+  const [communityPeopleById, setCommunityPeopleById] = useState<Record<string, User[]>>({})
+  const [selectedProfile, setSelectedProfile] = useState<User | null>(null)
+  const [communityCategories, setCommunityCategories] = useState<Record<string, CommunityCategory[]>>({})
+  const [serverMenuPreferences, setServerMenuPreferences] = useState<CommunityMemberSettings | null>(null)
+  const [serverOptionsMode, setServerOptionsMode] = useState<ServerOptionsDialogMode | null>(null)
+  const [serverOptionsBusy, setServerOptionsBusy] = useState(false)
+  const [serverOptionsError, setServerOptionsError] = useState('')
+  const [serverOptionsForm, setServerOptionsForm] = useState({
+    name: '', description: '', isPublic: true, startsAt: '', location: '',
+    notificationMode: 'mentions' as 'all' | 'mentions' | 'none', serverMuted: false,
+    allowDirectMessages: true, allowMessageRequests: true, hideMutedChannels: false, nickname: '',
   })
   const [initialRoute] = useState<WorkspaceRoute>(() =>
     parseWorkspaceRoute(window.location.pathname),
@@ -262,29 +281,30 @@ export function WorkspacePage({
   const [dmId, setDmId] = useState(initialRoute.dmId)
   const [notFoundPath, setNotFoundPath] = useState(initialRoute.path ?? '')
   const [membersOpen, setMembersOpen] = useState(isDesktop)
-  const [drawerOpen, setDrawerOpen] = useState(false)
 
-  useEffect(() => {
-    setDrawerOpen(false)
-  }, [view])
   const [mobileTab, setMobileTab] = useState<MobileTab>(() =>
     mobileTabForView(initialRoute.view),
   )
   const [composer, setComposer] = useState('')
   const [replyTo, setReplyTo] = useState<Message | null>(null)
+  const [typingText, setTypingText] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [modal, setModal] = useState<ActionModalType | 'call' | null>(null)
   const [modalValue, setModalValue] = useState('')
+  const [selectedChannelCategoryId, setSelectedChannelCategoryId] = useState('')
+  const [serverCreateError, setServerCreateError] = useState('')
+  const [serverCreating, setServerCreating] = useState(false)
   const [toast, setToast] = useState('')
   const [attachment, setAttachment] = useState<Attachment | null>(null)
-  const [voiceId, setVoiceId] = useState<string | null>(null)
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
   const [muted, setMuted] = useState(false)
-  const [deafened, setDeafened] = useState(false)
   const [cameraOn, setCameraOn] = useState(false)
   const [screenSharing, setScreenSharing] = useState(false)
   const [profileMenu, setProfileMenu] = useState(false)
+  const [serverMenuOpen, setServerMenuOpen] = useState(false)
+  const [currentServerNickname, setCurrentServerNickname] = useState('')
   const [notificationRead, setNotificationRead] = useState(false)
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>(loadSocialPosts)
   const [socialDraft, setSocialDraft] = useState('')
@@ -292,6 +312,9 @@ export function WorkspacePage({
   const [followedHandles, setFollowedHandles] = useState<string[]>(loadFollowedHandles)
 
   const messageInputRef = useRef<HTMLInputElement>(null)
+  const chatSocketRef = useRef<WebSocket | null>(null)
+  const chatSocketReadyRef = useRef(false)
+  const sendingMessageRef = useRef(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const feedRef = useRef<HTMLDivElement>(null)
   const socialInputRef = useRef<HTMLTextAreaElement>(null)
@@ -339,6 +362,97 @@ export function WorkspacePage({
   }, [notify])
 
   useEffect(() => {
+    let cancelled = false
+
+    const loadWorkspaceCommunities = async () => {
+      try {
+        const communities = await listCommunities()
+        const mappedServers = communities.map((community) => ({
+          id: community.id,
+          name: community.name,
+          abbr: community.name
+            .split(/\s+/)
+            .map((part) => part[0] ?? '')
+            .join('')
+            .slice(0, 3)
+            .toUpperCase(),
+          tone: 'community',
+        }))
+        const [channelEntries, categoryEntries, memberGroups] = await Promise.all([
+          Promise.all(
+            communities.map(async (community) => {
+              const channelRows = await listChannels(community.id)
+              return [
+                community.id,
+                channelRows.map((item) => ({
+                  id: item.id,
+                  name: item.name ?? 'unnamed',
+                  type: item.channel_type === 'announcement' ? 'announcement' as const : 'text' as const,
+                  categoryId: item.category_id,
+                  categoryName: item.category_name,
+                })),
+              ] as const
+            }),
+          ),
+          Promise.all(communities.map(async (community) => [community.id, await listCommunityCategories(community.id)] as const)),
+          Promise.all(communities.map((community) => listCommunityMembers(community.id))),
+        ])
+        if (cancelled) return
+        const communityPeopleEntries = communities.map((community, index) => [
+          community.id,
+          memberGroups[index].map((member) => ({
+            id: member.id,
+            name: member.display_name,
+            username: member.username,
+            initials: member.display_name
+              .split(/\s+/)
+              .map((part) => part[0] ?? '')
+              .join('')
+              .slice(0, 2)
+              .toUpperCase(),
+            tone: 'member',
+            status: member.online ? 'online' as const : 'idle' as const,
+            role: member.is_owner ? 'Server Owner' : member.role_name,
+            roleColor: member.role_color ?? undefined,
+            isOwner: member.is_owner,
+            bio: member.bio,
+            globalXp: member.global_xp,
+            globalLevel: member.global_level,
+            accountCreatedAt: member.created_at,
+            serverJoinedAt: member.joined_at,
+          })),
+        ] as const)
+        const memberMap = new Map<string, User>()
+        for (const [, communityPeople] of communityPeopleEntries) {
+          for (const member of communityPeople) {
+            if (member.id !== session.user.id) memberMap.set(member.id, member)
+          }
+        }
+        setCommunityPeopleById(Object.fromEntries(communityPeopleEntries))
+        setPeople([...memberMap.values()])
+        setCommunityCategories(Object.fromEntries(categoryEntries))
+        setData((previous) => ({
+          ...previous,
+          servers: mappedServers,
+          channels: {
+            ...previous.channels,
+            ...Object.fromEntries(channelEntries),
+          },
+        }))
+      } catch (error) {
+        if (cancelled) return
+        if (error instanceof ApiError && error.status === 401) return
+        notify(error instanceof Error ? error.message : 'Could not load your communities.')
+      }
+    }
+
+    void loadWorkspaceCommunities()
+    return () => {
+      cancelled = true
+    }
+  }, [session.user.id, notify])
+
+  useEffect(() => {
     const ok = saveData(data)
     if (!ok) {
       window.setTimeout(
@@ -355,6 +469,54 @@ export function WorkspacePage({
   }, [view, serverId, channelId, dmId])
 
   useEffect(() => {
+    if (view !== 'pinned') return
+    let cancelled = false
+    const targets = [
+      ...data.servers.flatMap((serverItem) =>
+        (data.channels[serverItem.id] ?? []).map((channelItem) => ({
+          channelId: channelItem.id,
+          scope: roomKey(serverItem.id, channelItem.id),
+          direct: false,
+        })),
+      ),
+      ...data.conversations.map((conversation) => ({
+        channelId: conversation.id,
+        scope: `dm:${conversation.id}`,
+        direct: true,
+      })),
+    ]
+
+    void Promise.all(
+      targets.map(async (target) => ({
+        ...target,
+        messages: await listPinnedMessages(target.channelId).catch(() => []),
+      })),
+    ).then((results) => {
+      if (cancelled) return
+      setData((previous) => {
+        const nextPins = { ...previous.pins }
+        const nextMessages = { ...previous.messages }
+        const nextDmMessages = { ...previous.dmMessages }
+        for (const result of results) {
+          nextPins[result.scope] = result.messages.map((message) => message.id)
+          if (result.direct) {
+            nextDmMessages[result.channelId] = result.messages
+          } else {
+            nextMessages[result.scope] = result.messages
+          }
+        }
+        return { ...previous, pins: nextPins, messages: nextMessages, dmMessages: nextDmMessages }
+      })
+    }).catch((error: unknown) => {
+      if (!cancelled) notify(error instanceof Error ? error.message : 'Pinned messages could not be loaded.')
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [view, data.servers, data.channels, data.conversations, notify])
+
+  useEffect(() => {
     const ok = saveSocialPosts(socialPosts)
     if (!ok) {
       window.setTimeout(
@@ -367,6 +529,30 @@ export function WorkspacePage({
   useEffect(() => {
     saveFollowedHandles(followedHandles)
   }, [followedHandles])
+  useEffect(() => {
+    if (view !== 'dm' || !people.some((person) => person.id === dmId)) return
+    if (data.conversations.some((conversation) => conversation.userId === dmId)) return
+
+    let cancelled = false
+    void createOrGetDm(dmId)
+      .then((dm) => {
+        if (cancelled) return
+        setData((previous) => ({
+          ...previous,
+          conversations: [
+            ...previous.conversations.filter((item) => item.userId !== dmId),
+            { id: dm.channel_id, userId: dmId, lastMessage: '', unread: 0 },
+          ],
+        }))
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) notify(error instanceof Error ? error.message : 'Could not load direct message.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [view, dmId, people, data.conversations, notify])
+
   useEffect(() => {
     const nextPath = buildWorkspacePath({ view, serverId, channelId, dmId, path: notFoundPath })
     if (window.location.pathname !== nextPath) {
@@ -393,9 +579,10 @@ export function WorkspacePage({
       setDmId(route.dmId)
       setNotFoundPath(route.path ?? '')
       setMobileTab(mobileTabForView(route.view))
-      setDrawerOpen(false)
+      
       setSearchOpen(false)
       setProfileMenu(false)
+      setServerMenuOpen(false)
     }
 
     window.addEventListener('popstate', handlePopState)
@@ -410,9 +597,10 @@ export function WorkspacePage({
         setSearchOpen(true)
       }
       if (e.key === 'Escape' && !document.querySelector('dialog:modal')) {
-        setDrawerOpen(false)
+        
         setSearchOpen(false)
         setProfileMenu(false)
+      setServerMenuOpen(false)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -420,20 +608,292 @@ export function WorkspacePage({
   }, [])
 
   const server = data.servers.find((s) => s.id === serverId) ?? data.servers[0]
+
+  useEffect(() => {
+    let cancelled = false
+    setServerMenuPreferences(null)
+    setCurrentServerNickname('')
+    if (!server?.id || view !== 'channel') return
+    void Promise.all([
+      getCommunityMemberSettings(server.id),
+      listCommunityMembers(server.id),
+    ]).then(([preferences, members]) => {
+      if (cancelled) return
+      setServerMenuPreferences(preferences)
+      const ownMember = members.find((member) => member.id === session.user.id)
+      const baseName = session.user.display_name || session.user.username
+      const nickname = ownMember && ownMember.display_name !== baseName ? ownMember.display_name : ''
+      setCurrentServerNickname(nickname)
+      setServerOptionsForm((previous) => ({
+        ...previous,
+        notificationMode: preferences.notification_mode,
+        serverMuted: preferences.is_muted,
+        allowDirectMessages: preferences.allow_direct_messages,
+        allowMessageRequests: preferences.allow_message_requests,
+        hideMutedChannels: preferences.hide_muted_channels,
+        nickname,
+      }))
+    }).catch((error) => {
+      if (!cancelled && !(error instanceof ApiError && error.status === 401)) {
+        notify(error instanceof Error ? error.message : 'Could not load server preferences.')
+      }
+    })
+    return () => { cancelled = true }
+  }, [server?.id, session.user.id, session.user.display_name, session.user.username, view, notify])
+
   const channels = useMemo(
     () => data.channels[server?.id ?? ''] ?? [],
     [data.channels, server?.id],
   )
-  const channel = channels.find((c) => c.id === channelId && c.type === 'text') ?? channels[0]
-  const currentDm = people.find((p) => p.id === dmId) ?? people[0]
-  const key = view === 'dm' ? `dm:${dmId}` : roomKey(server?.id ?? 'studio', channel?.id ?? 'general')
+  const channel = channels.find((c) => c.id === channelId && c.type !== 'voice') ?? channels.find((c) => c.type !== 'voice')
+  const currentDm = people.find((p) => p.id === dmId)
+  const currentServerPeople = server ? communityPeopleById[server.id] ?? [] : []
+  const currentServerProfile = currentServerPeople.find((person) => person.id === session.user.id)
+  const dmChannelId = data.conversations.find((conversation) => conversation.userId === dmId)?.id ?? dmId
+  const key = view === 'dm' ? `dm:${dmChannelId}` : roomKey(server?.id ?? 'studio', channel?.id ?? 'general')
   const currentMessages = useMemo(() => {
-    const allMessages = view === 'dm' ? (data.dmMessages[dmId] ?? []) : (data.messages[key] ?? [])
+    const allMessages = view === 'dm' ? (data.dmMessages[dmChannelId] ?? []) : (data.messages[key] ?? [])
     const query = search.trim().toLowerCase()
     return allMessages.filter(
       (m) => !query || `${m.text} ${m.author}`.toLowerCase().includes(query),
     )
-  }, [data.dmMessages, data.messages, dmId, key, search, view])
+  }, [data.dmMessages, data.messages, dmChannelId, key, search, view])
+
+  const activeChatChannelId =
+    view === 'dm'
+      ? (data.conversations.find((conversation) => conversation.userId === dmId)?.id ?? null)
+      : view === 'channel' && channel && channel.type !== 'voice'
+        ? channel.id
+        : null
+
+  useEffect(() => {
+    if (!activeChatChannelId) {
+      chatSocketReadyRef.current = false
+      chatSocketRef.current?.close()
+      chatSocketRef.current = null
+      return
+    }
+
+    let disposed = false
+    let retryTimer: number | null = null
+    let heartbeatTimer: number | null = null
+    let retryDelay = 500
+    let socket: WebSocket | null = null
+
+    const scopeKey = view === 'dm'
+      ? activeChatChannelId
+      : roomKey(server?.id ?? '', activeChatChannelId)
+
+    const applyMessages = (wireMessages: ChatMessageWire[]) => {
+      if (disposed || wireMessages.length === 0) return
+      const mapped = wireMessages.map((item) => mapChatMessage(item, session.user.id))
+      const highestSeq = wireMessages.reduce((max, item) => Math.max(max, item.seqId ?? 0), 0)
+      if (highestSeq > 0 && socket?.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'MARK_READ',
+          channel_id: activeChatChannelId,
+          seq_id: highestSeq,
+        }))
+      }
+      setData((previous) => {
+        const current = view === 'dm'
+          ? previous.dmMessages[activeChatChannelId] ?? []
+          : previous.messages[scopeKey] ?? []
+        // A sequence number is unique within a channel. Use it to collapse replayed
+        // history/PubSub deliveries even when the wire payload IDs differ.
+        const bySequence = new Map<string, Message>()
+        for (const message of [...current, ...mapped]) {
+          const identity = message.seqId && message.seqId > 0
+            ? `seq:${message.seqId}`
+            : `id:${message.id}`
+          bySequence.set(identity, message)
+        }
+        const nextMessages = [...bySequence.values()].sort((a, b) => (a.seqId ?? 0) - (b.seqId ?? 0))
+        return view === 'dm'
+          ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: nextMessages } }
+          : { ...previous, messages: { ...previous.messages, [scopeKey]: nextMessages } }
+      })
+    }
+
+    const connect = () => {
+      if (disposed) return
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+      socket = new WebSocket(`${protocol}//${window.location.host}/ws`)
+      chatSocketRef.current = socket
+      chatSocketReadyRef.current = false
+
+      socket.onopen = () => {
+        retryDelay = 500
+        socket?.send(JSON.stringify({
+          type: 'AUTH',
+          access_token: session.access_token,
+          device_id: session.device_id,
+        }))
+      }
+
+      socket.onmessage = (event) => {
+        let frame: {
+          type?: string
+          channelId?: string
+          messages?: ChatMessageWire[]
+          message?: ChatMessageWire | string
+          id?: string
+          code?: string
+          messageText?: string
+          messageId?: string
+          pinned?: boolean
+          reactions?: Record<string, string[]>
+          userId?: string
+        }
+        try {
+          frame = JSON.parse(String(event.data))
+        } catch {
+          return
+        }
+
+        if (frame.type === 'READY') {
+          chatSocketReadyRef.current = true
+          socket?.send(JSON.stringify({
+            type: 'SUBSCRIBE_CHANNELS',
+            channels: [{ channel_id: activeChatChannelId, last_seen_seq_id: 0 }],
+          }))
+          socket?.send(JSON.stringify({ type: 'FOCUS_CHANNEL', channel_id: activeChatChannelId }))
+          heartbeatTimer = window.setInterval(() => {
+            if (socket?.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({ type: 'PING' }))
+            }
+          }, 25_000)
+          return
+        }
+
+        if (frame.type === 'GAP_SYNC_BATCH' && frame.channelId === activeChatChannelId) {
+          applyMessages(frame.messages ?? [])
+          return
+        }
+
+        if (frame.type === 'MESSAGE_CREATE' && typeof frame.message !== 'string' && frame.message?.channelId === activeChatChannelId) {
+          applyMessages([frame.message])
+          return
+        }
+
+        if (frame.type === 'MESSAGE_UPDATE' && typeof frame.message !== 'string' && frame.message?.channelId === activeChatChannelId) {
+          const updated = mapChatMessage(frame.message, session.user.id)
+          setData((previous) => {
+            const list = view === 'dm'
+              ? previous.dmMessages[activeChatChannelId] ?? []
+              : previous.messages[scopeKey] ?? []
+            const next = list.map((item) => item.id === updated.id ? updated : item)
+            return view === 'dm'
+              ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next } }
+              : { ...previous, messages: { ...previous.messages, [scopeKey]: next } }
+          })
+          return
+        }
+
+        if (frame.type === 'TYPING_START' && frame.channelId === activeChatChannelId) {
+          const senderId = typeof frame.userId === 'string' ? frame.userId : ''
+          if (senderId && senderId !== session.user.id) {
+            const sender = people.find((person) => person.id === senderId)
+            setTypingText(sender ? `${sender.name} is typing…` : 'Someone is typing…')
+            window.setTimeout(() => setTypingText(''), 2_000)
+          }
+          return
+        }
+
+        if (frame.type === 'MESSAGE_PIN_UPDATE' && frame.messageId && frame.channelId === activeChatChannelId) {
+          setData((previous) => {
+            const current = previous.pins[scopeKey] ?? []
+            const next = frame.pinned
+              ? (current.includes(frame.messageId!) ? current : [...current, frame.messageId!])
+              : current.filter((id) => id !== frame.messageId)
+            return { ...previous, pins: { ...previous.pins, [scopeKey]: next } }
+          })
+          return
+        }
+
+        if (frame.type === 'MESSAGE_REACTION_UPDATE' && frame.messageId && frame.channelId === activeChatChannelId) {
+          const reactions = Object.fromEntries(
+            Object.entries(frame.reactions ?? {}).map(([emoji, userIds]) => [
+              emoji,
+              userIds.map((userId) => userId === session.user.id ? 'self' : userId),
+            ]),
+          )
+          setData((previous) => {
+            const list = view === 'dm'
+              ? previous.dmMessages[activeChatChannelId] ?? []
+              : previous.messages[scopeKey] ?? []
+            const next = list.map((item) => item.id === frame.messageId ? { ...item, reactions } : item)
+            return view === 'dm'
+              ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next } }
+              : { ...previous, messages: { ...previous.messages, [scopeKey]: next } }
+          })
+          return
+        }
+
+        if (frame.type === 'MESSAGE_DELETE' && frame.id && frame.channelId === activeChatChannelId) {
+          setData((previous) => {
+            const list = view === 'dm'
+              ? previous.dmMessages[activeChatChannelId] ?? []
+              : previous.messages[scopeKey] ?? []
+            const next = list.filter((item) => item.id !== frame.id)
+            return view === 'dm'
+              ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next } }
+              : { ...previous, messages: { ...previous.messages, [scopeKey]: next } }
+          })
+          return
+        }
+
+        if (frame.type === 'ERROR') {
+          if (frame.code === 'UNAUTHORIZED') {
+            chatSocketReadyRef.current = false
+            notify('Chat connection was rejected. Please sign in again.')
+          } else {
+            notify(typeof frame.message === 'string'
+              ? frame.message
+              : typeof frame.code === 'string'
+                ? `Chat error: ${frame.code}`
+                : 'The chat server rejected an event.')
+          }
+        }
+      }
+
+      socket.onclose = () => {
+        chatSocketReadyRef.current = false
+        if (heartbeatTimer !== null) {
+          window.clearInterval(heartbeatTimer)
+          heartbeatTimer = null
+        }
+        if (disposed) return
+        retryTimer = window.setTimeout(connect, retryDelay)
+        retryDelay = Math.min(10_000, retryDelay * 2)
+      }
+
+      socket.onerror = () => {
+        socket?.close()
+      }
+    }
+
+    connect()
+    return () => {
+      disposed = true
+      chatSocketReadyRef.current = false
+      if (retryTimer !== null) window.clearTimeout(retryTimer)
+      if (heartbeatTimer !== null) window.clearInterval(heartbeatTimer)
+      if (socket && socket.readyState < WebSocket.CLOSING) socket.close()
+      if (chatSocketRef.current === socket) chatSocketRef.current = null
+    }
+  }, [
+    activeChatChannelId,
+    view,
+    server?.id,
+    dmId,
+    session.access_token,
+    session.device_id,
+    session.user.id,
+    people,
+    notify,
+  ])
+
 
   const pinnedMessages = useMemo(
     () =>
@@ -451,13 +911,13 @@ export function WorkspacePage({
 
   const title =
     view === 'home'
-      ? 'Home'
+      ? 'Friends'
       : view === 'channel'
       ? channel?.name ?? 'general'
       : view === 'dm'
         ? currentDm?.name ?? 'Direct messages'
         : view === 'social'
-          ? 'Social feed'
+          ? 'Threads'
           : view === 'bots'
             ? 'Bot Portal'
             : view === 'channels'
@@ -494,72 +954,391 @@ export function WorkspacePage({
   const currentUser = useMemo(
     () => ({
       id: session.user.id,
-      name: data.displayName || session.user.display_name || session.user.username,
+      name: currentServerNickname || data.displayName || session.user.display_name || session.user.username,
       initials,
       tone: 'self',
       status: 'online' as const,
+      username: session.user.username,
+      bio: session.user.bio,
+      globalXp: session.user.global_xp,
+      globalLevel: session.user.global_level,
+      accountCreatedAt: session.user.created_at,
+      serverJoinedAt: currentServerProfile?.serverJoinedAt,
+      role: currentServerProfile?.role,
+      roleColor: currentServerProfile?.roleColor,
+      isOwner: currentServerProfile?.isOwner,
     }),
-    [session.user.id, session.user.display_name, session.user.username, data.displayName, initials],
+    [
+      session.user.id,
+      session.user.display_name,
+      session.user.username,
+      session.user.bio,
+      session.user.global_xp,
+      session.user.global_level,
+      session.user.created_at,
+      data.displayName,
+      initials,
+      currentServerNickname,
+      currentServerProfile?.serverJoinedAt,
+      currentServerProfile?.role,
+      currentServerProfile?.roleColor,
+      currentServerProfile?.isOwner,
+    ],
   )
 
-  const sendMessage = (e?: FormEvent) => {
+  const openProfile = (userId: string) => {
+    const targetId = userId === 'self' ? session.user.id : userId
+    const profile = targetId === session.user.id
+      ? currentUser
+      : currentServerPeople.find((person) => person.id === targetId)
+        ?? people.find((person) => person.id === targetId)
+    if (profile) setSelectedProfile(profile)
+    else notify('This member profile is no longer available.')
+  }
+
+  const handleCreateCommunity = async () => {
+    const name = modalValue.trim()
+    if (!name || serverCreating) return
+    setServerCreateError('')
+    setServerCreating(true)
+    try {
+      const result = await createCommunity({ name })
+      const community = result.community
+      const server = {
+        id: community.id,
+        name: community.name,
+        abbr: community.name
+          .split(/\s+/)
+          .map((part) => part[0] ?? '')
+          .join('')
+          .slice(0, 3)
+          .toUpperCase(),
+        tone: 'community',
+      }
+      setData((previous) => ({
+        ...previous,
+        servers: [...previous.servers.filter((item) => item.id !== server.id), server],
+        channels: {
+          ...previous.channels,
+          [server.id]: [{ id: result.general_channel_id, name: 'general', type: 'text' }],
+        },
+      }))
+      setServerId(server.id)
+      setChannelId(result.general_channel_id)
+      setView('channel')
+      setMobileTab('chat')
+      setModal(null)
+      setModalValue('')
+      setServerCreateError('')
+      notify(`Created ${community.name}. Invite code: ${result.invite_code}`)
+    } catch (error) {
+      setServerCreateError(error instanceof Error ? error.message : 'Could not create community.')
+    } finally {
+      setServerCreating(false)
+    }
+  }
+
+  const openServerOptions = async (mode: ServerOptionsDialogMode) => {
+    if (!server) return
+    setServerOptionsError('')
+    try {
+      const [preferences, communities, members] = await Promise.all([
+        getCommunityMemberSettings(server.id),
+        listCommunities(),
+        listCommunityMembers(server.id),
+      ])
+      setServerMenuPreferences(preferences)
+      const community = communities.find((item) => item.id === server.id)
+      const ownMember = members.find((member) => member.id === session.user.id)
+      const baseName = session.user.display_name || session.user.username
+      const nickname = ownMember && ownMember.display_name !== baseName ? ownMember.display_name : ''
+      setCurrentServerNickname(nickname)
+      setServerOptionsForm((previous) => ({
+        ...previous,
+        name: mode === 'category' || mode === 'event' ? '' : (community?.name ?? server.name),
+        description: mode === 'event' ? '' : (community?.description ?? ''),
+        startsAt: mode === 'event' ? '' : previous.startsAt,
+        location: mode === 'event' ? '' : previous.location,
+        isPublic: community?.is_public ?? true,
+        notificationMode: preferences.notification_mode,
+        serverMuted: preferences.is_muted,
+        allowDirectMessages: preferences.allow_direct_messages,
+        allowMessageRequests: preferences.allow_message_requests,
+        hideMutedChannels: preferences.hide_muted_channels,
+        nickname,
+      }))
+      setServerOptionsMode(mode)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not load server options.')
+    }
+  }
+
+  const handleSubmitServerOptions = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!server || !serverOptionsMode || serverOptionsBusy) return
+    setServerOptionsBusy(true)
+    setServerOptionsError('')
+    try {
+      if (serverOptionsMode === 'settings') {
+        const updated = await updateCommunity(server.id, {
+          name: serverOptionsForm.name.trim(),
+          description: serverOptionsForm.description.trim(),
+          is_public: serverOptionsForm.isPublic,
+        })
+        setData((previous) => ({
+          ...previous,
+          servers: previous.servers.map((item) => item.id === server.id
+            ? { ...item, name: updated.name, abbr: updated.name.split(/\s+/).map((part) => part[0] ?? '').join('').slice(0, 3).toUpperCase() }
+            : item),
+        }))
+        notify('Server settings saved')
+      } else if (serverOptionsMode === 'category') {
+        const category = await createCommunityCategory(server.id, serverOptionsForm.name.trim())
+        setCommunityCategories((previous) => ({
+          ...previous,
+          [server.id]: [...(previous[server.id] ?? []), category],
+        }))
+        notify(`Created category ${category.name}`)
+      } else if (serverOptionsMode === 'event') {
+        await createCommunityEvent(server.id, {
+          name: serverOptionsForm.name.trim(),
+          description: serverOptionsForm.description.trim(),
+          starts_at: new Date(serverOptionsForm.startsAt).toISOString(),
+          location: serverOptionsForm.location.trim(),
+        })
+        notify('Server event created')
+      } else if (serverOptionsMode === 'notifications') {
+        const updated = await updateCommunityMemberSettings(server.id, {
+          notification_mode: serverOptionsForm.notificationMode,
+          is_muted: serverOptionsForm.serverMuted,
+          hide_muted_channels: serverOptionsForm.hideMutedChannels,
+        })
+        setServerMenuPreferences(updated)
+        notify('Notification preferences saved')
+      } else if (serverOptionsMode === 'privacy') {
+        const updated = await updateCommunityMemberSettings(server.id, {
+          allow_direct_messages: serverOptionsForm.allowDirectMessages,
+          allow_message_requests: serverOptionsForm.allowMessageRequests,
+        })
+        setServerMenuPreferences(updated)
+        notify('Privacy preferences saved')
+      } else if (serverOptionsMode === 'profile') {
+        const result = await updateCommunityNickname(server.id, serverOptionsForm.nickname)
+        setCurrentServerNickname(result.nickname ?? '')
+        notify(result.nickname ? 'Server nickname saved' : 'Server nickname cleared')
+      }
+      if (serverOptionsMode !== 'settings') setServerOptionsMode(null)
+    } catch (error) {
+      setServerOptionsError(error instanceof Error ? error.message : 'Server option could not be saved.')
+    } finally {
+      setServerOptionsBusy(false)
+    }
+  }
+
+  const handleToggleHideMutedChannels = async () => {
+    if (!server) return
+    const nextValue = !Boolean(serverMenuPreferences?.hide_muted_channels)
+    try {
+      const updated = await updateCommunityMemberSettings(server.id, { hide_muted_channels: nextValue })
+      setServerMenuPreferences(updated)
+      setServerOptionsForm((previous) => ({ ...previous, hideMutedChannels: updated.hide_muted_channels }))
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not update channel visibility.')
+    }
+  }
+
+  const removeActiveServerFromWorkspace = (communityId: string) => {
+    const remaining = data.servers.filter((item) => item.id !== communityId)
+    setData((previous) => ({
+      ...previous,
+      servers: previous.servers.filter((item) => item.id !== communityId),
+      channels: Object.fromEntries(Object.entries(previous.channels).filter(([id]) => id !== communityId)),
+    }))
+    setCommunityCategories((previous) => {
+      const next = { ...previous }
+      delete next[communityId]
+      return next
+    })
+    setServerMenuPreferences(null)
+    setServerId(remaining[0]?.id ?? '')
+    setChannelId(remaining[0] ? (data.channels[remaining[0].id]?.[0]?.id ?? '') : '')
+    setView(remaining[0] ? 'channel' : 'home')
+    setMobileTab(remaining[0] ? 'chat' : 'home')
+  }
+
+  const handleLeaveServer = async () => {
+    if (!server || !window.confirm(`Leave ${server.name}? You will need an invite to rejoin.`)) return
+    try {
+      await leaveCommunity(server.id)
+      const leavingName = server.name
+      removeActiveServerFromWorkspace(server.id)
+      notify(`Left ${leavingName}`)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not leave server.')
+    }
+  }
+
+  const handleDeleteServer = async () => {
+    if (!server || !window.confirm(`Delete ${server.name}? This permanently removes its channels, messages and members.`)) return
+    try {
+      await deleteCommunity(server.id)
+      const deletedName = server.name
+      removeActiveServerFromWorkspace(server.id)
+      notify(`Deleted ${deletedName}`)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not delete server.')
+    }
+  }
+
+  const handleOpenInvite = async () => {
+    if (!server) return
+    try {
+      const result = await getCommunityInvite(server.id)
+      setModalValue(result.invite_code)
+      setModal('invite')
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not create an invite.')
+    }
+  }
+
+  const handleJoinCommunity = async () => {
+    const raw = modalValue.trim()
+    const inviteCode = raw.split(/[/?#]/).filter(Boolean).at(-1) ?? raw
+    if (!inviteCode) return
+    try {
+      const joined = await joinCommunity(inviteCode)
+      const community = (await listCommunities()).find((item) => item.id === joined.community_id)
+      if (!community) throw new Error('Joined, but the community could not be loaded.')
+      const [rows, categories] = await Promise.all([
+        listChannels(community.id),
+        listCommunityCategories(community.id),
+      ])
+      setCommunityCategories((previous) => ({ ...previous, [community.id]: categories }))
+      const server = {
+        id: community.id,
+        name: community.name,
+        abbr: community.name
+          .split(/\s+/)
+          .map((part) => part[0] ?? '')
+          .join('')
+          .slice(0, 3)
+          .toUpperCase(),
+        tone: 'community',
+      }
+      setData((previous) => ({
+        ...previous,
+        servers: [...previous.servers.filter((item) => item.id !== server.id), server],
+        channels: {
+          ...previous.channels,
+          [server.id]: rows.map((item) => ({
+            id: item.id,
+            name: item.name ?? 'unnamed',
+            type: item.channel_type === 'announcement' ? 'announcement' as const : 'text' as const,
+          })),
+        },
+      }))
+      setServerId(server.id)
+      const firstChannel = rows[0]
+      if (firstChannel) setChannelId(firstChannel.id)
+      setView('channel')
+      setMobileTab('chat')
+      setModal(null)
+      setModalValue('')
+      notify(joined.already_member ? `Opened ${community.name}` : `Joined ${community.name}`)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not join community.')
+    }
+  }
+
+  const sendMessage = async (e?: FormEvent) => {
     e?.preventDefault()
     const clean = composer.trim()
-    if (!clean && !attachment) return
+    if ((!clean && !attachment) || !activeChatChannelId) return
 
     if (editingId) {
-      setData((prev) => {
-        const list = view === 'dm' ? (prev.dmMessages[dmId] ?? []) : (prev.messages[key] ?? [])
-        const nextList = list.map((m) =>
-          m.id === editingId ? { ...m, text: clean, edited: true } : m,
-        )
-        return view === 'dm'
-          ? { ...prev, dmMessages: { ...prev.dmMessages, [dmId]: nextList } }
-          : { ...prev, messages: { ...prev.messages, [key]: nextList } }
-      })
-      setEditingId(null)
-      setComposer('')
+      if (attachment) {
+        notify('Remove the attachment before editing a message.')
+        return
+      }
+      try {
+        const updated = await editChatMessage(editingId, clean)
+        const mapped = mapChatMessage(updated, session.user.id)
+        setData((previous) => {
+          const list = view === 'dm'
+            ? previous.dmMessages[activeChatChannelId] ?? []
+            : previous.messages[key] ?? []
+          const next = list.map((item) => item.id === mapped.id ? mapped : item)
+          return view === 'dm'
+            ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next } }
+            : { ...previous, messages: { ...previous.messages, [key]: next } }
+        })
+        setEditingId(null)
+        setComposer('')
+      } catch (error) {
+        notify(error instanceof Error ? error.message : 'Message could not be edited.')
+      }
       return
     }
 
-    const now = new Date()
-    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-    const nextMessage: Message = {
-      id: `m${Date.now()}`,
-      authorId: 'self',
-      author: data.displayName,
-      initials,
-      tone: 'self',
-      time,
-      text: clean || `Shared ${attachment?.name ?? 'attachment'}`,
-      reactions: {},
-      replyTo: replyTo?.id,
-      attachment: attachment ?? undefined,
-    }
+    if (sendingMessageRef.current) return
+    sendingMessageRef.current = true
+    const clientMessageId = crypto.randomUUID()
+    try {
+      let mediaId = attachment?.mediaId
+      if (attachment && !mediaId) {
+        if (!attachmentFile) throw new Error('Select the attachment again before sending.')
+        const uploaded = await uploadChatMedia(attachmentFile, activeChatChannelId)
+        mediaId = uploaded.attachment.id
+        setAttachment((previous) => {
+          if (!previous) return previous
+          revokeBlobUrl(previous.url)
+          return {
+            ...previous,
+            mediaId,
+            url: uploaded.attachment.url,
+            type: uploaded.attachment.mimeType,
+            name: uploaded.attachment.name,
+          }
+        })
+        setAttachmentFile(null)
+      }
 
-    setData((prev) => {
-      if (view === 'dm') {
-        const existing = prev.conversations.some((c) => c.userId === dmId)
-        const nextConvs = existing
-          ? prev.conversations.map((c) =>
-              c.userId === dmId ? { ...c, lastMessage: nextMessage.text, unread: 0 } : c,
-            )
-          : [...prev.conversations, { id: `c${dmId}`, userId: dmId, lastMessage: nextMessage.text, unread: 0 }]
-        return {
-          ...prev,
-          conversations: nextConvs,
-          dmMessages: { ...prev.dmMessages, [dmId]: [...(prev.dmMessages[dmId] ?? []), nextMessage] },
+      const ack = await postMessage(activeChatChannelId, {
+        client_msg_id: clientMessageId,
+        content: clean,
+        media_id: mediaId,
+        reply_to_id: replyTo?.id,
+      })
+      const persisted = await listMessages(activeChatChannelId, Math.max(0, ack.seq_id - 1), 5)
+      setData((previous) => {
+        const current = view === 'dm'
+          ? previous.dmMessages[activeChatChannelId] ?? []
+          : previous.messages[key] ?? []
+        const bySequence = new Map<string, Message>()
+        for (const message of [...current, ...persisted]) {
+          const identity = message.seqId && message.seqId > 0
+            ? `seq:${message.seqId}`
+            : `id:${message.id}`
+          bySequence.set(identity, message)
         }
-      }
-      return {
-        ...prev,
-        messages: { ...prev.messages, [key]: [...(prev.messages[key] ?? []), nextMessage] },
-      }
-    })
+        const next = [...bySequence.values()].sort((a, b) => (a.seqId ?? 0) - (b.seqId ?? 0))
+        return view === 'dm'
+          ? { ...previous, dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next } }
+          : { ...previous, messages: { ...previous.messages, [key]: next } }
+      })
 
-    setComposer('')
-    setReplyTo(null)
-    setAttachment(null)
+      setComposer('')
+      setReplyTo(null)
+      setAttachment((previous) => {
+        revokeBlobUrl(previous?.url)
+        return null
+      })
+      setAttachmentFile(null)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Message could not be sent.')
+    } finally {
+      sendingMessageRef.current = false
+    }
   }
 
   const pickServer = (id: string) => {
@@ -568,31 +1347,57 @@ export function WorkspacePage({
     if (first) setChannelId(first.id)
     setView('channel')
     setMobileTab('chat')
-    setDrawerOpen(false)
+    
   }
 
   const pickChannel = (c: Channel) => {
     if (c.type === 'voice') {
-      setVoiceId(c.id)
       notify(`Connected to ${c.name} voice preview`)
-      setDrawerOpen(false)
+      
       return
     }
     setChannelId(c.id)
     setView('channel')
     setMobileTab('chat')
-    setDrawerOpen(false)
+    
   }
 
-  const openDm = (uid: string) => {
-    setDmId(uid)
-    setView('dm')
-    setMobileTab('chat')
-    setDrawerOpen(false)
-    setData((prev) => ({
-      ...prev,
-      conversations: prev.conversations.map((c) => (c.userId === uid ? { ...c, unread: 0 } : c)),
-    }))
+  const openDm = async (target: string) => {
+    const existing = data.conversations.find((conversation) =>
+      conversation.userId === target || conversation.id === target,
+    )
+    const recipientId = existing?.userId ?? target
+    const person = people.find((user) => user.id === recipientId)
+    if (!person) {
+      notify('That member is no longer available in your shared communities.')
+      return
+    }
+
+    try {
+      const dm = existing?.id
+        ? { channel_id: existing.id }
+        : await createOrGetDm(recipientId)
+      setData((previous) => {
+        const withoutDuplicate = previous.conversations.filter((item) => item.userId !== recipientId)
+        return {
+          ...previous,
+          conversations: [
+            ...withoutDuplicate,
+            {
+              id: dm.channel_id,
+              userId: recipientId,
+              lastMessage: existing?.lastMessage ?? '',
+              unread: 0,
+            },
+          ],
+        }
+      })
+      setDmId(recipientId)
+      setView('dm')
+      setMobileTab('chat')
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not open direct message.')
+    }
   }
 
   const discoverReturnRouteRef = useRef<WorkspaceRoute | null>(null)
@@ -605,7 +1410,7 @@ export function WorkspacePage({
     if (nextView === 'social') setMobileTab('social')
     else if (nextView === 'channels') setMobileTab('channels')
     else if (nextView === 'people') setMobileTab('people')
-    setDrawerOpen(false)
+    
   }
 
   const showMembersPanel = ((view === 'channel' && Boolean(server) && Boolean(channel)) || (view === 'dm' && Boolean(currentDm))) && membersOpen
@@ -613,99 +1418,118 @@ export function WorkspacePage({
   return (
     <div
       className={`app-shell theme-${data.theme} ${isMobile ? 'viewport-mobile' : 'viewport-desktop'} ${
-        drawerOpen ? 'drawer-open' : ''
-      } ${pageTransition ? `page-transition-${pageTransition}` : ''} view-${view}`}
+        'sidebar-persistent'
+      } ${pageTransition ? `page-transition-${pageTransition}` : ''} view-${view} ${view === 'discover' ? 'has-no-channel-sidebar' : ''}`}
     >
       {pageTransition === 'rocket' && (
         <div className="route-transition-overlay" aria-hidden="true" ref={rocketCoverRef}>
           <div className="route-transition-stars" ref={rocketStarsRef} />
-          <span className="route-transition-rocket" ref={rocketRef}><i className="fa-solid fa-rocket" /></span>
+          <span className="route-transition-rocket" ref={rocketRef}><i className="fa-solid fa-rocket" aria-hidden="true" /></span>
           <div className="route-transition-label" ref={rocketLabelRef}>Memuat…</div>
         </div>
       )}
-      <button
-        className="drawer-scrim"
-        aria-label="Close navigation"
-        onClick={() => setDrawerOpen(false)}
-      />
-
-      <>
-          <ServerRail
-            servers={data.servers}
-            activeServerId={serverId}
-            activeView={view}
-            onSelectHome={() => {
-              setView('home')
-              setMobileTab('home')
-              setDrawerOpen(false)
-            }}
-            onSelectServer={pickServer}
-            onCreateServer={() => {
-              setModal('server')
-              setModalValue('')
-            }}
-            onNavigateView={navigateView}
-          />
-
-          {view !== 'channels' && view !== 'people' && <ChannelSidebar
-        currentUser={currentUser}
-        view={view}
+      <ServerRail
         servers={data.servers}
-        allChannels={data.channels}
         activeServerId={serverId}
-        server={server}
-        channels={channels}
-        channelId={channel?.id ?? ''}
-        dmId={dmId}
-        conversations={data.conversations}
-        people={people}
-        displayName={data.displayName}
-        theme={data.theme}
-        socialTab={socialTab}
-        voiceId={voiceId}
-        muted={muted}
-        deafened={deafened}
-        profileMenuOpen={profileMenu}
-        onToggleProfileMenu={() => setProfileMenu((v) => !v)}
-        onSelectSocialTab={setSocialTab}
-        onOpenQuickSearch={() => setSearchOpen(true)}
-        onSelectChannel={pickChannel}
-        onSelectServer={pickServer}
-        onSelectServerChannel={(joinedServerId, joinedChannel) => {
-          setServerId(joinedServerId)
-          if (joinedChannel.type === 'voice') {
-            setVoiceId(joinedChannel.id)
-            notify(`Connected to ${joinedChannel.name} voice preview`)
-            setDrawerOpen(false)
-            return
-          }
-          setChannelId(joinedChannel.id)
-          setView('channel')
-          setMobileTab('chat')
-          setDrawerOpen(false)
+        activeView={view}
+        onSelectHome={() => {
+          setView('home')
+          setMobileTab('home')
         }}
-        onOpenDm={openDm}
-        onCreateChannelModal={() => {
-          setModal('channel')
+        onSelectServer={pickServer}
+        onCreateServer={() => {
+          setServerCreateError('')
+          setModal('server')
           setModalValue('')
         }}
-        onNewDmModal={() => {
-          setModal('dm')
-          setModalValue(people[0]?.id ?? 'mika')
-        }}
-        onVoiceChannelNotice={() => notify('Select any voice channel below to preview audio.')}
-        onToggleMute={() => setMuted((v) => !v)}
-        onToggleDeafen={() => setDeafened((v) => !v)}
-        onDisconnectVoice={() => setVoiceId(null)}
-        onNavigateSettings={() => navigateView('settings')}
         onNavigateDiscover={() => navigateView('discover')}
-        onToggleTheme={() =>
-          setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))
-        }
-            onOpenBots={() => navigateView('bots')}
-            onLogout={() => void onLogout()}
-          />}
-      </>
+        onOpenBots={() => navigateView('bots')}
+      />
+
+      {view !== 'discover' && view !== 'channels' && view !== 'people' && (
+        <ChannelSidebar
+          currentUser={currentUser}
+          view={view}
+          server={server}
+          channels={channels}
+          categories={communityCategories[serverId] ?? []}
+          channelId={channel?.id ?? ''}
+          dmId={dmId}
+          conversations={data.conversations}
+          people={people}
+          displayName={data.displayName}
+          theme={data.theme}
+          socialTab={socialTab}
+          voiceId={null}
+          muted={muted}
+          deafened={false}
+          profileMenuOpen={profileMenu}
+          serverMenuOpen={serverMenuOpen}
+          onToggleServerMenu={() => {
+            setProfileMenu(false)
+            setServerMenuOpen((open) => !open)
+          }}
+          onInvitePeople={() => void handleOpenInvite()}
+          onOpenServerSettings={() => void openServerOptions('settings')}
+          onCreateCategory={() => void openServerOptions('category')}
+          onCreateEvent={() => void openServerOptions('event')}
+          onOpenNotificationSettings={() => void openServerOptions('notifications')}
+          onOpenPrivacySettings={() => void openServerOptions('privacy')}
+          onEditServerProfile={() => void openServerOptions('profile')}
+          onToggleHideMutedChannels={() => void handleToggleHideMutedChannels()}
+          hideMutedChannels={serverMenuPreferences?.hide_muted_channels ?? false}
+          canDeleteServer={serverMenuPreferences?.is_owner ?? false}
+          onLeaveServer={() => void handleLeaveServer()}
+          onDeleteServer={() => void handleDeleteServer()}
+          onCopyServerId={() => {
+            if (!server?.id) return
+            void navigator.clipboard.writeText(server.id)
+              .then(() => notify('Server ID copied'))
+              .catch(() => notify('Could not copy server ID.'))
+            setServerMenuOpen(false)
+          }}
+          onToggleProfileMenu={() => {
+            setServerMenuOpen(false)
+            setProfileMenu((open) => !open)
+          }}
+          onSelectSocialTab={setSocialTab}
+          onOpenQuickSearch={() => setSearchOpen(true)}
+          onSelectChannel={pickChannel}
+          onOpenDm={openDm}
+          onCreateChannelModal={() => {
+            setModal('channel')
+            setModalValue('')
+            setSelectedChannelCategoryId('')
+          }}
+          onCreateChannelInCategory={(categoryId) => {
+            if (!categoryId) {
+              notify('Category not found. Refresh the server channel list and try again.')
+              return
+            }
+            setSelectedChannelCategoryId(categoryId)
+            setModal('channel')
+            setModalValue('')
+          }}
+          onNewDmModal={() => {
+            setModal('dm')
+            setModalValue('')
+          }}
+          onVoiceChannelNotice={() => notify('Voice is not connected yet.')}
+          onToggleMute={() => setMuted((value) => !value)}
+          onToggleDeafen={() => notify('Deafen will be available when voice is connected.')}
+          onDisconnectVoice={() => notify('No active voice connection.')}
+          onNavigateHome={() => {
+            setView('home')
+            setMobileTab('home')
+          }}
+          onNavigateThreads={() => navigateView('social')}
+          onNavigateSettings={() => navigateView('settings')}
+          onNavigateDiscover={() => navigateView('discover')}
+          onToggleTheme={() => setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))}
+          onOpenBots={() => navigateView('bots')}
+          onLogout={() => void onLogout()}
+        />
+      )}
 
       <main className="workspace">
         <Topbar
@@ -717,7 +1541,6 @@ export function WorkspacePage({
           searchOpen={searchOpen}
           notificationRead={notificationRead}
           unreadCount={data.conversations.reduce((acc, c) => acc + c.unread, 0)}
-          onOpenDrawer={() => setDrawerOpen(true)}
           onBack={() => {
             const previous = discoverReturnRouteRef.current
             if (previous) {
@@ -731,7 +1554,7 @@ export function WorkspacePage({
               setView('home')
               setMobileTab('home')
             }
-            setDrawerOpen(false)
+            
           }}
           onFocusSocialComposer={() => socialInputRef.current?.focus()}
           onVoiceCallModal={() => setModal('call')}
@@ -895,10 +1718,7 @@ export function WorkspacePage({
               <PeopleDirectory
                 people={people}
                 onOpenDm={openDm}
-                onInvite={() => {
-                  setModal('invite')
-                  setModalValue('')
-                }}
+                onInvite={() => void handleOpenInvite()}
               />
             ) : view === 'settings' ? (
               <SettingsView
@@ -915,6 +1735,7 @@ export function WorkspacePage({
             ) : view === 'discover' ? (
               <DiscoverView
                 onCreateCommunity={() => {
+                  setServerCreateError('')
                   setModal('server')
                   setModalValue('')
                 }}
@@ -956,6 +1777,8 @@ export function WorkspacePage({
               />
             ) : (
               <ChatPanel
+                currentUserId={session.user.id}
+                onOpenProfile={openProfile}
                 isDm={view === 'dm'}
                 currentDm={currentDm}
                 channel={channel}
@@ -968,8 +1791,17 @@ export function WorkspacePage({
                 replyTo={replyTo}
                 editingId={editingId}
                 attachment={attachment}
-                onComposerTextChange={setComposer}
+                onComposerTextChange={(value) => {
+                  setComposer(value)
+                  if (value.trim() && chatSocketRef.current?.readyState === WebSocket.OPEN && chatSocketReadyRef.current && activeChatChannelId) {
+                    chatSocketRef.current.send(JSON.stringify({
+                      type: 'TYPING_START',
+                      channel_id: activeChatChannelId,
+                    }))
+                  }
+                }}
                 onSendMessage={sendMessage}
+                typingText={typingText}
                 onCancelReply={() => setReplyTo(null)}
                 onCancelEdit={() => {
                   setEditingId(null)
@@ -977,37 +1809,52 @@ export function WorkspacePage({
                 }}
                 onAttachmentSelect={(file) => {
                   if (!file) return
+                  if (file.size > 10 * 1024 * 1024) {
+                    notify('Attachments are limited to 10 MB.')
+                    return
+                  }
+                  const supportedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'text/csv', 'application/zip', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation']
+                  if (!supportedTypes.includes(file.type)) {
+                    notify('Supported: images, PDF, TXT, CSV, ZIP, Word, Excel and PowerPoint.')
+                    return
+                  }
                   const url = URL.createObjectURL(file)
                   blobUrlsRef.current.add(url)
                   setAttachment((prev) => {
                     revokeBlobUrl(prev?.url)
                     return { name: file.name, type: file.type, url }
                   })
+                  setAttachmentFile(file)
                 }}
                 onRemoveAttachment={() => {
                   setAttachment((prev) => {
                     revokeBlobUrl(prev?.url)
                     return null
                   })
+                  setAttachmentFile(null)
                 }}
                 onAddEmoji={(emoji) => setComposer((v) => `${v} ${emoji}`)}
                 onReact={(id, emoji) => {
-                  setData((prev) => {
-                    const list = view === 'dm' ? (prev.dmMessages[dmId] ?? []) : (prev.messages[key] ?? [])
-                    const nextList = list.map((m) => {
-                      if (m.id !== id) return m
-                      const users = m.reactions[emoji] ?? []
-                      const nextUsers = users.includes('self')
-                        ? users.filter((u) => u !== 'self')
-                        : [...users, 'self']
-                      const nextReactions = { ...m.reactions, [emoji]: nextUsers }
-                      if (nextUsers.length === 0) delete nextReactions[emoji]
-                      return { ...m, reactions: nextReactions }
-                    })
-                    return view === 'dm'
-                      ? { ...prev, dmMessages: { ...prev.dmMessages, [dmId]: nextList } }
-                      : { ...prev, messages: { ...prev.messages, [key]: nextList } }
-                  })
+                  void (async () => {
+                    try {
+                      const result = await toggleMessageReaction(id, emoji)
+                      const reactions = Object.fromEntries(
+                        Object.entries(result.reactions).map(([reaction, userIds]) => [
+                          reaction,
+                          userIds.map((userId) => userId === session.user.id ? 'self' : userId),
+                        ]),
+                      )
+                      setData((previous) => {
+                        const list = view === 'dm' ? (previous.dmMessages[dmChannelId] ?? []) : (previous.messages[key] ?? [])
+                        const nextList = list.map((message) => message.id === id ? { ...message, reactions } : message)
+                        return view === 'dm'
+                          ? { ...previous, dmMessages: { ...previous.dmMessages, [dmChannelId]: nextList } }
+                          : { ...previous, messages: { ...previous.messages, [key]: nextList } }
+                      })
+                    } catch (error) {
+                      notify(error instanceof Error ? error.message : 'Reaction could not be saved.')
+                    }
+                  })()
                 }}
                 onReply={setReplyTo}
                 onEdit={(m) => {
@@ -1016,26 +1863,41 @@ export function WorkspacePage({
                   messageInputRef.current?.focus()
                 }}
                 onRemove={(m) => {
-                  revokeBlobUrl(m.attachment?.url)
-                  setData((prev) => {
-                    const list = view === 'dm' ? (prev.dmMessages[dmId] ?? []) : (prev.messages[key] ?? [])
-                    const nextList = list.filter((x) => x.id !== m.id)
-                    return view === 'dm'
-                      ? { ...prev, dmMessages: { ...prev.dmMessages, [dmId]: nextList } }
-                      : { ...prev, messages: { ...prev.messages, [key]: nextList } }
-                  })
+                  void (async () => {
+                    try {
+                      await deleteChatMessage(m.id)
+                      setData((prev) => {
+                        const list = view === 'dm' ? (prev.dmMessages[dmChannelId] ?? []) : (prev.messages[key] ?? [])
+                        const nextList = list.filter((item) => item.id !== m.id)
+                        return view === 'dm'
+                          ? { ...prev, dmMessages: { ...prev.dmMessages, [dmChannelId]: nextList } }
+                          : { ...prev, messages: { ...prev.messages, [key]: nextList } }
+                      })
+                    } catch (error) {
+                      notify(error instanceof Error ? error.message : 'Message could not be deleted.')
+                    }
+                  })()
                 }}
                 onTogglePin={(m) => {
-                  setData((prev) => {
-                    const current = prev.pins[key] ?? []
-                    const next = current.includes(m.id)
-                      ? current.filter((x) => x !== m.id)
-                      : [...current, m.id]
-                    return { ...prev, pins: { ...prev.pins, [key]: next } }
-                  })
+                  void (async () => {
+                    const isPinned = (data.pins[key] ?? []).includes(m.id)
+                    try {
+                      if (isPinned) await unpinMessage(m.id)
+                      else await pinMessage(m.id)
+                      setData((previous) => {
+                        const current = previous.pins[key] ?? []
+                        const next = isPinned
+                          ? current.filter((item) => item !== m.id)
+                          : [...current, m.id]
+                        return { ...previous, pins: { ...previous.pins, [key]: next } }
+                      })
+                    } catch (error) {
+                      notify(error instanceof Error ? error.message : 'Pin change could not be saved.')
+                    }
+                  })()
                 }}
                 onOpenPinnedView={() => navigateView('pinned')}
-                onInvite={() => setModal('invite')}
+                onInvite={() => void handleOpenInvite()}
                 onNotify={notify}
                 onDiscoverCommunities={() => navigateView('discover')}
                 onBrowseChannels={() => navigateView('channels')}
@@ -1063,12 +1925,12 @@ export function WorkspacePage({
           {showMembersPanel && (
             <MembersPanel
               isDm={view === 'dm'}
+              currentUser={currentUser}
               currentDmUser={currentDm}
-              people={people}
+              people={view === 'dm' ? people : currentServerPeople}
               mobileOpen={isMobile && membersOpen}
-              onOpenDm={openDm}
-              onInvite={() => setModal('invite')}
-              onNotify={notify}
+              onInvite={() => void handleOpenInvite()}
+              onOpenProfile={openProfile}
             />
           )}
         </div>
@@ -1086,7 +1948,7 @@ export function WorkspacePage({
               }
               if (tab === 'channels') setView('channels')
               if (tab === 'people') setView('people')
-              setDrawerOpen(false)
+              
             }}
           />
         )}
@@ -1109,16 +1971,73 @@ export function WorkspacePage({
         />
       )}
 
+      {serverOptionsMode && server && (
+        <ServerOptionsDialog
+          mode={serverOptionsMode}
+          serverName={server.name}
+          communityId={server.id}
+          currentUserId={session.user.id}
+          isOwner={Boolean(serverMenuPreferences?.is_owner)}
+          canManageRoles={Boolean(serverMenuPreferences?.can_manage_roles)}
+          {...serverOptionsForm}
+          busy={serverOptionsBusy}
+          error={serverOptionsError}
+          onChangeName={(name) => setServerOptionsForm((previous) => ({ ...previous, name }))}
+          onChangeDescription={(description) => setServerOptionsForm((previous) => ({ ...previous, description }))}
+          onChangePublic={(isPublic) => setServerOptionsForm((previous) => ({ ...previous, isPublic }))}
+          onChangeStartsAt={(startsAt) => setServerOptionsForm((previous) => ({ ...previous, startsAt }))}
+          onChangeLocation={(location) => setServerOptionsForm((previous) => ({ ...previous, location }))}
+          onChangeNotificationMode={(notificationMode) => setServerOptionsForm((previous) => ({ ...previous, notificationMode }))}
+          onChangeServerMuted={(serverMuted) => setServerOptionsForm((previous) => ({ ...previous, serverMuted }))}
+          onChangeAllowDirectMessages={(allowDirectMessages) => setServerOptionsForm((previous) => ({ ...previous, allowDirectMessages }))}
+          onChangeAllowMessageRequests={(allowMessageRequests) => setServerOptionsForm((previous) => ({ ...previous, allowMessageRequests }))}
+          onChangeHideMutedChannels={(hideMutedChannels) => setServerOptionsForm((previous) => ({ ...previous, hideMutedChannels }))}
+          onChangeNickname={(nickname) => setServerOptionsForm((previous) => ({ ...previous, nickname }))}
+          onSubmit={(event) => void handleSubmitServerOptions(event)}
+          onCreateChannel={() => {
+            setServerOptionsMode(null)
+            setSelectedChannelCategoryId('')
+            setModalValue('')
+            setModal('channel')
+          }}
+          onCreateCategory={() => void openServerOptions('category')}
+          onCreateEvent={() => void openServerOptions('event')}
+          onDeleteServer={() => {
+            setServerOptionsMode(null)
+            void handleDeleteServer()
+          }}
+          onLeaveServer={() => {
+            setServerOptionsMode(null)
+            void handleLeaveServer()
+          }}
+          onClose={() => setServerOptionsMode(null)}
+        />
+      )}
+
       {modal && modal !== 'call' && (
         <ActionModal
           type={modal}
           value={modalValue}
           people={people}
-          onChangeValue={setModalValue}
+          categories={communityCategories[serverId] ?? []}
+          selectedCategoryId={selectedChannelCategoryId}
+          onChangeCategoryId={setSelectedChannelCategoryId}
+          serverError={modal === 'server' ? serverCreateError : ''}
+          creatingServer={modal === 'server' && serverCreating}
+          onChangeValue={(value) => {
+            setModalValue(value)
+            if (modal === 'server') setServerCreateError('')
+          }}
+          onCreateServer={() => void handleCreateCommunity()}
+          onJoinServer={() => void handleJoinCommunity()}
+          onCopyInvite={() => {
+            void navigator.clipboard.writeText(modalValue)
+              .then(() => notify('Invite code copied'))
+              .catch(() => notify('Could not copy invite code.'))
+          }}
           onSubmit={(e) => {
             e.preventDefault()
             if (modal === 'invite') {
-              notify('Invite links will be enabled when the community invite API is ready.')
               setModal(null)
               return
             }
@@ -1132,20 +2051,70 @@ export function WorkspacePage({
               setModalValue('')
               return
             }
-            if (modal === 'server' || modal === 'channel') {
-              notify(
-                modal === 'server'
-                  ? 'Community creation will be enabled when the community API is ready.'
-                  : 'Channel creation will be enabled when the channel API is ready.',
-              )
-              setModal(null)
-              setModalValue('')
+            if (modal === 'channel') {
+              if (!server?.id) {
+                notify('Select a server before creating a channel.')
+                return
+              }
+              void (async () => {
+                try {
+                  const result = await createChannelApi(server.id, {
+                    name: modalValue.trim(),
+                    category_id: selectedChannelCategoryId || null,
+                  })
+                  const created = result.channel
+                  setData((previous) => ({
+                    ...previous,
+                    channels: {
+                      ...previous.channels,
+                      [server.id]: [
+                        ...(previous.channels[server.id] ?? []),
+                        {
+                          id: created.id,
+                          name: created.name ?? modalValue.trim(),
+                          type: created.channel_type === 'announcement' ? 'announcement' : 'text',
+                          categoryId: created.category_id,
+                          categoryName: created.category_name,
+                        },
+                      ],
+                    },
+                  }))
+                  setChannelId(created.id)
+                  setView('channel')
+                  setMobileTab('chat')
+                  setModal(null)
+                  setModalValue('')
+                  notify(`Created #${created.name ?? modalValue.trim()}`)
+                } catch (error) {
+                  notify(error instanceof Error ? error.message : 'Could not create channel.')
+                }
+              })()
               return
             }
           }}
           onClose={() => {
             setModal(null)
             setModalValue('')
+            setSelectedChannelCategoryId('')
+          }}
+        />
+      )}
+
+      {selectedProfile && (
+        <MemberProfile
+          user={selectedProfile}
+          serverName={view === 'channel' ? server?.name : undefined}
+          isSelf={selectedProfile.id === session.user.id}
+          onClose={() => setSelectedProfile(null)}
+          onMessage={() => {
+            const targetId = selectedProfile.id
+            setSelectedProfile(null)
+            void openDm(targetId)
+          }}
+          onCopyId={() => {
+            void navigator.clipboard.writeText(selectedProfile.id)
+              .then(() => notify('User ID copied'))
+              .catch(() => notify('Could not copy user ID.'))
           }}
         />
       )}

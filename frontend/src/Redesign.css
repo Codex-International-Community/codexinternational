@@ -3026,3 +3026,407 @@ dialog.modal {
     display: none;
   }
 }
+
+
+/* Discord-style member profile popout */
+.message-author-avatar,
+.message-author-name {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.message-author-avatar {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  align-self: flex-start;
+  border-radius: 50%;
+}
+
+.message-author-avatar:hover .avatar {
+  box-shadow: 0 0 0 2px var(--accent-border);
+}
+
+.message-author-name {
+  font: inherit;
+  font-weight: 750;
+  text-align: left;
+}
+
+.message-author-name:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.member-profile-open-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0 42px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: .75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.member-profile-overlay {
+  position: fixed;
+  z-index: 180;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(4, 7, 12, .68);
+  backdrop-filter: blur(6px);
+  animation: member-profile-fade-in .16s ease-out;
+}
+
+.member-profile-card {
+  width: min(100%, 390px);
+  max-height: min(84dvh, 720px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 26px 90px rgba(0, 0, 0, .42);
+  scrollbar-width: thin;
+  animation: member-profile-rise-in .2s cubic-bezier(.2, .8, .2, 1);
+}
+
+.member-profile-cover {
+  position: relative;
+  height: 116px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 80% 10%, rgba(111, 191, 255, .42), transparent 40%),
+    radial-gradient(ellipse at 16% 100%, rgba(82, 92, 173, .4), transparent 48%),
+    linear-gradient(135deg, #182d46, #243b5b 52%, #182535);
+}
+
+.theme-light .member-profile-cover {
+  background:
+    radial-gradient(ellipse at 80% 10%, rgba(111, 191, 255, .45), transparent 40%),
+    radial-gradient(ellipse at 16% 100%, rgba(82, 92, 173, .3), transparent 48%),
+    linear-gradient(135deg, #c7e0f4, #a9c4df 52%, #d8e4ef);
+}
+
+.member-profile-cover::after {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+  background-size: 26px 26px;
+  content: '';
+  mask-image: linear-gradient(120deg, black, transparent 86%);
+}
+
+.member-profile-cover-orbit {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  border: 1px solid rgba(218, 238, 255, .22);
+  border-radius: 50%;
+  transform: rotate(-28deg);
+}
+
+.member-profile-cover-orbit--one {
+  top: -92px;
+  right: -45px;
+  width: 275px;
+  height: 180px;
+}
+
+.member-profile-cover-orbit--two {
+  top: -73px;
+  right: -13px;
+  width: 195px;
+  height: 135px;
+}
+
+.member-profile-close {
+  position: absolute;
+  z-index: 2;
+  top: 11px;
+  right: 11px;
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 9px;
+  background: rgba(8, 13, 22, .42);
+  color: #fff;
+  cursor: pointer;
+}
+
+.member-profile-close:hover {
+  background: rgba(8, 13, 22, .7);
+}
+
+.member-profile-identity {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  min-height: 92px;
+  padding: 0 19px 15px;
+  border-bottom: 1px solid var(--line);
+}
+
+.member-profile-avatar {
+  display: grid;
+  flex: 0 0 84px;
+  width: 84px;
+  height: 84px;
+  place-items: center;
+  margin-top: -39px;
+  border: 6px solid var(--surface);
+  border-radius: 27px;
+  font-size: 1.55rem;
+  box-shadow: none;
+}
+
+.member-profile-avatar .status {
+  right: -1px;
+  bottom: -1px;
+  width: 17px;
+  height: 17px;
+  border: 4px solid var(--surface);
+}
+
+.member-profile-identity-copy {
+  min-width: 0;
+  flex: 1;
+  padding-bottom: 1px;
+}
+
+.member-profile-name-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.member-profile-name-line h2 {
+  overflow: hidden;
+  margin: 0;
+  color: var(--text);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -.035em;
+  text-overflow: ellipsis;
+}
+
+.member-profile-you {
+  padding: 3px 6px;
+  border: 1px solid var(--accent-border);
+  border-radius: 5px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: .6rem;
+  font-weight: 850;
+  letter-spacing: .07em;
+}
+
+.member-profile-identity-copy > p {
+  overflow: hidden;
+  margin: 3px 0 7px;
+  color: var(--muted);
+  font-size: .8rem;
+  text-overflow: ellipsis;
+}
+
+.member-profile-presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 650;
+}
+
+.member-profile-presence i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00ba7c;
+}
+
+.member-profile-presence--idle i {
+  background: #e4a348;
+}
+
+.member-profile-content {
+  display: grid;
+  gap: 17px;
+  padding: 18px 19px 19px;
+}
+
+.member-profile-role-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.member-profile-section-label {
+  color: var(--quiet);
+  font-size: .65rem;
+  font-weight: 800;
+  letter-spacing: .09em;
+}
+
+.member-profile-role {
+  max-width: 65%;
+  overflow: hidden;
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: .72rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-profile-section {
+  display: grid;
+  gap: 8px;
+}
+
+.member-profile-section h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: .8rem;
+  font-weight: 800;
+}
+
+.member-profile-section > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.member-profile-section > p.member-profile-muted {
+  color: var(--quiet);
+  font-style: italic;
+}
+
+.member-profile-server-name {
+  color: var(--accent);
+  font-size: .76rem;
+  font-weight: 750;
+}
+
+.member-profile-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.member-profile-facts > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--workspace);
+}
+
+.member-profile-facts span {
+  color: var(--quiet);
+  font-size: .67rem;
+  font-weight: 650;
+}
+
+.member-profile-facts strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: .75rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-profile-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.member-profile-actions button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 39px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: .78rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.member-profile-actions button:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.member-profile-actions .member-profile-message {
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
+  color: #fff;
+}
+
+.member-profile-actions .member-profile-message:hover {
+  border-color: var(--accent-solid-hover);
+  background: var(--accent-solid-hover);
+  color: #fff;
+}
+
+@keyframes member-profile-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes member-profile-rise-in {
+  from { opacity: 0; transform: translateY(9px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 480px) {
+  .member-profile-overlay {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .member-profile-card {
+    width: 100%;
+    max-height: min(84dvh, 700px);
+    border-radius: 16px 16px 10px 10px;
+  }
+
+  .member-profile-identity {
+    gap: 11px;
+    padding-inline: 14px;
+  }
+
+  .member-profile-content {
+    padding: 16px 14px max(16px, env(safe-area-inset-bottom));
+  }
+}

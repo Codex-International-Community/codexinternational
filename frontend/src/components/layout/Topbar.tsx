@@ -11,7 +11,6 @@ interface TopbarProps {
   searchOpen: boolean
   notificationRead: boolean
   unreadCount: number
-  onOpenDrawer: () => void
   onBack?: () => void
   onFocusSocialComposer: () => void
   onVoiceCallModal: () => void
@@ -34,7 +33,6 @@ export function Topbar({
   searchOpen,
   notificationRead,
   unreadCount,
-  onOpenDrawer,
   onBack,
   onFocusSocialComposer,
   onVoiceCallModal,
@@ -49,7 +47,7 @@ export function Topbar({
 }: TopbarProps) {
   const symbolIcon: IconName =
     view === 'social'
-      ? 'at'
+      ? 'thread'
       : view === 'channels'
         ? 'hash'
         : view === 'people'
@@ -57,35 +55,35 @@ export function Topbar({
           : view === 'bots'
             ? 'shield'
             : view === 'home'
-              ? 'home'
+              ? 'users'
               : view === 'dm'
-              ? 'message'
-              : view === 'discover'
-                ? 'compass'
-                : view === 'settings'
-                  ? 'settings'
-                  : view === 'notifications'
-                    ? 'bell'
-                    : view === 'pinned'
-                      ? 'pin'
-                      : view === 'not-found'
-                        ? 'help'
-                        : channel?.type === 'voice'
-                        ? 'volume'
-                        : 'hash'
+                ? 'message'
+                : view === 'discover'
+                  ? 'compass'
+                  : view === 'settings'
+                    ? 'settings'
+                    : view === 'notifications'
+                      ? 'bell'
+                      : view === 'pinned'
+                        ? 'pin'
+                        : view === 'not-found'
+                          ? 'help'
+                          : channel?.type === 'voice'
+                            ? 'volume'
+                            : 'hash'
 
   const topicText =
     view === 'home'
-      ? 'Your direct messages and recent conversations.'
+      ? ''
       : view === 'channel'
-      ? 'A place to share ideas and catch up.'
-      : view === 'dm'
-        ? 'Your private conversation.'
-        : view === 'social'
-          ? 'Public thoughts and conversations from your people.'
-          : view === 'bots'
-            ? 'Create bots and issue one-time VPS tokens.'
-            : 'Your space, your way.'
+        ? 'A place to share ideas and catch up.'
+        : view === 'dm'
+          ? 'Your private conversation.'
+          : view === 'social'
+            ? 'Public thoughts and conversations from your people.'
+            : view === 'bots'
+              ? 'Create bots and issue one-time VPS tokens.'
+              : 'Your space, your way.'
 
   return (
     <header className={`topbar ${isMobile ? 'topbar--mobile' : 'topbar--desktop'}`}>
@@ -95,21 +93,11 @@ export function Topbar({
             <Icon name="arrow" />
           </button>
         )}
-        {isMobile && view !== 'channels' && view !== 'people' && view !== 'discover' && (
-          <button
-            type="button"
-            className="mobile-menu"
-            onClick={onOpenDrawer}
-            aria-label="Open navigation"
-          >
-            <Icon name="menu" />
-          </button>
-        )}
         <span className="channel-symbol">
           <Icon name={symbolIcon} />
         </span>
         <strong>{title}</strong>
-        {!isMobile && (
+        {!isMobile && view !== 'home' && topicText && (
           <>
             <i />
             <span className="channel-topic">{topicText}</span>
@@ -118,11 +106,7 @@ export function Topbar({
       </div>
 
       <div className="topbar-actions">
-        {view === 'discover' ? (
-          <button type="button" className="discover-sidebar-toggle" onClick={onOpenDrawer} aria-label="Open sidebar" title="Open sidebar">
-            <Icon name="menu" />
-          </button>
-        ) : view === 'social' ? (
+        {view === 'discover' ? null : view === 'social' ? (
           <button
             type="button"
             className="topbar-compose"

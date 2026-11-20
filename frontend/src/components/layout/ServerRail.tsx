@@ -9,7 +9,8 @@ interface ServerRailProps {
   onSelectHome: () => void
   onSelectServer: (id: string) => void
   onCreateServer: () => void
-  onNavigateView: (view: View) => void
+  onNavigateDiscover: () => void
+  onOpenBots: () => void
 }
 
 export function ServerRail({
@@ -19,36 +20,40 @@ export function ServerRail({
   onSelectHome,
   onSelectServer,
   onCreateServer,
-  onNavigateView,
+  onNavigateDiscover,
+  onOpenBots,
 }: ServerRailProps) {
+  const homeActive = activeView === 'home' || activeView === 'dm' || activeView === 'social'
+
   return (
-    <aside className="server-rail" aria-label="Workspace navigation">
+    <aside className="server-rail" aria-label="Server navigation">
       <button
         type="button"
-        className={`brand-mark ${activeView === 'home' ? 'active' : ''}`}
-        aria-current={activeView === 'home' ? 'page' : undefined}
-        aria-label="Home"
-        title="Home"
+        className={`brand-mark ${homeActive ? 'active' : ''}`}
+        aria-label="Friends and direct messages"
+        aria-current={homeActive ? 'page' : undefined}
+        title="Friends and direct messages"
         onClick={onSelectHome}
       >
         c
       </button>
+
       <div className="rail-rule" />
 
-      <div className="rail-list">
-        {servers.map((s) => {
-          const isActive = activeServerId === s.id && activeView === 'channel'
+      <div className="rail-list" aria-label="Your servers">
+        {servers.map((server) => {
+          const active = activeServerId === server.id && activeView === 'channel'
           return (
             <button
               type="button"
-              key={s.id}
-              aria-label={s.name}
-              aria-current={isActive ? 'page' : undefined}
-              title={s.name}
-              className={`server-pill ${s.tone}${isActive ? ' active' : ''}`}
-              onClick={() => onSelectServer(s.id)}
+              key={server.id}
+              aria-label={server.name}
+              aria-current={active ? 'page' : undefined}
+              title={server.name}
+              className={`server-pill ${server.tone}${active ? ' active' : ''}`}
+              onClick={() => onSelectServer(server.id)}
             >
-              {s.abbr}
+              {server.abbr}
               <i />
             </button>
           )
@@ -58,79 +63,34 @@ export function ServerRail({
       <button
         type="button"
         className="rail-add"
-        aria-label="Create community"
-        title="Create community"
+        aria-label="Create server"
+        title="Create server"
         onClick={onCreateServer}
       >
-        <Icon name="plus" />
+        <Icon name="plus" size={21} />
       </button>
 
       <button
         type="button"
         className={`rail-discover ${activeView === 'discover' ? 'active' : ''}`}
-        aria-label="Discover"
+        aria-label="Discover communities"
         aria-current={activeView === 'discover' ? 'page' : undefined}
-        title="Discover"
-        onClick={() => onNavigateView('discover')}
+        title="Discover communities"
+        onClick={onNavigateDiscover}
       >
-        <Icon name="compass" />
-      </button>
-
-      <button
-        type="button"
-        className={`rail-social ${activeView === 'social' ? 'active' : ''}`}
-        aria-label="Social timeline"
-        aria-current={activeView === 'social' ? 'page' : undefined}
-        title="Social timeline"
-        onClick={() => onNavigateView('social')}
-      >
-        <Icon name="at" />
-      </button>
-
-      <button
-        type="button"
-        className={`rail-directory ${activeView === 'channels' ? 'active' : ''}`}
-        aria-label="Channels"
-        aria-current={activeView === 'channels' ? 'page' : undefined}
-        title="Channels"
-        onClick={() => onNavigateView('channels')}
-      >
-        <Icon name="hash" />
-      </button>
-
-      <button
-        type="button"
-        className={`rail-directory ${activeView === 'people' ? 'active' : ''}`}
-        aria-label="People"
-        aria-current={activeView === 'people' ? 'page' : undefined}
-        title="People"
-        onClick={() => onNavigateView('people')}
-      >
-        <Icon name="users" />
-      </button>
-
-      <button
-        type="button"
-        className={`rail-directory ${activeView === 'bots' ? 'active' : ''}`}
-        aria-label="Bots & Tokens"
-        aria-current={activeView === 'bots' ? 'page' : undefined}
-        title="Bots & Tokens"
-        onClick={() => onNavigateView('bots')}
-      >
-        <Icon name="shield" />
+        <Icon name="compass" size={19} />
       </button>
 
       <div className="rail-spacer" />
 
       <button
         type="button"
-        className="rail-bottom"
-        aria-label="Settings"
-        aria-current={activeView === 'settings' ? 'page' : undefined}
-        title="Settings"
-        onClick={() => onNavigateView('settings')}
+        className={`rail-bot ${activeView === 'bots' ? 'active' : ''}`}
+        aria-label="Bot Portal"
+        title="Bot Portal"
+        onClick={onOpenBots}
       >
-        <Icon name="settings" />
+        <Icon name="shield" size={19} />
       </button>
     </aside>
   )

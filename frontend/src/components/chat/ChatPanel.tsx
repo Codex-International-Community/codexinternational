@@ -5,6 +5,8 @@ import { Composer } from './Composer'
 import type { Attachment, Channel, Message, Server, User } from '../../types/chat'
 
 interface ChatPanelProps {
+  currentUserId: string
+  onOpenProfile: (userId: string) => void
   isDm: boolean
   currentDm?: User
   channel?: Channel
@@ -18,6 +20,7 @@ interface ChatPanelProps {
   editingId: string | null
   attachment: Attachment | null
   onComposerTextChange: (value: string) => void
+  typingText?: string
   onSendMessage: (e?: FormEvent) => void
   onCancelReply: () => void
   onCancelEdit: () => void
@@ -37,7 +40,28 @@ interface ChatPanelProps {
   onBrowsePeople: () => void
 }
 
+function localDayKey(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return [date.getFullYear(), date.getMonth(), date.getDate()].join('-')
+}
+
+function localDayLabel(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const now = new Date()
+  const todayKey = [now.getFullYear(), now.getMonth(), now.getDate()].join('-')
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+  const yesterdayKey = [yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate()].join('-')
+  const key = localDayKey(value)
+  if (key === todayKey) return 'Today'
+  if (key === yesterdayKey) return 'Yesterday'
+  return new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(date)
+}
+
 export function ChatPanel({
+  currentUserId,
+  onOpenProfile,
   isDm,
   currentDm,
   channel,
@@ -51,6 +75,7 @@ export function ChatPanel({
   editingId,
   attachment,
   onComposerTextChange,
+  typingText = '',
   onSendMessage,
   onCancelReply,
   onCancelEdit,
@@ -81,7 +106,7 @@ export function ChatPanel({
         <button type="button" className="primary-action" onClick={onDiscoverCommunities}>
           <Icon name="compass" size={16} /> Discover communities
         </button>
-        <span className="workspace-empty-note">Community listings and membership will connect when the backend endpoints are ready.</span>
+        <span className="workspace-empty-note">Join a server to see its channels and start chatting.</span>
       </section>
     )
   }
@@ -92,7 +117,7 @@ export function ChatPanel({
         <span className="workspace-empty-mark"><Icon name="hash" size={25} /></span>
         <span className="eyebrow">COMMUNITY CHANNELS</span>
         <h1 id="workspace-empty-title">No channels yet.</h1>
-        <p>Channel navigation is ready. Channel data will appear when the community API is connected.</p>
+        <p>Create or join a server to add channels here.</p>
         <button type="button" className="primary-action" onClick={onBrowseChannels}>Browse channels</button>
       </section>
     )
@@ -104,7 +129,7 @@ export function ChatPanel({
         <span className="workspace-empty-mark"><Icon name="users" size={25} /></span>
         <span className="eyebrow">DIRECT MESSAGES</span>
         <h1 id="workspace-empty-title">No conversations yet.</h1>
-        <p>People and private conversations will appear when their API endpoints are available.</p>
+        <p>Choose a member from the sidebar to start a direct conversation.</p>
         <button type="button" className="primary-action" onClick={onBrowsePeople}>Browse people</button>
       </section>
     )
@@ -151,30 +176,49 @@ export function ChatPanel({
           </div>
         </div>
 
-        {messages.map((message) => (
-          <MessageItem
-            key={message.id}
-            message={message}
-            isPinned={pinnedMessageIds.includes(message.id)}
-            isMenuOpen={activeMenuId === message.id}
-            onReact={onReact}
-            onReply={handleStartReply}
-            onEdit={(item) => { onEdit(item); setActiveMenuId(null) }}
-            onRemove={(item) => { onRemove(item); setActiveMenuId(null) }}
-            onTogglePin={(item) => { onTogglePin(item); setActiveMenuId(null) }}
-            onToggleMenu={(id) => setActiveMenuId((current) => current === id ? null : id)}
-            onReplyReferenceClick={(id) => onNotify(`Reply reference: ${id}`)}
-          />
-        ))}
+        {messages.map((message, index) => {
+          const dayKey = message.createdAt ? localDayKey(message.createdAt) : ''
+          const previousDayKey = index > 0 && messages[index - 1].createdAt
+            ? localDayKey(messages[index - 1].createdAt!)
+            : ''
+          const showDayDivider = Boolean(dayKey && dayKey !== previousDayKey)
+          return (
+            <div key={message.id} className="message-day-group">
+              {showDayDivider && (
+                <div className="message-date-divider" role="separator" aria-label={localDayLabel(message.createdAt!)}>
+                  <span>{localDayLabel(message.createdAt!)}</span>
+                </div>
+              )}
+              <MessageItem
+                message={message}
+                currentUserId={currentUserId}
+                onOpenProfile={onOpenProfile}
+                isPinned={pinnedMessageIds.includes(message.id)}
+                isMenuOpen={activeMenuId === message.id}
+                onReact={onReact}
+                onReply={handleStartReply}
+                onEdit={(item) => { onEdit(item); setActiveMenuId(null) }}
+                onRemove={(item) => { onRemove(item); setActiveMenuId(null) }}
+                onTogglePin={(item) => { onTogglePin(item); setActiveMenuId(null) }}
+                onToggleMenu={(id) => setActiveMenuId((current) => current === id ? null : id)}
+                onReplyReferenceClick={(id) => onNotify(`Reply reference: ${id}`)}
+              />
+            </div>
+          )
+        })}
 
         {messages.length === 0 && (
           <div className="empty-state">
             <Icon name="message" size={25} />
             <strong>No messages yet</strong>
-            <span>Message history will appear here when the chat API is connected.</span>
+            <span>Be the first to start the conversation.</span>
           </div>
         )}
       </div>
+
+      {typingText && (
+        <div className="typing-indicator" aria-live="polite">{typingText}</div>
+      )}
 
       <Composer
         inputRef={messageInputRef}

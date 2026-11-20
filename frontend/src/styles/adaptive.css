@@ -1609,6 +1609,297 @@ dialog.bot-reveal-modal {
   min-width: 0;
 }
 
+.app-shell > .channel-sidebar > .server-menu {
+  position: absolute;
+  z-index: 95;
+  top: 72px;
+  left: 9px;
+  display: flex;
+  width: 224px;
+  max-width: calc(100% - 18px);
+  max-height: calc(100vh - 100px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .38);
+  font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
+}
+.app-shell > .channel-sidebar > .server-menu .server-menu-item {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.app-shell > .channel-sidebar > .server-menu .server-menu-item:hover:not(:disabled) {
+  background: var(--surface2);
+}
+.app-shell > .channel-sidebar > .server-menu .server-menu-item small {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+}
+.app-shell > .channel-sidebar > .server-menu .server-menu-item--disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: .58;
+}
+.app-shell > .channel-sidebar > .server-menu .server-menu-item--toggle {
+  gap: 9px;
+}
+.app-shell > .channel-sidebar > .server-menu .server-menu-check {
+  display: grid;
+  width: 15px;
+  height: 15px;
+  flex: 0 0 15px;
+  place-items: center;
+  border: 1px solid var(--muted);
+  border-radius: 3px;
+}
+.app-shell > .channel-sidebar > .server-menu .server-menu-check.checked {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+.app-shell > .channel-sidebar > .server-menu .server-menu-item--danger {
+  color: #ed686d;
+}
+.app-shell > .channel-sidebar > .server-menu .server-menu-item--danger:hover:not(:disabled) {
+  background: color-mix(in srgb, #ed686d 12%, transparent);
+}
+.server-channel-category {
+  margin-top: 8px;
+}
+.server-channel-category > .section-label {
+  min-height: 25px;
+  padding-inline: 11px 5px;
+}
+.server-channel-category .channel-item {
+  margin-top: 1px;
+}
+.app-shell > .channel-sidebar > .server-menu .server-menu-item--invite {
+  color: #3ba55d;
+  font-weight: 600;
+}
+.app-shell > .channel-sidebar > .server-menu .server-menu-divider {
+  height: 1px;
+  margin: 4px 3px;
+  background: var(--line);
+}
+.server-invite-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.server-invite-content > label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+.server-invite-code {
+  display: flex;
+  gap: 7px;
+}
+.server-invite-code input {
+  flex: 1;
+  min-width: 0;
+}
+.server-invite-code button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface2);
+  color: var(--text);
+  cursor: pointer;
+}
+.server-invite-content small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.server-options-overlay {
+  position: fixed;
+  z-index: 210;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, .62);
+  backdrop-filter: blur(3px);
+}
+.server-options-dialog {
+  width: min(470px, calc(100vw - 32px));
+  max-height: min(84vh, 760px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .48);
+}
+.server-options-form {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 22px;
+}
+.server-options-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.server-options-header h2 {
+  margin: 5px 0 4px;
+  font-size: 20px;
+  font-weight: 750;
+}
+.server-options-header p {
+  max-width: 350px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.server-options-header > button {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.server-options-header > button:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+.server-options-form > label {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .09em;
+}
+.server-options-form > input,
+.server-options-form > textarea,
+.server-options-form > select {
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  outline: none;
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.server-options-form > textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+.server-options-form > input:focus,
+.server-options-form > textarea:focus,
+.server-options-form > select:focus {
+  border-color: var(--accent);
+}
+.server-options-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+.server-options-toggle > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+.server-options-toggle strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+.server-options-toggle small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.server-options-toggle input {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  accent-color: var(--accent);
+}
+.server-options-hint {
+  color: var(--muted);
+  font-size: 11px;
+}
+.server-options-error {
+  margin: 0;
+  color: #ed686d;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.server-options-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 10px;
+  margin-top: 7px;
+  border-top: 1px solid var(--line);
+}
+.server-options-actions button {
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.server-options-actions .server-options-save {
+  border-color: transparent;
+  background: var(--accent);
+  color: white;
+}
+.server-options-actions button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+@media (max-width: 520px) {
+  .server-options-form { padding: 17px; }
+  .server-options-dialog { max-height: 90vh; }
+}
+
 .app-shell > .channel-sidebar > .server-title small {
   font-family: var(--landing-mono, 'Space Mono', monospace);
   font-size: .62rem;
@@ -2794,4 +3085,1382 @@ button:hover > .gf-icon { opacity: 1; }
   .app-shell.view-people {
     grid-template-columns: 68px minmax(0, 1fr) !important;
   }
+}
+
+/* Keep the compact server navigation visible on directory pages without
+   mounting the full channel drawer over their existing content. */
+@media (max-width: 767px) {
+  .app-shell.view-channels > .server-rail,
+  .app-shell.view-people > .server-rail {
+    display: flex !important;
+    position: fixed !important;
+    inset: 56px auto 68px 0 !important;
+    width: 52px !important;
+    min-width: 52px !important;
+    max-width: 52px !important;
+    height: auto !important;
+    transform: none !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 42 !important;
+  }
+
+  .app-shell.view-channels > .workspace,
+  .app-shell.view-people > .workspace {
+    width: calc(100% - 52px);
+    margin-left: 52px;
+  }
+
+  .app-shell.view-channels .mobile-tabs,
+  .app-shell.view-people .mobile-tabs {
+    width: calc(100vw - 52px);
+  }
+}
+
+/* Discover is a focused directory page: no server rail or channel drawer. */
+.app-shell.view-discover > .server-rail,
+.app-shell.view-discover > .channel-sidebar {
+  display: none !important;
+}
+.app-shell.view-discover > .drawer-scrim {
+  display: none !important;
+}
+.app-shell.view-discover .discover-sidebar-toggle {
+  display: none !important;
+}
+
+/* Responsive workspace proportions for compact laptop and tablet widths. */
+@media (min-width: 768px) and (max-width: 1120px) {
+  .app-shell:not(.view-discover) {
+    grid-template-columns: 60px minmax(210px, 226px) minmax(0, 1fr) !important;
+  }
+  .app-shell:not(.view-discover) .channel-sidebar {
+    min-width: 0;
+  }
+  .app-shell:not(.view-discover) .page-scroll {
+    padding-inline: clamp(16px, 2.8vw, 30px);
+  }
+}
+
+/* Keep drawer content and joined-server rows inside narrow phone viewports. */
+@media (max-width: 767px) {
+  .app-shell:not(.view-discover) > .channel-sidebar {
+    width: min(270px, calc(100vw - 72px)) !important;
+    max-width: calc(100vw - 72px) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .app-shell:not(.view-discover) .joined-server-select strong,
+  .app-shell:not(.view-discover) .channel-item span,
+  .app-shell:not(.view-discover) .dm-row span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .app-shell .page-scroll {
+    min-width: 0;
+    overflow-x: hidden;
+    padding-inline: clamp(13px, 4vw, 22px);
+  }
+  .app-shell .discover-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  }
+  .app-shell .discover-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .app-shell .discover-heading > div {
+    min-width: 0;
+  }
+  .app-shell .discover-heading h1 {
+    overflow-wrap: anywhere;
+    font-size: clamp(1.35rem, 6vw, 1.9rem);
+  }
+}
+
+/* Consistent, reduced-jank expand and drawer motion. */
+.joined-server,
+.joined-server-heading,
+.joined-server-toggle,
+.joined-server-select,
+.channel-sidebar,
+.server-rail {
+  transition-timing-function: cubic-bezier(.22, .8, .22, 1);
+}
+.joined-server-channels {
+  transform-origin: top;
+}
+@media (prefers-reduced-motion: reduce) {
+  .joined-server-channels {
+    animation: none !important;
+  }
+}
+
+/* Unified Discord-style server rail: identical on Home, Chat, Social,
+   People, Channels and the other workspace routes. */
+.app-shell {
+  grid-template-columns: 68px minmax(0, 1fr) !important;
+}
+.app-shell > .server-rail {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  width: 68px;
+  min-width: 68px;
+  height: 100%;
+  min-height: 0;
+  gap: 9px;
+  padding: 13px 0 max(13px, env(safe-area-inset-bottom, 0px));
+  overflow: visible;
+  background: var(--rail);
+  border-right: 1px solid var(--line);
+  transition: transform .28s cubic-bezier(.22,.8,.22,1);
+}
+.app-shell > .workspace {
+  grid-column: 2;
+  min-width: 0;
+}
+.app-shell .server-rail .rail-add {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--surface2);
+  color: var(--accent);
+  transition: border-radius .22s ease, background .22s ease, transform .22s ease;
+}
+.app-shell .server-rail .rail-add:not(:disabled):hover {
+  border-radius: 12px;
+  background: var(--accent-bg);
+  transform: translateY(-1px);
+}
+.app-shell .server-rail .rail-add:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+}
+.app-shell .server-rail .rail-rule {
+  flex: 0 0 1px;
+  width: 30px;
+  margin: 0;
+  background: var(--line);
+}
+.app-shell .server-rail .rail-list {
+  width: 100%;
+  min-height: 0;
+  flex: 0 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.app-shell .server-rail .rail-list::-webkit-scrollbar { display: none; }
+.app-shell .server-rail .server-pill {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  flex: 0 0 44px;
+  background: var(--surface2);
+  color: var(--text);
+}
+.app-shell .server-rail .server-pill:hover,
+.app-shell .server-rail .server-pill.active {
+  border-radius: 12px;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.app-shell .server-rail .server-pill i {
+  left: -12px;
+  background: var(--accent);
+}
+.app-shell .server-rail .rail-empty {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 36px;
+  color: var(--quiet);
+}
+.app-shell .server-rail .rail-spacer { flex: 1 1 auto; min-height: 12px; }
+.app-shell .server-rail .rail-bot,
+.app-shell .server-rail .rail-user {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: border-radius .2s ease, background .2s ease, color .2s ease, transform .2s ease;
+}
+.app-shell .server-rail .rail-bot:hover,
+.app-shell .server-rail .rail-bot.active,
+.app-shell .server-rail .rail-user:hover,
+.app-shell .server-rail .rail-user.active {
+  border-radius: 12px;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+.app-shell .server-rail .rail-profile-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+.app-shell .server-rail .rail-user {
+  padding: 0;
+  overflow: visible;
+}
+.app-shell .server-rail .rail-user .avatar {
+  width: 38px;
+  height: 38px;
+}
+.app-shell .server-rail .rail-profile-menu {
+  position: absolute;
+  z-index: 100;
+  left: calc(100% + 9px);
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(230px, calc(100vw - 88px));
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--side);
+  color: var(--text);
+  box-shadow: 0 14px 40px rgba(0,0,0,.28);
+  animation: rail-menu-in .18s cubic-bezier(.22,.8,.22,1) both;
+}
+.app-shell .rail-profile-menu strong {
+  overflow: hidden;
+  font-size: .88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .rail-profile-menu > span {
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: .72rem;
+}
+.app-shell .rail-profile-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.app-shell .rail-profile-menu button:hover { background: var(--surface2); }
+@keyframes rail-menu-in {
+  from { opacity: 0; transform: translateX(-5px) scale(.98); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+/* The old wide channel/profile sidebar is intentionally not part of the
+   workspace shell anymore; all pages share the compact server rail. */
+.app-shell > .channel-sidebar { display: none !important; }
+
+@media (max-width: 767px) {
+  .app-shell {
+    display: block;
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .app-shell > .server-rail {
+    position: fixed;
+    z-index: 52;
+    inset: 0 auto 0 0;
+    width: 68px;
+    min-width: 68px;
+    height: 100dvh;
+    transform: translate3d(-105%, 0, 0);
+    visibility: hidden;
+    pointer-events: none;
+    box-shadow: 12px 0 34px rgba(0,0,0,.24);
+    transition: transform .28s cubic-bezier(.22,.8,.22,1), visibility .28s;
+  }
+  .app-shell.drawer-open > .server-rail {
+    transform: translate3d(0,0,0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .app-shell > .workspace {
+    width: 100%;
+    margin: 0;
+  }
+  .app-shell .server-rail .rail-profile-menu {
+    left: calc(100% + 8px);
+    bottom: max(8px, env(safe-area-inset-bottom, 0px));
+  }
+  .app-shell .drawer-scrim {
+    z-index: 51;
+    touch-action: manipulation;
+  }
+}
+@media (min-width: 768px) {
+  .app-shell > .server-rail {
+    transform: none !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell > .server-rail,
+  .app-shell .rail-profile-menu,
+  .app-shell .server-rail button {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
+
+/* Final mobile drawer behavior: closed on entry, persistent across routes,
+   opened from every page, and closed only by the double-tap handler. */
+@media (max-width: 767px) {
+  .app-shell > .server-rail,
+  .app-shell.view-discover > .server-rail {
+    display: flex !important;
+    position: fixed !important;
+    z-index: 62 !important;
+    inset: 0 auto 0 0 !important;
+    width: 68px !important;
+    min-width: 68px !important;
+    max-width: 68px !important;
+    height: 100dvh !important;
+    transform: translate3d(-105%, 0, 0) !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transition: transform .28s cubic-bezier(.22,.8,.22,1), visibility .28s !important;
+  }
+  .app-shell.drawer-open > .server-rail,
+  .app-shell.view-discover.drawer-open > .server-rail {
+    transform: translate3d(0,0,0) !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+  .app-shell > .channel-sidebar,
+  .app-shell > .drawer-scrim,
+  .app-shell.view-discover > .channel-sidebar {
+    display: none !important;
+  }
+  .app-shell > .workspace {
+    position: relative;
+    z-index: auto;
+    width: 100%;
+    margin: 0;
+  }
+  .app-shell .topbar {
+    position: relative;
+    z-index: 3;
+  }
+  .app-shell .drawer-scrim {
+    display: block;
+    position: fixed;
+    z-index: 2;
+    inset: 56px 0 calc(62px + env(safe-area-inset-bottom, 0px)) 0;
+    border: 0;
+    background: rgba(0,0,0,.34);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .22s ease, visibility .22s ease;
+  }
+  .app-shell.drawer-open .drawer-scrim {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .app-shell .server-rail .rail-profile-wrap {
+    margin-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+  }
+  .app-shell .server-rail {
+    padding-bottom: max(13px, env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (min-width: 768px) {
+  .app-shell > .server-rail,
+  .app-shell.view-discover > .server-rail {
+    display: flex !important;
+    position: relative !important;
+    inset: auto !important;
+    transform: none !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 1 !important;
+  }
+  .app-shell .mobile-menu { display: none !important; }
+  .app-shell > .drawer-scrim { display: none !important; }
+}
+
+/* Persistent Discord-style server rail on every route and viewport.
+   The workspace (including its original-height navbar) occupies only the
+   remaining grid column, so the rail never overlays or clips the topbar. */
+.app-shell {
+  display: grid !important;
+  grid-template-columns: 68px minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  overflow: hidden;
+}
+.app-shell > .server-rail {
+  display: flex !important;
+  position: relative !important;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  inset: auto !important;
+  width: 68px !important;
+  min-width: 68px !important;
+  max-width: 68px !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  transform: none !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  z-index: 4 !important;
+  border-right: 1px solid var(--line);
+  box-shadow: none !important;
+}
+.app-shell > .workspace {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+  overflow: hidden;
+}
+.app-shell > .channel-sidebar,
+.app-shell > .drawer-scrim {
+  display: none !important;
+}
+.app-shell .mobile-menu {
+  display: none !important;
+}
+
+/* Match the directory pages' clean content spacing across Home, Chat and Social. */
+.app-shell.view-home .page-scroll,
+.app-shell.view-social .page-scroll,
+.app-shell.view-dm .page-scroll {
+  min-width: 0;
+  padding-inline: clamp(20px, 3.2vw, 48px);
+}
+.app-shell.view-home .topbar,
+.app-shell.view-social .topbar,
+.app-shell.view-dm .topbar,
+.app-shell.view-channels .topbar,
+.app-shell.view-people .topbar {
+  flex: 0 0 56px;
+  width: 100%;
+  min-width: 0;
+  height: 56px;
+  min-height: 56px;
+  box-sizing: border-box;
+}
+
+/* Keep route transitions inside the content viewport; never animate the rail
+   or shift the navbar during page changes. */
+.app-shell > .route-transition-overlay {
+  position: fixed !important;
+  z-index: 110 !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+}
+.app-shell.page-transition-slide-forward > .workspace,
+.app-shell.page-transition-slide-backward > .workspace {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+.app-shell .topbar {
+  position: relative;
+  z-index: 5;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .app-shell {
+    display: grid !important;
+    grid-template-columns: 58px minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+  }
+  .app-shell > .server-rail {
+    width: 58px !important;
+    min-width: 58px !important;
+    max-width: 58px !important;
+    padding-inline: 0;
+    overflow: hidden;
+  }
+  .app-shell > .workspace {
+    min-width: 0;
+    width: 100% !important;
+    height: 100dvh !important;
+    grid-template-rows: 56px minmax(0, 1fr) 54px !important;
+  }
+  .app-shell .topbar {
+    width: 100%;
+    height: 56px;
+    min-height: 56px;
+    padding-inline: clamp(9px, 2vw, 14px);
+  }
+  .app-shell .topbar-title {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+  .app-shell .topbar-title strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .app-shell .topbar-actions {
+    flex: 0 0 auto;
+  }
+  .app-shell .server-rail .rail-add,
+  .app-shell .server-rail .server-pill,
+  .app-shell .server-rail .rail-bot,
+  .app-shell .server-rail .rail-user {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+  .app-shell .server-rail .rail-list {
+    max-height: calc(100% - 170px);
+  }
+  .app-shell.view-home .page-scroll,
+  .app-shell.view-social .page-scroll,
+  .app-shell.view-dm .page-scroll {
+    padding-inline: 14px;
+  }
+}
+@media (max-width: 380px) {
+  .app-shell {
+    grid-template-columns: 52px minmax(0, 1fr) !important;
+  }
+  .app-shell > .server-rail {
+    width: 52px !important;
+    min-width: 52px !important;
+    max-width: 52px !important;
+  }
+  .app-shell .server-rail .rail-add,
+  .app-shell .server-rail .server-pill,
+  .app-shell .server-rail .rail-bot,
+  .app-shell .server-rail .rail-user {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+  }
+}
+
+
+/* Discord-style workspace hierarchy: server rail, DM sidebar, content and Active Now. */
+@media (min-width: 768px) {
+  .app-shell {
+    grid-template-columns: 68px 320px minmax(0, 1fr);
+  }
+
+  .app-shell.view-channels,
+  .app-shell.view-people,
+  .app-shell.has-no-channel-sidebar {
+    grid-template-columns: 68px minmax(0, 1fr);
+  }
+}
+
+.app-shell.view-home .workspace {
+  grid-template-rows: 48px minmax(0, 1fr);
+}
+
+.app-shell.view-home .topbar {
+  min-height: 48px;
+  padding-inline: 22px;
+  background: var(--workspace);
+}
+
+.app-shell.view-home .topbar-title {
+  gap: 12px;
+}
+
+.app-shell.view-home .topbar-title > strong {
+  font-size: .95rem;
+}
+
+.channel-sidebar--home .channel-list {
+  padding-top: 12px;
+}
+
+.home-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 3px 0 18px;
+}
+
+.home-sidebar-nav button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.home-sidebar-nav button:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.home-sidebar-nav button.selected {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.home-sidebar-nav button svg {
+  flex: 0 0 auto;
+}
+
+.server-channel-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.server-channel-group .section-label {
+  margin-top: 7px;
+}
+
+.friends-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--workspace);
+}
+
+.friends-main-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+}
+
+.friends-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 54px;
+  padding: 0 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.friends-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.friends-tab-heading,
+.friends-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: .875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.friends-tab-heading {
+  color: var(--text);
+}
+
+.friends-tab-heading[aria-current="page"] {
+  background: var(--surface2);
+}
+
+.friends-tab:hover,
+.friends-tab-heading:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.friends-tab.selected {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.friends-tab-divider {
+  flex: 0 0 1px;
+  height: 22px;
+  margin: 0 3px;
+  background: var(--line);
+}
+
+.friends-add-button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent-solid);
+  color: #fff;
+  font: inherit;
+  font-size: .85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.friends-add-button:hover {
+  filter: brightness(1.08);
+}
+
+.friends-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+
+.friends-list {
+  width: min(100%, 820px);
+  margin: 0 auto;
+  padding: 18px 22px;
+}
+
+.friend-row,
+.active-now-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 66px;
+  padding: 9px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.friend-row:hover,
+.active-now-row:hover {
+  background: var(--surface2);
+}
+
+.friend-row-copy,
+.active-now-row > span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.friend-row-copy strong,
+.active-now-row strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: .9rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friend-row-copy small,
+.active-now-row small {
+  color: var(--muted);
+  font-size: .78rem;
+}
+
+.friend-row-action {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-size: .8rem;
+  font-weight: 650;
+}
+
+.friends-empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  padding: 30px 20px;
+  text-align: center;
+}
+
+.friends-empty-illustration,
+.active-now-art {
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  margin-bottom: 20px;
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--muted);
+}
+
+.friends-empty > strong {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.friends-empty > p {
+  max-width: 42ch;
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: .875rem;
+  line-height: 1.55;
+}
+
+.friends-empty-action {
+  min-height: 36px;
+  margin-top: 18px;
+  padding: 0 14px;
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font: inherit;
+  font-size: .83rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.friends-active-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 20px 16px;
+  overflow: auto;
+}
+
+.friends-active-panel h2 {
+  margin: 0 0 18px;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 750;
+}
+
+.active-now-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.active-now-row {
+  min-height: 62px;
+  padding: 8px 5px;
+  border: 0;
+  border-radius: 7px;
+}
+
+.active-now-empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 10px 60px;
+  text-align: center;
+}
+
+.active-now-art {
+  width: 104px;
+  height: 104px;
+  margin-bottom: 19px;
+  opacity: .8;
+}
+
+.active-now-empty strong {
+  color: var(--text);
+  font-size: .93rem;
+  font-weight: 700;
+}
+
+.active-now-empty p {
+  max-width: 28ch;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 1180px) {
+  .friends-view {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .friends-active-panel {
+    display: none;
+  }
+
+  .friends-main-panel {
+    border-right: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-shell.view-home .workspace {
+    grid-template-rows: 56px minmax(0, 1fr) 54px;
+  }
+
+  .friends-toolbar {
+    gap: 8px;
+    min-height: 52px;
+    padding: 0 10px;
+  }
+
+  .friends-tabs {
+    gap: 3px;
+  }
+
+  .friends-tab-heading,
+  .friends-tab {
+    padding-inline: 8px;
+    font-size: .8rem;
+  }
+
+  .friends-add-button {
+    min-height: 32px;
+    padding-inline: 9px;
+    font-size: .78rem;
+  }
+
+  .friends-list {
+    padding: 12px 10px;
+  }
+}
+
+
+/* Final desktop layout correction.
+   A previous legacy rule force-hid the channel sidebar and collapsed the shell
+   to two columns. Override that rule at the end of the cascade. */
+@media (min-width: 768px) {
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) {
+    display: grid !important;
+    grid-template-columns: 68px 320px minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+  }
+
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) > .server-rail {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) > .channel-sidebar {
+    display: flex !important;
+    position: relative !important;
+    inset: auto !important;
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    width: 320px !important;
+    min-width: 320px !important;
+    max-width: 320px !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    transform: none !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 2 !important;
+    overflow: hidden;
+    box-shadow: none !important;
+  }
+
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) > .workspace {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1080px) {
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) {
+    grid-template-columns: 62px 270px minmax(0, 1fr) !important;
+  }
+
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) > .server-rail {
+    width: 62px !important;
+    min-width: 62px !important;
+    max-width: 62px !important;
+  }
+
+  .app-shell:not(.view-channels):not(.view-people):not(.view-discover) > .channel-sidebar {
+    width: 270px !important;
+    min-width: 270px !important;
+    max-width: 270px !important;
+  }
+}
+
+
+/* Create Server dialog follows the active application theme. */
+dialog.modal--discord-server {
+  width: min(480px, calc(100vw - 32px));
+  max-width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--side);
+  color: var(--text);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, .3);
+}
+.theme-dark dialog.modal--discord-server { color-scheme: dark; }
+.theme-light dialog.modal--discord-server {
+  color-scheme: light;
+  box-shadow: 0 20px 60px rgba(20, 24, 32, .2);
+}
+dialog.modal--discord-server::backdrop {
+  background: rgba(6, 8, 12, .68);
+  backdrop-filter: blur(7px);
+}
+.discord-server-error {
+  margin: 10px 0 0 !important;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, #e5484d 35%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, #e5484d 9%, transparent);
+  color: #ff8589 !important;
+  font-size: 12px !important;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.theme-light dialog.modal--discord-server::backdrop { background: rgba(20, 24, 32, .34); }
+.modal--discord-server .discord-server-form {
+  position: relative;
+  padding: 30px 28px 25px;
+  background: var(--side);
+  color: var(--text);
+}
+.modal--discord-server .modal-x {
+  top: 15px;
+  right: 15px;
+  z-index: 2;
+  color: var(--muted);
+}
+.modal--discord-server .modal-x:hover {
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--text);
+}
+.discord-server-heading { padding: 0 18px; text-align: center; }
+.discord-server-heading h2 {
+  margin: 0 24px 9px !important;
+  color: var(--text) !important;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 24px !important;
+  font-weight: 750 !important;
+  line-height: 1.25;
+  letter-spacing: -.025em !important;
+}
+.discord-server-heading p {
+  max-width: 360px;
+  margin: 0 auto 23px !important;
+  color: var(--muted) !important;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.discord-server-choices { display: flex; flex-direction: column; gap: 9px; }
+.discord-server-choice,
+.discord-server-join {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  min-height: 76px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: background .14s ease, border-color .14s ease, transform .14s ease;
+}
+.discord-server-choice:hover,
+.discord-server-join:hover {
+  border-color: var(--accent-border);
+  background: var(--surface);
+  transform: translateY(-1px);
+}
+.discord-server-choice-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+}
+.discord-server-choice-copy,
+.discord-server-join > span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.discord-server-choice-copy strong,
+.discord-server-join strong {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 650;
+}
+.discord-server-choice-copy small,
+.discord-server-join small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.discord-server-choice > img,
+.discord-server-join > img { opacity: .75; }
+.discord-server-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 19px 0 13px;
+  color: var(--quiet);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .12em;
+}
+.discord-server-divider::before,
+.discord-server-divider::after {
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+  content: "";
+}
+.discord-server-join { min-height: 62px; }
+.discord-server-join strong { font-size: 13px; }
+.discord-server-join small { font-size: 12px; }
+.discord-server-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: -5px 0 18px;
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.discord-server-back:hover { color: var(--text); }
+.discord-server-back img { transform: rotate(180deg); }
+.discord-server-heading--step { padding: 0 12px; }
+.discord-server-large-icon {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: var(--surface2);
+  color: var(--text);
+}
+.discord-server-purpose {
+  width: fit-content;
+  margin: 0 auto 22px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 650;
+}
+.discord-server-label {
+  display: block;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .06em;
+}
+.modal--discord-server .discord-server-input {
+  box-sizing: border-box;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  outline: none;
+  background: var(--workspace);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+}
+.modal--discord-server .discord-server-input:focus { border-color: var(--accent); }
+.modal--discord-server .discord-server-input::placeholder { color: var(--quiet); }
+.discord-server-unavailable {
+  margin: 11px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.discord-server-primary {
+  width: 100%;
+  min-height: 42px;
+  margin-top: 20px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent-solid);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  cursor: not-allowed;
+}
+.discord-server-primary:disabled { opacity: .48; }
+@media (max-width: 520px) {
+  dialog.modal--discord-server {
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    border-radius: 12px;
+  }
+  .modal--discord-server .discord-server-form { padding: 27px 19px 20px; }
+  .discord-server-heading { padding-inline: 8px; }
+  .discord-server-heading h2 { font-size: 21px !important; }
+  .discord-server-choice { min-height: 72px; padding-inline: 11px; }
+}
+
+/* Threads social surface: neutral typography and active-theme feed colors. */
+.app-shell.view-social .social-layout { background: var(--workspace); }
+.app-shell.view-social .social-feed-column {
+  width: min(100%, 700px);
+  margin-inline: auto;
+  padding: 30px 24px 56px;
+}
+.app-shell.view-social .social-heading {
+  align-items: flex-start;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.app-shell.view-social .social-heading h1 {
+  margin: 2px 0 5px;
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 30px;
+  font-weight: 780;
+  line-height: 1.12;
+  letter-spacing: -.045em;
+  text-transform: none;
+}
+.app-shell.view-social .social-kicker {
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+.app-shell.view-social .social-heading p {
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.app-shell.view-social .social-composer {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 18px 0;
+}
+.app-shell.view-social .social-compose-body textarea {
+  min-height: 62px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.app-shell.view-social .social-compose-footer > span {
+  color: var(--quiet);
+  font-family: inherit;
+}
+.app-shell.view-social .social-compose-footer button {
+  min-height: 34px;
+  padding-inline: 16px;
+  border-radius: 999px;
+  background: var(--text);
+  color: var(--workspace);
+  font-size: 13px;
+}
+.app-shell.view-social .social-compose-footer button:disabled { opacity: .42; }
+.app-shell.view-social .social-feed-tabs { border-bottom: 1px solid var(--line); }
+.app-shell.view-social .social-feed-tabs button {
+  color: var(--muted);
+  font-family: inherit;
+  text-transform: none;
+}
+.app-shell.view-social .social-feed-tabs button.active {
+  color: var(--text);
+  border-bottom-color: var(--text);
+}
+.app-shell.view-social .social-post { border-bottom: 1px solid var(--line); }
+.app-shell.view-social .social-post-copy,
+.app-shell.view-social .social-post-meta strong,
+.app-shell.view-social .social-reply strong { font-family: inherit; }
+.app-shell.view-social .social-post-actions button {
+  color: var(--muted);
+  font-family: inherit;
+}
+.app-shell.view-social .social-post-actions button:hover,
+.app-shell.view-social .social-post-actions button.is-liked { color: var(--text); }
+.app-shell.view-social .social-right-panel { background: var(--side); }
+@media (max-width: 767px) {
+  .app-shell.view-social .social-feed-column {
+    padding: 22px 15px max(34px, env(safe-area-inset-bottom));
+  }
+  .app-shell.view-social .social-heading h1 { font-size: 27px; }
+}
+
+
+/* Live typing status within the Discord message composer area. */
+.typing-indicator {
+  min-height: 18px;
+  padding: 0 18px 5px;
+  color: var(--muted);
+  font-size: .72rem;
+  line-height: 1.4;
 }
