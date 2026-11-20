@@ -74,7 +74,13 @@ export interface CommunityMemberSummary {
   id: string
   username: string
   display_name: string
+  bio: string
+  global_xp: number
+  global_level: number
+  created_at: string
+  joined_at: string
   role_name: string
+  role_color: string | null
   role_id: string | null
   is_owner: boolean
   online: boolean

@@ -24,6 +24,14 @@ export interface User {
   tone: string
   status: 'online' | 'idle'
   role?: string
+  username?: string
+  bio?: string
+  globalXp?: number
+  globalLevel?: number
+  accountCreatedAt?: string
+  serverJoinedAt?: string
+  roleColor?: string
+  isOwner?: boolean
 }
 
 export interface Message {

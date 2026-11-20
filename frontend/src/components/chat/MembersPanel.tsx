@@ -8,9 +8,8 @@ interface MembersPanelProps {
   currentDmUser?: User
   people: User[]
   mobileOpen?: boolean
-  onOpenDm: (userId: string) => void
   onInvite: () => void
-  onNotify: (message: string) => void
+  onOpenProfile: (userId: string) => void
 }
 
 export function MembersPanel({
@@ -19,33 +18,55 @@ export function MembersPanel({
   currentDmUser,
   people,
   mobileOpen = false,
-  onOpenDm,
   onInvite,
-  onNotify,
+  onOpenProfile,
 }: MembersPanelProps) {
-  const communityPeople = [currentUser, ...people]
-  const onlinePeople = communityPeople.filter((person) => person.status === 'online')
-  const idlePeople = communityPeople.filter((person) => person.status !== 'online')
+  const communityPeople = people.length > 0 ? people : [currentUser]
   const visiblePeople = isDm && currentDmUser ? [currentDmUser] : communityPeople
+  const onlinePeople = visiblePeople.filter((person) => person.status === 'online')
+  const idlePeople = visiblePeople.filter((person) => person.status !== 'online')
+
+  const renderMember = (person: User) => (
+    <button
+      type="button"
+      className="member"
+      key={person.id}
+      onClick={() => onOpenProfile(person.id)}
+      aria-label={`Open ${person.name}'s profile`}
+    >
+      <Avatar user={person} />
+      <span>
+        <strong>{person.name}{person.id === currentUser.id ? ' (You)' : ''}</strong>
+        <small>{person.isOwner ? 'Server Owner' : person.role ?? (person.status === 'online' ? 'Online' : 'Away')}</small>
+      </span>
+    </button>
+  )
 
   return (
     <aside className={`members-panel ${mobileOpen ? 'mobile-members-open' : ''}`}>
       <div className="members-heading">
         <div>
           <strong>{isDm ? 'Contact' : 'Members'}</strong>
-          <span>{visiblePeople.length > 0 ? visiblePeople.length : '-'}</span>
+          <span>{visiblePeople.length}</span>
         </div>
-        <button onClick={onInvite} title="Invite">
-          <Icon name="plus" size={15} />
-        </button>
+        {!isDm && (
+          <button type="button" onClick={onInvite} title="Invite">
+            <Icon name="plus" size={15} />
+          </button>
+        )}
       </div>
 
       {isDm && currentDmUser ? (
         <div className="member-section">
           <div className="member-label">CONTACT INFO</div>
-          <button className="member" onClick={() => onNotify(`You are viewing ${currentDmUser.name}.`)}>
-            <Avatar user={currentDmUser} />
-            <span><strong>{currentDmUser.name}</strong><small>{currentDmUser.role ?? 'Member'}</small></span>
+          {renderMember(currentDmUser)}
+          <button
+            type="button"
+            className="member-profile-open-link"
+            onClick={() => onOpenProfile(currentDmUser.id)}
+          >
+            View profile
+            <Icon name="arrow" size={13} />
           </button>
         </div>
       ) : (
@@ -53,26 +74,16 @@ export function MembersPanel({
           {onlinePeople.length > 0 && (
             <div className="member-section">
               <div className="member-label">ONLINE ({onlinePeople.length})</div>
-              {onlinePeople.map((person) => (
-                <button className="member" key={person.id} onClick={() => person.id !== currentUser.id && onOpenDm(person.id)}>
-                  <Avatar user={person} />
-                  <span><strong>{person.name}{person.id === currentUser.id ? ' (You)' : ''}</strong><small>{person.role ?? 'Online'}</small></span>
-                </button>
-              ))}
+              {onlinePeople.map(renderMember)}
             </div>
           )}
           {idlePeople.length > 0 && (
             <div className="member-section">
-              <div className="member-label">AWAY ({idlePeople.length})</div>
-              {idlePeople.map((person) => (
-                <button className="member" key={person.id} onClick={() => person.id !== currentUser.id && onOpenDm(person.id)}>
-                  <Avatar user={person} />
-                  <span><strong>{person.name}{person.id === currentUser.id ? ' (You)' : ''}</strong><small>{person.role ?? 'Away'}</small></span>
-                </button>
-              ))}
+              <div className="member-label">OFFLINE ({idlePeople.length})</div>
+              {idlePeople.map(renderMember)}
             </div>
           )}
-          {communityPeople.length === 0 && (
+          {visiblePeople.length === 0 && (
             <div className="directory-empty">
               <Icon name="users" size={22} />
               <strong>No members to show</strong>

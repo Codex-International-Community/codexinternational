@@ -5,6 +5,8 @@ import { Composer } from './Composer'
 import type { Attachment, Channel, Message, Server, User } from '../../types/chat'
 
 interface ChatPanelProps {
+  currentUserId: string
+  onOpenProfile: (userId: string) => void
   isDm: boolean
   currentDm?: User
   channel?: Channel
@@ -58,6 +60,8 @@ function localDayLabel(value: string) {
 }
 
 export function ChatPanel({
+  currentUserId,
+  onOpenProfile,
   isDm,
   currentDm,
   channel,
@@ -187,6 +191,8 @@ export function ChatPanel({
               )}
               <MessageItem
                 message={message}
+                currentUserId={currentUserId}
+                onOpenProfile={onOpenProfile}
                 isPinned={pinnedMessageIds.includes(message.id)}
                 isMenuOpen={activeMenuId === message.id}
                 onReact={onReact}

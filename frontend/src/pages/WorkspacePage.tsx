@@ -34,6 +34,7 @@ import { CallModal } from '../components/modals/CallModal'
 
 import { ChatPanel } from '../components/chat/ChatPanel'
 import { MembersPanel } from '../components/chat/MembersPanel'
+import { MemberProfile } from '../components/common/MemberProfile'
 import { SocialFeed } from '../components/social/SocialFeed'
 import { SocialAside } from '../components/social/SocialAside'
 import { ChannelDirectory } from '../components/directories/ChannelDirectory'
@@ -182,6 +183,8 @@ export function WorkspacePage({
     }
   })
   const [people, setPeople] = useState<User[]>([])
+  const [communityPeopleById, setCommunityPeopleById] = useState<Record<string, User[]>>({})
+  const [selectedProfile, setSelectedProfile] = useState<User | null>(null)
   const [communityCategories, setCommunityCategories] = useState<Record<string, CommunityCategory[]>>({})
   const [serverMenuPreferences, setServerMenuPreferences] = useState<CommunityMemberSettings | null>(null)
   const [serverOptionsMode, setServerOptionsMode] = useState<ServerOptionsDialogMode | null>(null)
@@ -395,24 +398,37 @@ export function WorkspacePage({
           Promise.all(communities.map((community) => listCommunityMembers(community.id))),
         ])
         if (cancelled) return
-        const memberMap = new Map<string, User>()
-        for (const member of memberGroups.flat()) {
-          if (member.id === session.user.id) continue
-          const initials = member.display_name
-            .split(/\s+/)
-            .map((part) => part[0] ?? '')
-            .join('')
-            .slice(0, 2)
-            .toUpperCase()
-          memberMap.set(member.id, {
+        const communityPeopleEntries = communities.map((community, index) => [
+          community.id,
+          memberGroups[index].map((member) => ({
             id: member.id,
             name: member.display_name,
-            initials,
+            username: member.username,
+            initials: member.display_name
+              .split(/\s+/)
+              .map((part) => part[0] ?? '')
+              .join('')
+              .slice(0, 2)
+              .toUpperCase(),
             tone: 'member',
-            status: member.online ? 'online' : 'idle',
-            role: member.role_name,
-          })
+            status: member.online ? 'online' as const : 'idle' as const,
+            role: member.is_owner ? 'Server Owner' : member.role_name,
+            roleColor: member.role_color ?? undefined,
+            isOwner: member.is_owner,
+            bio: member.bio,
+            globalXp: member.global_xp,
+            globalLevel: member.global_level,
+            accountCreatedAt: member.created_at,
+            serverJoinedAt: member.joined_at,
+          })),
+        ] as const)
+        const memberMap = new Map<string, User>()
+        for (const [, communityPeople] of communityPeopleEntries) {
+          for (const member of communityPeople) {
+            if (member.id !== session.user.id) memberMap.set(member.id, member)
+          }
         }
+        setCommunityPeopleById(Object.fromEntries(communityPeopleEntries))
         setPeople([...memberMap.values()])
         setCommunityCategories(Object.fromEntries(categoryEntries))
         setData((previous) => ({
@@ -631,6 +647,8 @@ export function WorkspacePage({
   )
   const channel = channels.find((c) => c.id === channelId && c.type !== 'voice') ?? channels.find((c) => c.type !== 'voice')
   const currentDm = people.find((p) => p.id === dmId)
+  const currentServerPeople = server ? communityPeopleById[server.id] ?? [] : []
+  const currentServerProfile = currentServerPeople.find((person) => person.id === session.user.id)
   const dmChannelId = data.conversations.find((conversation) => conversation.userId === dmId)?.id ?? dmId
   const key = view === 'dm' ? `dm:${dmChannelId}` : roomKey(server?.id ?? 'studio', channel?.id ?? 'general')
   const currentMessages = useMemo(() => {
@@ -940,9 +958,43 @@ export function WorkspacePage({
       initials,
       tone: 'self',
       status: 'online' as const,
+      username: session.user.username,
+      bio: session.user.bio,
+      globalXp: session.user.global_xp,
+      globalLevel: session.user.global_level,
+      accountCreatedAt: session.user.created_at,
+      serverJoinedAt: currentServerProfile?.serverJoinedAt,
+      role: currentServerProfile?.role,
+      roleColor: currentServerProfile?.roleColor,
+      isOwner: currentServerProfile?.isOwner,
     }),
-    [session.user.id, session.user.display_name, session.user.username, data.displayName, initials, currentServerNickname],
+    [
+      session.user.id,
+      session.user.display_name,
+      session.user.username,
+      session.user.bio,
+      session.user.global_xp,
+      session.user.global_level,
+      session.user.created_at,
+      data.displayName,
+      initials,
+      currentServerNickname,
+      currentServerProfile?.serverJoinedAt,
+      currentServerProfile?.role,
+      currentServerProfile?.roleColor,
+      currentServerProfile?.isOwner,
+    ],
   )
+
+  const openProfile = (userId: string) => {
+    const targetId = userId === 'self' ? session.user.id : userId
+    const profile = targetId === session.user.id
+      ? currentUser
+      : currentServerPeople.find((person) => person.id === targetId)
+        ?? people.find((person) => person.id === targetId)
+    if (profile) setSelectedProfile(profile)
+    else notify('This member profile is no longer available.')
+  }
 
   const handleCreateCommunity = async () => {
     const name = modalValue.trim()
@@ -1725,6 +1777,8 @@ export function WorkspacePage({
               />
             ) : (
               <ChatPanel
+                currentUserId={session.user.id}
+                onOpenProfile={openProfile}
                 isDm={view === 'dm'}
                 currentDm={currentDm}
                 channel={channel}
@@ -1873,11 +1927,10 @@ export function WorkspacePage({
               isDm={view === 'dm'}
               currentUser={currentUser}
               currentDmUser={currentDm}
-              people={people}
+              people={view === 'dm' ? people : currentServerPeople}
               mobileOpen={isMobile && membersOpen}
-              onOpenDm={openDm}
               onInvite={() => void handleOpenInvite()}
-              onNotify={notify}
+              onOpenProfile={openProfile}
             />
           )}
         </div>
@@ -2043,6 +2096,25 @@ export function WorkspacePage({
             setModal(null)
             setModalValue('')
             setSelectedChannelCategoryId('')
+          }}
+        />
+      )}
+
+      {selectedProfile && (
+        <MemberProfile
+          user={selectedProfile}
+          serverName={view === 'channel' ? server?.name : undefined}
+          isSelf={selectedProfile.id === session.user.id}
+          onClose={() => setSelectedProfile(null)}
+          onMessage={() => {
+            const targetId = selectedProfile.id
+            setSelectedProfile(null)
+            void openDm(targetId)
+          }}
+          onCopyId={() => {
+            void navigator.clipboard.writeText(selectedProfile.id)
+              .then(() => notify('User ID copied'))
+              .catch(() => notify('Could not copy user ID.'))
           }}
         />
       )}

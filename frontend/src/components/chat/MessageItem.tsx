@@ -4,6 +4,8 @@ import type { Message } from '../../types/chat'
 
 interface MessageItemProps {
   message: Message
+  currentUserId: string
+  onOpenProfile: (userId: string) => void
   isPinned: boolean
   isMenuOpen: boolean
   onReact: (messageId: string, emoji: string) => void
@@ -17,6 +19,8 @@ interface MessageItemProps {
 
 export function MessageItem({
   message,
+  currentUserId,
+  onOpenProfile,
   isPinned,
   isMenuOpen,
   onReact,
@@ -41,20 +45,34 @@ export function MessageItem({
 
   return (
     <article className="message">
-      <Avatar
-        user={{
-          id: message.authorId,
-          name: message.author,
-          initials: message.initials,
-          tone: message.tone,
-          status: 'online',
-        }}
-        size="large"
-      />
+      <button
+        type="button"
+        className="message-author-avatar"
+        onClick={() => onOpenProfile(message.authorId === 'self' ? currentUserId : message.authorId)}
+        aria-label={`Open ${message.author}'s profile`}
+      >
+        <Avatar
+          user={{
+            id: message.authorId,
+            name: message.author,
+            initials: message.initials,
+            tone: message.tone,
+            status: 'online',
+          }}
+          size="large"
+        />
+      </button>
 
       <div className="message-content">
         <div className="message-meta">
-          <strong>{message.author}</strong>
+          <button
+            type="button"
+            className="message-author-name"
+            onClick={() => onOpenProfile(message.authorId === 'self' ? currentUserId : message.authorId)}
+            aria-label={`Open ${message.author}'s profile`}
+          >
+            {message.author}
+          </button>
           {message.role && <span className="role">{message.role}</span>}
           <time dateTime={message.createdAt} title={message.createdAt ? new Date(message.createdAt).toLocaleString() : undefined}>
             {message.time}

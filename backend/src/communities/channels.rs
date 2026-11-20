@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use axum::{Json, extract::{Path, State}, http::StatusCode};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
@@ -51,7 +52,13 @@ pub struct CommunityMemberSummary {
     pub id: Uuid,
     pub username: String,
     pub display_name: String,
+    pub bio: String,
+    pub global_xp: i64,
+    pub global_level: i32,
+    pub created_at: DateTime<Utc>,
+    pub joined_at: DateTime<Utc>,
     pub role_name: String,
+    pub role_color: Option<String>,
     pub role_id: Option<Uuid>,
     pub is_owner: bool,
     pub online: bool,
@@ -258,7 +265,8 @@ pub async fn list_members(
     let members = sqlx::query_as::<_, CommunityMemberSummary>(
         "SELECT u.id, u.username,
                 COALESCE(m.nickname, u.display_name) AS display_name,
-                COALESCE(r.name, '@everyone') AS role_name, m.role_id,
+                u.bio, u.global_xp, u.global_level, u.created_at, m.joined_at,
+                COALESCE(r.name, '@everyone') AS role_name, r.color AS role_color, m.role_id,
                 (c.owner_id = m.user_id) AS is_owner,
                 (u.last_seen_at > NOW() - INTERVAL '90 seconds') AS online
          FROM community_members m
