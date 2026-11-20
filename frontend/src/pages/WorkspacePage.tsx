@@ -1424,6 +1424,15 @@ export function WorkspacePage({
             setModalValue('')
             setSelectedChannelCategoryId('')
           }}
+          onCreateChannelInCategory={(categoryId) => {
+            if (!categoryId) {
+              notify('Category not found. Refresh the server channel list and try again.')
+              return
+            }
+            setSelectedChannelCategoryId(categoryId)
+            setModal('channel')
+            setModalValue('')
+          }}
           onNewDmModal={() => {
             setModal('dm')
             setModalValue('')

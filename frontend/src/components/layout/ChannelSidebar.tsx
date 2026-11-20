@@ -43,6 +43,7 @@ interface ChannelSidebarProps {
   onSelectChannel: (channel: Channel) => void
   onOpenDm: (userId: string) => void
   onCreateChannelModal: () => void
+  onCreateChannelInCategory: (categoryId: string) => void
   onNewDmModal: () => void
   onVoiceChannelNotice: () => void
   onToggleMute: () => void
@@ -95,6 +96,7 @@ export function ChannelSidebar({
   onSelectChannel,
   onOpenDm,
   onCreateChannelModal,
+  onCreateChannelInCategory,
   onNewDmModal,
   onVoiceChannelNotice,
   onToggleMute,
@@ -323,7 +325,17 @@ export function ChannelSidebar({
               ))}
               {categoryChannels.map((group) => (
                 <div className="server-channel-category" key={group.name}>
-                  <div className="section-label"><span>{group.name.toUpperCase()}</span></div>
+                  <div className="section-label">
+                    <span>{group.name.toUpperCase()}</span>
+                    <button
+                      type="button"
+                      aria-label={`Create channel in ${group.name}`}
+                      title={`Create channel in ${group.name}`}
+                      onClick={() => onCreateChannelInCategory(categories.find((category) => category.name === group.name)?.id ?? '')}
+                    >
+                      <Icon name="plus" size={14} />
+                    </button>
+                  </div>
                   {group.channels.map((channel) => (
                     <button type="button" key={channel.id} className={`channel-item ${channelId === channel.id ? 'chosen' : ''}`}
                       aria-current={channelId === channel.id ? 'page' : undefined} onClick={() => onSelectChannel(channel)}>
