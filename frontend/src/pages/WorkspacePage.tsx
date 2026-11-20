@@ -299,10 +299,7 @@ export function WorkspacePage({
   const [screenSharing, setScreenSharing] = useState(false)
   const [profileMenu, setProfileMenu] = useState(false)
   const [serverMenuOpen, setServerMenuOpen] = useState(false)
-  const [serverSettingsOpen, setServerSettingsOpen] = useState(false)
-  const [serverSettingsName, setServerSettingsName] = useState('')
-  const [serverSettingsBusy, setServerSettingsBusy] = useState(false)
-  const [serverSettingsError, setServerSettingsError] = useState('')
+  const [currentServerNickname, setCurrentServerNickname] = useState('')
   const [notificationRead, setNotificationRead] = useState(false)
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>(loadSocialPosts)
   const [socialDraft, setSocialDraft] = useState('')
@@ -593,6 +590,39 @@ export function WorkspacePage({
   }, [])
 
   const server = data.servers.find((s) => s.id === serverId) ?? data.servers[0]
+
+  useEffect(() => {
+    let cancelled = false
+    setServerMenuPreferences(null)
+    setCurrentServerNickname('')
+    if (!server?.id || view !== 'channel') return
+    void Promise.all([
+      getCommunityMemberSettings(server.id),
+      listCommunityMembers(server.id),
+    ]).then(([preferences, members]) => {
+      if (cancelled) return
+      setServerMenuPreferences(preferences)
+      const ownMember = members.find((member) => member.id === session.user.id)
+      const baseName = session.user.display_name || session.user.username
+      const nickname = ownMember && ownMember.display_name !== baseName ? ownMember.display_name : ''
+      setCurrentServerNickname(nickname)
+      setServerOptionsForm((previous) => ({
+        ...previous,
+        notificationMode: preferences.notification_mode,
+        serverMuted: preferences.is_muted,
+        allowDirectMessages: preferences.allow_direct_messages,
+        allowMessageRequests: preferences.allow_message_requests,
+        hideMutedChannels: preferences.hide_muted_channels,
+        nickname,
+      }))
+    }).catch((error) => {
+      if (!cancelled && !(error instanceof ApiError && error.status === 401)) {
+        notify(error instanceof Error ? error.message : 'Could not load server preferences.')
+      }
+    })
+    return () => { cancelled = true }
+  }, [server?.id, session.user.id, session.user.display_name, session.user.username, view, notify])
+
   const channels = useMemo(
     () => data.channels[server?.id ?? ''] ?? [],
     [data.channels, server?.id],
@@ -904,12 +934,12 @@ export function WorkspacePage({
   const currentUser = useMemo(
     () => ({
       id: session.user.id,
-      name: data.displayName || session.user.display_name || session.user.username,
+      name: currentServerNickname || data.displayName || session.user.display_name || session.user.username,
       initials,
       tone: 'self',
       status: 'online' as const,
     }),
-    [session.user.id, session.user.display_name, session.user.username, data.displayName, initials],
+    [session.user.id, session.user.display_name, session.user.username, data.displayName, initials, currentServerNickname],
   )
 
   const handleCreateCommunity = async () => {
@@ -954,35 +984,153 @@ export function WorkspacePage({
     }
   }
 
-  const handleOpenServerSettings = () => {
+  const openServerOptions = async (mode: ServerOptionsDialogMode) => {
     if (!server) return
-    setServerSettingsName(server.name)
-    setServerSettingsError('')
-    setServerSettingsOpen(true)
+    setServerOptionsError('')
+    try {
+      const [preferences, communities, members] = await Promise.all([
+        getCommunityMemberSettings(server.id),
+        listCommunities(),
+        listCommunityMembers(server.id),
+      ])
+      setServerMenuPreferences(preferences)
+      const community = communities.find((item) => item.id === server.id)
+      const ownMember = members.find((member) => member.id === session.user.id)
+      const baseName = session.user.display_name || session.user.username
+      const nickname = ownMember && ownMember.display_name !== baseName ? ownMember.display_name : ''
+      setCurrentServerNickname(nickname)
+      setServerOptionsForm((previous) => ({
+        ...previous,
+        name: community?.name ?? server.name,
+        description: community?.description ?? '',
+        isPublic: community?.is_public ?? true,
+        notificationMode: preferences.notification_mode,
+        serverMuted: preferences.is_muted,
+        allowDirectMessages: preferences.allow_direct_messages,
+        allowMessageRequests: preferences.allow_message_requests,
+        hideMutedChannels: preferences.hide_muted_channels,
+        nickname,
+      }))
+      setServerOptionsMode(mode)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not load server options.')
+    }
   }
 
-  const handleSaveServerSettings = async () => {
-    if (!server || !serverSettingsName.trim() || serverSettingsBusy) return
-    setServerSettingsBusy(true)
-    setServerSettingsError('')
+  const handleSubmitServerOptions = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!server || !serverOptionsMode || serverOptionsBusy) return
+    setServerOptionsBusy(true)
+    setServerOptionsError('')
     try {
-      const updated = await updateCommunity(server.id, { name: serverSettingsName.trim() })
-      setData((previous) => ({
-        ...previous,
-        servers: previous.servers.map((item) => item.id === server.id
-          ? {
-              ...item,
-              name: updated.name,
-              abbr: updated.name.split(/\s+/).map((part) => part[0] ?? '').join('').slice(0, 3).toUpperCase(),
-            }
-          : item),
-      }))
-      setServerSettingsOpen(false)
-      notify('Server settings saved')
+      if (serverOptionsMode === 'settings') {
+        const updated = await updateCommunity(server.id, {
+          name: serverOptionsForm.name.trim(),
+          description: serverOptionsForm.description.trim(),
+          is_public: serverOptionsForm.isPublic,
+        })
+        setData((previous) => ({
+          ...previous,
+          servers: previous.servers.map((item) => item.id === server.id
+            ? { ...item, name: updated.name, abbr: updated.name.split(/\s+/).map((part) => part[0] ?? '').join('').slice(0, 3).toUpperCase() }
+            : item),
+        }))
+        notify('Server settings saved')
+      } else if (serverOptionsMode === 'category') {
+        const category = await createCommunityCategory(server.id, serverOptionsForm.name.trim())
+        setCommunityCategories((previous) => ({
+          ...previous,
+          [server.id]: [...(previous[server.id] ?? []), category],
+        }))
+        notify(`Created category ${category.name}`)
+      } else if (serverOptionsMode === 'event') {
+        await createCommunityEvent(server.id, {
+          name: serverOptionsForm.name.trim(),
+          description: serverOptionsForm.description.trim(),
+          starts_at: new Date(serverOptionsForm.startsAt).toISOString(),
+          location: serverOptionsForm.location.trim(),
+        })
+        notify('Server event created')
+      } else if (serverOptionsMode === 'notifications') {
+        const updated = await updateCommunityMemberSettings(server.id, {
+          notification_mode: serverOptionsForm.notificationMode,
+          is_muted: serverOptionsForm.serverMuted,
+          hide_muted_channels: serverOptionsForm.hideMutedChannels,
+        })
+        setServerMenuPreferences(updated)
+        notify('Notification preferences saved')
+      } else if (serverOptionsMode === 'privacy') {
+        const updated = await updateCommunityMemberSettings(server.id, {
+          allow_direct_messages: serverOptionsForm.allowDirectMessages,
+          allow_message_requests: serverOptionsForm.allowMessageRequests,
+        })
+        setServerMenuPreferences(updated)
+        notify('Privacy preferences saved')
+      } else if (serverOptionsMode === 'profile') {
+        const result = await updateCommunityNickname(server.id, serverOptionsForm.nickname)
+        setCurrentServerNickname(result.nickname ?? '')
+        notify(result.nickname ? 'Server nickname saved' : 'Server nickname cleared')
+      }
+      setServerOptionsMode(null)
     } catch (error) {
-      setServerSettingsError(error instanceof Error ? error.message : 'Server settings could not be saved.')
+      setServerOptionsError(error instanceof Error ? error.message : 'Server option could not be saved.')
     } finally {
-      setServerSettingsBusy(false)
+      setServerOptionsBusy(false)
+    }
+  }
+
+  const handleToggleHideMutedChannels = async () => {
+    if (!server) return
+    const nextValue = !Boolean(serverMenuPreferences?.hide_muted_channels)
+    try {
+      const updated = await updateCommunityMemberSettings(server.id, { hide_muted_channels: nextValue })
+      setServerMenuPreferences(updated)
+      setServerOptionsForm((previous) => ({ ...previous, hideMutedChannels: updated.hide_muted_channels }))
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not update channel visibility.')
+    }
+  }
+
+  const removeActiveServerFromWorkspace = (communityId: string) => {
+    const remaining = data.servers.filter((item) => item.id !== communityId)
+    setData((previous) => ({
+      ...previous,
+      servers: previous.servers.filter((item) => item.id !== communityId),
+      channels: Object.fromEntries(Object.entries(previous.channels).filter(([id]) => id !== communityId)),
+    }))
+    setCommunityCategories((previous) => {
+      const next = { ...previous }
+      delete next[communityId]
+      return next
+    })
+    setServerMenuPreferences(null)
+    setServerId(remaining[0]?.id ?? '')
+    setChannelId(remaining[0] ? (data.channels[remaining[0].id]?.[0]?.id ?? '') : '')
+    setView(remaining[0] ? 'channel' : 'home')
+    setMobileTab(remaining[0] ? 'chat' : 'home')
+  }
+
+  const handleLeaveServer = async () => {
+    if (!server || !window.confirm(`Leave ${server.name}? You will need an invite to rejoin.`)) return
+    try {
+      await leaveCommunity(server.id)
+      const leavingName = server.name
+      removeActiveServerFromWorkspace(server.id)
+      notify(`Left ${leavingName}`)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not leave server.')
+    }
+  }
+
+  const handleDeleteServer = async () => {
+    if (!server || !window.confirm(`Delete ${server.name}? This permanently removes its channels, messages and members.`)) return
+    try {
+      await deleteCommunity(server.id)
+      const deletedName = server.name
+      removeActiveServerFromWorkspace(server.id)
+      notify(`Deleted ${deletedName}`)
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Could not delete server.')
     }
   }
 
@@ -1240,7 +1388,17 @@ export function WorkspacePage({
             setServerMenuOpen((open) => !open)
           }}
           onInvitePeople={() => void handleOpenInvite()}
-          onOpenServerSettings={handleOpenServerSettings}
+          onOpenServerSettings={() => void openServerOptions('settings')}
+          onCreateCategory={() => void openServerOptions('category')}
+          onCreateEvent={() => void openServerOptions('event')}
+          onOpenNotificationSettings={() => void openServerOptions('notifications')}
+          onOpenPrivacySettings={() => void openServerOptions('privacy')}
+          onEditServerProfile={() => void openServerOptions('profile')}
+          onToggleHideMutedChannels={() => void handleToggleHideMutedChannels()}
+          hideMutedChannels={serverMenuPreferences?.hide_muted_channels ?? false}
+          canDeleteServer={serverMenuPreferences?.is_owner ?? false}
+          onLeaveServer={() => void handleLeaveServer()}
+          onDeleteServer={() => void handleDeleteServer()}
           onCopyServerId={() => {
             if (!server?.id) return
             void navigator.clipboard.writeText(server.id)
@@ -1709,49 +1867,27 @@ export function WorkspacePage({
         />
       )}
 
-      {serverSettingsOpen && server && (
-        <div className="server-settings-overlay" onMouseDown={() => setServerSettingsOpen(false)}>
-          <section
-            className="server-settings-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="server-settings-title"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <form
-              className="server-settings-form"
-              onSubmit={(event) => {
-                event.preventDefault()
-                void handleSaveServerSettings()
-              }}
-            >
-              <div className="server-settings-header">
-                <div>
-                  <span className="eyebrow">SERVER SETTINGS</span>
-                  <h2 id="server-settings-title">{server.name}</h2>
-                </div>
-                <button type="button" aria-label="Close server settings" onClick={() => setServerSettingsOpen(false)}>
-                  <span aria-hidden="true">×</span>
-                </button>
-              </div>
-              <label htmlFor="server-settings-name">SERVER NAME</label>
-              <input
-                id="server-settings-name"
-                maxLength={100}
-                value={serverSettingsName}
-                onChange={(event) => setServerSettingsName(event.target.value)}
-                autoFocus
-              />
-              {serverSettingsError && <p className="server-settings-error" role="alert">{serverSettingsError}</p>}
-              <div className="server-settings-actions">
-                <button type="button" onClick={() => setServerSettingsOpen(false)}>Cancel</button>
-                <button type="submit" disabled={!serverSettingsName.trim() || serverSettingsBusy}>
-                  {serverSettingsBusy ? 'Saving…' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
+      {serverOptionsMode && server && (
+        <ServerOptionsDialog
+          mode={serverOptionsMode}
+          serverName={server.name}
+          {...serverOptionsForm}
+          busy={serverOptionsBusy}
+          error={serverOptionsError}
+          onChangeName={(name) => setServerOptionsForm((previous) => ({ ...previous, name }))}
+          onChangeDescription={(description) => setServerOptionsForm((previous) => ({ ...previous, description }))}
+          onChangePublic={(isPublic) => setServerOptionsForm((previous) => ({ ...previous, isPublic }))}
+          onChangeStartsAt={(startsAt) => setServerOptionsForm((previous) => ({ ...previous, startsAt }))}
+          onChangeLocation={(location) => setServerOptionsForm((previous) => ({ ...previous, location }))}
+          onChangeNotificationMode={(notificationMode) => setServerOptionsForm((previous) => ({ ...previous, notificationMode }))}
+          onChangeServerMuted={(serverMuted) => setServerOptionsForm((previous) => ({ ...previous, serverMuted }))}
+          onChangeAllowDirectMessages={(allowDirectMessages) => setServerOptionsForm((previous) => ({ ...previous, allowDirectMessages }))}
+          onChangeAllowMessageRequests={(allowMessageRequests) => setServerOptionsForm((previous) => ({ ...previous, allowMessageRequests }))}
+          onChangeHideMutedChannels={(hideMutedChannels) => setServerOptionsForm((previous) => ({ ...previous, hideMutedChannels }))}
+          onChangeNickname={(nickname) => setServerOptionsForm((previous) => ({ ...previous, nickname }))}
+          onSubmit={(event) => void handleSubmitServerOptions(event)}
+          onClose={() => setServerOptionsMode(null)}
+        />
       )}
 
       {modal && modal !== 'call' && (
@@ -1807,6 +1943,8 @@ export function WorkspacePage({
                           id: created.id,
                           name: created.name ?? modalValue.trim(),
                           type: created.channel_type === 'announcement' ? 'announcement' : 'text',
+                          categoryId: created.category_id,
+                          categoryName: created.category_name,
                         },
                       ],
                     },
