@@ -133,7 +133,7 @@ export function ChannelSidebar({
       {server && view === 'channel' && serverMenuOpen && (
         <div className="server-menu" role="menu" aria-label={`${server.name} server menu`}>
           <button className="server-menu-item server-menu-item--invite" type="button" role="menuitem" onClick={() => { onInvitePeople(); onToggleServerMenu() }}>
-            <Icon name="user-plus" size={16} /> Invite People
+            <Icon name="users" size={16} /> Invite People
           </button>
           <div className="server-menu-divider" />
           <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onOpenServerSettings(); onToggleServerMenu() }}>
