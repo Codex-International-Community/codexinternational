@@ -229,3 +229,31 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   return (await res.json()) as T
 }
+
+export async function apiUpload<T>(path: string, file: Blob, fileName: string, extraHeaders: Record<string, string> = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': file.type,
+    'X-File-Name': fileName,
+    ...extraHeaders,
+  }
+  if (memorySession?.access_token) {
+    headers.Authorization = `Bearer ${memorySession.access_token}`
+  }
+
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}${path}`, { method: 'POST', headers, body: file })
+  } catch {
+    throw new ApiError(0, 'NETWORK_ERROR', 'Could not connect to the media upload endpoint.')
+  }
+
+  if (res.status === 401 && memorySession?.refresh_token) {
+    const refreshed = await refreshSessionOnce()
+    if (refreshed) {
+      return apiUpload<T>(path, file, fileName, extraHeaders)
+    }
+    throw new ApiError(401, 'UNAUTHORIZED', 'Session expired. Please sign in again.')
+  }
+  if (!res.ok) throw await parseErrorResponse(res)
+  return (await res.json()) as T
+}

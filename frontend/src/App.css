@@ -3506,3 +3506,252 @@ dialog.modal {
     display: none;
   }
 }
+
+
+/* Chat date separators and role controls */
+.message-date-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 23px 0 12px;
+  color: var(--quiet);
+  font-size: .72rem;
+  font-weight: 750;
+}
+
+.message-date-divider::before,
+.message-date-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.message-date-divider span {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--workspace);
+}
+
+.message-meta time {
+  cursor: default;
+}
+
+.server-settings-role-select {
+  max-width: 170px;
+  min-width: 110px;
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.server-settings-role-editor {
+  margin: 20px 0;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+}
+
+.server-settings-role-editor-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.server-settings-role-editor-heading strong {
+  color: var(--text);
+  font-size: .92rem;
+}
+
+.server-settings-role-editor-heading span {
+  color: var(--quiet);
+  font-size: .7rem;
+}
+
+.server-settings-role-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px;
+  gap: 12px;
+  margin-bottom: 17px;
+}
+
+.server-settings-role-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.server-settings-role-fields label > span,
+.server-settings-role-permissions-label {
+  color: var(--muted);
+  font-size: .67rem;
+  font-weight: 850;
+  letter-spacing: .09em;
+}
+
+.server-settings-role-fields input:not([type="color"]) {
+  width: 100%;
+  height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--workspace);
+  color: var(--text);
+  font-size: .85rem;
+}
+
+.server-settings-role-color input {
+  width: 100%;
+  height: 40px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--workspace);
+}
+
+.server-settings-permission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.server-settings-permission-grid label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--workspace);
+  color: var(--muted);
+  font-size: .75rem;
+  cursor: pointer;
+}
+
+.server-settings-permission-grid input {
+  accent-color: var(--accent-solid);
+}
+
+.server-settings-role-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 17px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.server-settings-role-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.server-settings-role-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.server-settings-role-color-dot {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--workspace);
+}
+
+.server-settings-role-card-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 5px;
+}
+
+.server-settings-role-card-copy > strong {
+  color: var(--text);
+  font-size: .86rem;
+}
+
+.server-settings-role-card-copy > small {
+  color: var(--quiet);
+  font-size: .7rem;
+}
+
+.server-settings-role-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.server-settings-role-badges span {
+  padding: 4px 6px;
+  border-radius: 5px;
+  background: var(--surface2);
+  color: var(--muted);
+  font-size: .65rem;
+}
+
+.server-settings-role-card-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 5px;
+}
+
+.server-settings-role-card-actions button {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--workspace);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.server-settings-role-card-actions button:hover {
+  border-color: var(--accent-border);
+  color: var(--text);
+}
+
+@media (max-width: 560px) {
+  .server-settings-permission-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .server-settings-role-editor-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .server-settings-role-select {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .message-date-divider {
+    margin: 18px 0 9px;
+  }
+}

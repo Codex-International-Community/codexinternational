@@ -33,6 +33,7 @@ export interface Message {
   initials: string
   tone: string
   time: string
+  createdAt?: string
   text: string
   reactions: Record<string, string[]>
   replyTo?: string

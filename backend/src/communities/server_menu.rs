@@ -7,7 +7,7 @@ use sqlx::FromRow;
 use uuid::Uuid;
 use crate::{
  auth::extractor::AuthUser,
- communities::permissions::{has_permission, PERM_MANAGE_CHANNELS},
+ communities::permissions::{has_permission, PERM_MANAGE_CHANNELS, PERM_MANAGE_ROLES},
  error::AppError,
  state::AppState,
 };
@@ -151,6 +151,7 @@ pub struct UpdateMemberSettingsRequest {
 #[derive(Debug, Serialize)]
 pub struct MemberSettingsResponse {
  pub is_owner: bool,
+ pub can_manage_roles: bool,
  #[serde(flatten)]
  pub settings: CommunityMemberSettings,
 }
@@ -165,20 +166,20 @@ fn default_member_settings() -> CommunityMemberSettings {
 pub async fn get_member_settings(
  State(state): State<Arc<AppState>>, auth: AuthUser, Path(community_id): Path<Uuid>,
 ) -> Result<Json<MemberSettingsResponse>, AppError> {
- let (is_owner, _) = ensure_member(&state, community_id, auth.user_id).await?;
+ let (is_owner, permissions) = ensure_member(&state, community_id, auth.user_id).await?;
  let settings = sqlx::query_as::<_, CommunityMemberSettings>(
   "SELECT notification_mode, is_muted, allow_direct_messages, allow_message_requests, hide_muted_channels
    FROM community_member_settings WHERE community_id = $1 AND user_id = $2"
  ).bind(community_id).bind(auth.user_id).fetch_optional(&state.pg).await?
   .unwrap_or_else(default_member_settings);
- Ok(Json(MemberSettingsResponse { is_owner, settings }))
+ Ok(Json(MemberSettingsResponse { is_owner, can_manage_roles: is_owner || has_permission(permissions, PERM_MANAGE_ROLES), settings }))
 }
 
 pub async fn update_member_settings(
  State(state): State<Arc<AppState>>, auth: AuthUser, Path(community_id): Path<Uuid>,
  Json(request): Json<UpdateMemberSettingsRequest>,
 ) -> Result<Json<MemberSettingsResponse>, AppError> {
- let (is_owner, _) = ensure_member(&state, community_id, auth.user_id).await?;
+ let (is_owner, permissions) = ensure_member(&state, community_id, auth.user_id).await?;
  if let Some(mode) = request.notification_mode.as_deref()
   && !matches!(mode, "all" | "mentions" | "none") {
   return Err(AppError::BadRequest("notification_mode must be all, mentions or none".to_string()));
@@ -198,7 +199,7 @@ pub async fn update_member_settings(
  ).bind(community_id).bind(auth.user_id).bind(request.notification_mode).bind(request.is_muted)
   .bind(request.allow_direct_messages).bind(request.allow_message_requests).bind(request.hide_muted_channels)
   .fetch_one(&state.pg).await?;
- Ok(Json(MemberSettingsResponse { is_owner, settings }))
+ Ok(Json(MemberSettingsResponse { is_owner, can_manage_roles: is_owner || has_permission(permissions, PERM_MANAGE_ROLES), settings }))
 }
 
 #[derive(Debug, Deserialize)]

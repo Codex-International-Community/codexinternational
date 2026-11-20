@@ -56,7 +56,7 @@ export function MessageItem({
         <div className="message-meta">
           <strong>{message.author}</strong>
           {message.role && <span className="role">{message.role}</span>}
-          <time>
+          <time dateTime={message.createdAt} title={message.createdAt ? new Date(message.createdAt).toLocaleString() : undefined}>
             {message.time}
             {message.edited ? ' · edited' : ''}
           </time>

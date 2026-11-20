@@ -2,16 +2,22 @@ import { useEffect, useId, useMemo, useState, type FormEvent } from 'react'
 import { Icon } from '../common/Icon'
 import type { IconName } from '../../types/common'
 import {
+  createCommunityRole,
   deleteCommunityCategory,
+  deleteCommunityRole,
   getCommunityInvite,
   listChannels,
   listCommunityCategories,
   listCommunityEvents,
   listCommunityMembers,
+  listCommunityRoles,
+  updateCommunityMemberRole,
+  updateCommunityRole,
   type ChannelSummary,
   type CommunityCategory,
   type CommunityEvent,
   type CommunityMemberSummary,
+  type CommunityRole,
 } from '../../api/communities'
 
 export type ServerOptionsDialogMode =
@@ -22,13 +28,15 @@ export type ServerOptionsDialogMode =
   | 'privacy'
   | 'profile'
 
-type ServerSettingsSection = 'overview' | 'members' | 'channels' | 'invites' | 'events' | 'danger'
+type ServerSettingsSection = 'overview' | 'members' | 'channels' | 'roles' | 'invites' | 'events' | 'danger'
 
 export interface ServerOptionsDialogProps {
   mode: ServerOptionsDialogMode
   serverName: string
   communityId: string
+  currentUserId: string
   isOwner: boolean
+  canManageRoles: boolean
   name: string
   description: string
   isPublic: boolean
@@ -138,7 +146,9 @@ export function ServerOptionsDialog(props: ServerOptionsDialogProps) {
     mode,
     serverName,
     communityId,
+    currentUserId,
     isOwner,
+    canManageRoles,
     name,
     description,
     isPublic,
@@ -175,6 +185,7 @@ export function ServerOptionsDialog(props: ServerOptionsDialogProps) {
   const titleId = useId()
   const [activeSection, setActiveSection] = useState<ServerSettingsSection>('overview')
   const [members, setMembers] = useState<CommunityMemberSummary[]>([])
+  const [roles, setRoles] = useState<CommunityRole[]>([])
   const [channels, setChannels] = useState<ChannelSummary[]>([])
   const [categories, setCategories] = useState<CommunityCategory[]>([])
   const [events, setEvents] = useState<CommunityEvent[]>([])
@@ -183,6 +194,22 @@ export function ServerOptionsDialog(props: ServerOptionsDialogProps) {
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState('')
   const [localMessage, setLocalMessage] = useState('')
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
+  const [roleName, setRoleName] = useState('')
+  const [roleColor, setRoleColor] = useState('#6B8DFF')
+  const [rolePermissions, setRolePermissions] = useState(0)
+  const [roleBusy, setRoleBusy] = useState(false)
+  const permissionOptions: { bit: number; label: string; ownerOnly?: boolean }[] = [
+    { bit: 1, label: 'View Channels' },
+    { bit: 2, label: 'Send Messages' },
+    { bit: 4, label: 'Manage Messages' },
+    { bit: 8, label: 'Mention @everyone' },
+    { bit: 16, label: 'Manage Channels' },
+    { bit: 32, label: 'Manage Roles' },
+    { bit: 64, label: 'Moderate Contributions' },
+    { bit: 128, label: 'Administrator', ownerOnly: true },
+    { bit: 256, label: 'Moderate Members' },
+  ]
 
   useEffect(() => {
     if (mode !== 'settings') return
@@ -191,14 +218,16 @@ export function ServerOptionsDialog(props: ServerOptionsDialogProps) {
     setLoadError('')
     void Promise.all([
       listCommunityMembers(communityId),
+      listCommunityRoles(communityId),
       listChannels(communityId),
       listCommunityCategories(communityId),
       listCommunityEvents(communityId),
       getCommunityInvite(communityId),
     ])
-      .then(([memberRows, channelRows, categoryRows, eventRows, invite]) => {
+      .then(([memberRows, roleRows, channelRows, categoryRows, eventRows, invite]) => {
         if (cancelled) return
         setMembers(memberRows)
+        setRoles(roleRows)
         setChannels(channelRows)
         setCategories(categoryRows)
         setEvents(eventRows)
@@ -259,11 +288,79 @@ export function ServerOptionsDialog(props: ServerOptionsDialogProps) {
     }
   }
 
+  const startRoleEdit = (role: CommunityRole) => {
+    setEditingRoleId(role.id)
+    setRoleName(role.name)
+    setRoleColor(role.color)
+    setRolePermissions(role.permissions)
+    setLocalMessage('')
+  }
+
+  const resetRoleEditor = () => {
+    setEditingRoleId(null)
+    setRoleName('')
+    setRoleColor('#6B8DFF')
+    setRolePermissions(0)
+  }
+
+  const saveRole = async () => {
+    if (!roleName.trim() || roleBusy) return
+    setRoleBusy(true)
+    setLocalMessage('')
+    try {
+      const payload = { name: roleName.trim(), color: roleColor, permissions: rolePermissions }
+      const saved = editingRoleId
+        ? await updateCommunityRole(communityId, editingRoleId, payload)
+        : await createCommunityRole(communityId, payload)
+      setRoles((previous) => {
+        const next = previous.filter((item) => item.id !== saved.id)
+        return [...next, saved].sort((a, b) => b.position - a.position || a.name.localeCompare(b.name))
+      })
+      resetRoleEditor()
+      setLocalMessage(editingRoleId ? 'Role updated' : 'Role created')
+    } catch (requestError) {
+      setLocalMessage(requestError instanceof Error ? requestError.message : 'Could not save role.')
+    } finally {
+      setRoleBusy(false)
+    }
+  }
+
+  const removeRole = async (role: CommunityRole) => {
+    if (!window.confirm('Delete the ' + role.name + ' role? Members assigned to it will be moved to @everyone.')) return
+    try {
+      await deleteCommunityRole(communityId, role.id)
+      const fallback = roles.find((item) => item.is_default)
+      setRoles((previous) => previous.filter((item) => item.id !== role.id))
+      if (fallback) {
+        setMembers((previous) => previous.map((member) => member.role_id === role.id
+          ? { ...member, role_id: fallback.id, role_name: fallback.name }
+          : member))
+      }
+      if (editingRoleId === role.id) resetRoleEditor()
+      setLocalMessage('Role deleted')
+    } catch (requestError) {
+      setLocalMessage(requestError instanceof Error ? requestError.message : 'Could not delete role.')
+    }
+  }
+
+  const assignMemberRole = async (member: CommunityMemberSummary, roleId: string) => {
+    try {
+      const role = await updateCommunityMemberRole(communityId, member.id, roleId || null)
+      setMembers((previous) => previous.map((item) => item.id === member.id
+        ? { ...item, role_id: role.id, role_name: role.name }
+        : item))
+      setLocalMessage('Updated role for ' + member.display_name)
+    } catch (requestError) {
+      setLocalMessage(requestError instanceof Error ? requestError.message : 'Could not update member role.')
+    }
+  }
+
   if (mode === 'settings') {
     const sections: { id: ServerSettingsSection; label: string; icon: IconName }[] = [
       { id: 'overview', label: 'Overview', icon: 'settings' },
       { id: 'members', label: 'Members', icon: 'users' },
       { id: 'channels', label: 'Channels', icon: 'hash' },
+      { id: 'roles', label: 'Roles', icon: 'shield' },
       { id: 'invites', label: 'Invites', icon: 'link' },
       { id: 'events', label: 'Events', icon: 'calendar' },
     ]
@@ -414,7 +511,21 @@ export function ServerOptionsDialog(props: ServerOptionsDialogProps) {
                         <i />
                         {member.online ? 'Online' : 'Offline'}
                       </span>
-                      <span className="server-settings-role">{member.role_name}</span>
+                      {canManageRoles ? (
+                        <select
+                          className="server-settings-role-select"
+                          aria-label={`Role for ${member.display_name}`}
+                          value={member.role_id ?? roles.find((role) => role.is_default)?.id ?? ''}
+                          disabled={member.is_owner || member.id === currentUserId}
+                          onChange={(event) => void assignMemberRole(member, event.target.value)}
+                        >
+                          {roles.map((role) => (
+                            <option key={role.id} value={role.id}>{role.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="server-settings-role">{member.role_name}</span>
+                      )}
                     </div>
                   ))}
                   {!loading && filteredMembers.length === 0 && (
@@ -488,6 +599,100 @@ export function ServerOptionsDialog(props: ServerOptionsDialogProps) {
                       <Icon name="hash" size={23} />
                       <strong>No channels yet</strong>
                       <span>Create a channel to start organizing conversations.</span>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {activeSection === 'roles' && (
+              <section className="server-settings-section">
+                <div className="server-settings-section-heading server-settings-section-heading--row">
+                  <div>
+                    <span className="server-settings-eyebrow">PERMISSIONS &amp; ACCESS</span>
+                    <h3>Roles</h3>
+                    <p>Create server roles, configure permissions, and control what members can do.</p>
+                  </div>
+                  {canManageRoles && (
+                    <button type="button" className="server-settings-primary" onClick={() => { resetRoleEditor(); setLocalMessage('') }}>
+                      <Icon name="plus" size={15} /> Create Role
+                    </button>
+                  )}
+                </div>
+
+                {canManageRoles && (
+                  <div className="server-settings-role-editor">
+                    <div className="server-settings-role-editor-heading">
+                      <strong>{editingRoleId ? 'Edit role' : 'New role'}</strong>
+                      <span>Permissions are enforced by the server API.</span>
+                    </div>
+                    <div className="server-settings-role-fields">
+                      <label>
+                        <span>ROLE NAME</span>
+                        <input value={roleName} maxLength={50} placeholder="e.g. Moderator" onChange={(event) => setRoleName(event.target.value)} />
+                      </label>
+                      <label className="server-settings-role-color">
+                        <span>ROLE COLOR</span>
+                        <input type="color" value={roleColor} onChange={(event) => setRoleColor(event.target.value.toUpperCase())} />
+                      </label>
+                    </div>
+                    <span className="server-settings-role-permissions-label">PERMISSIONS</span>
+                    <div className="server-settings-permission-grid">
+                      {permissionOptions.filter((option) => !option.ownerOnly || isOwner).map((option) => (
+                        <label key={option.bit}>
+                          <input
+                            type="checkbox"
+                            checked={(rolePermissions & option.bit) === option.bit}
+                            onChange={(event) => setRolePermissions((current) => event.target.checked ? current | option.bit : current & ~option.bit)}
+                          />
+                          <span>{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="server-settings-role-editor-actions">
+                      {editingRoleId && <button type="button" className="server-settings-secondary" onClick={resetRoleEditor}>Cancel</button>}
+                      <button type="button" className="server-settings-primary" disabled={roleBusy || !roleName.trim()} onClick={() => void saveRole()}>
+                        {roleBusy ? 'Saving…' : editingRoleId ? 'Save Role' : 'Create Role'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="server-settings-role-list">
+                  {roles.map((role) => {
+                    const activePermissionNames = permissionOptions.filter((option) => (role.permissions & option.bit) === option.bit).map((option) => option.label)
+                    return (
+                      <article className="server-settings-role-card" key={role.id}>
+                        <span className="server-settings-role-color-dot" style={{ background: role.color }} />
+                        <div className="server-settings-role-card-copy">
+                          <strong>{role.name}</strong>
+                          <small>{role.is_default ? 'Default role' : `Position ${role.position}`} · {activePermissionNames.length} permissions</small>
+                          <div className="server-settings-role-badges">
+                            {activePermissionNames.length > 0
+                              ? activePermissionNames.map((permission) => <span key={permission}>{permission}</span>)
+                              : <span>No additional permissions</span>}
+                          </div>
+                        </div>
+                        {!role.is_default && canManageRoles && (
+                          <div className="server-settings-role-card-actions">
+                            <button type="button" aria-label={`Edit ${role.name}`} onClick={() => startRoleEdit(role)}>
+                              <Icon name="edit" size={15} />
+                            </button>
+                            {canManageRoles && (
+                              <button type="button" aria-label={`Delete ${role.name}`} onClick={() => void removeRole(role)}>
+                                <Icon name="trash" size={15} />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </article>
+                    )
+                  })}
+                  {!loading && roles.length === 0 && (
+                    <div className="server-settings-empty">
+                      <Icon name="shield" size={23} />
+                      <strong>No roles found</strong>
+                      <span>The server role list could not be loaded.</span>
                     </div>
                   )}
                 </div>

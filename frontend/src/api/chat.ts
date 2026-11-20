@@ -1,4 +1,4 @@
-import { apiRequest, getSession } from './client'
+import { apiRequest, apiUpload, getSession } from './client'
 import type { Message } from '../types/chat'
 
 export interface ChatMessageWire {
@@ -19,6 +19,8 @@ export interface ChatMessageWire {
   replyTo?: string | null
   replyToId?: string | null
   edited?: boolean
+  role?: string
+  attachment?: { id: string; name: string; mimeType: string; sizeBytes: number; url: string }
 }
 
 export interface MessageAck {
@@ -43,6 +45,7 @@ export function mapChatMessage(wire: ChatMessageWire, currentUserId: string): Me
     initials: wire.initials,
     tone: authorId === currentUserId ? 'self' : wire.tone ?? 'member',
     time,
+    createdAt: wire.createdAt,
     text: wire.text ?? wire.content ?? '',
     reactions: Object.fromEntries(
       Object.entries(wire.reactions ?? {}).map(([emoji, userIds]) => [
@@ -54,6 +57,8 @@ export function mapChatMessage(wire: ChatMessageWire, currentUserId: string): Me
     edited: wire.edited ?? false,
     seqId: wire.seqId,
     clientMsgId: wire.clientMsgId,
+    role: wire.role,
+    attachment: wire.attachment ? { mediaId: wire.attachment.id, name: wire.attachment.name, type: wire.attachment.mimeType, url: wire.attachment.url } : undefined,
   }
 }
 
@@ -73,11 +78,31 @@ export async function listMessages(
   return result.messages.map((message) => mapChatMessage(message, currentUserId))
 }
 
+
+export interface ChatMediaUploadResult {
+  attachment: {
+    id: string
+    name: string
+    mimeType: string
+    sizeBytes: number
+    url: string
+  }
+}
+
+export async function uploadChatMedia(file: File, channelId: string): Promise<ChatMediaUploadResult> {
+  const safeName = file.name
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/^\.+/, '')
+    .slice(0, 120) || 'attachment'
+  return apiUpload<ChatMediaUploadResult>('/api/v1/media', file, safeName, { 'X-Channel-Id': channelId })
+}
+
 export async function postMessage(
   channelId: string,
   input: {
     client_msg_id: string
     content: string
+    media_id?: string
     reply_to_id?: string
   },
 ): Promise<MessageAck> {

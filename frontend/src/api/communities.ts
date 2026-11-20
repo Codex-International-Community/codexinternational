@@ -75,6 +75,8 @@ export interface CommunityMemberSummary {
   username: string
   display_name: string
   role_name: string
+  role_id: string | null
+  is_owner: boolean
   online: boolean
 }
 
@@ -128,6 +130,7 @@ export interface CommunityEvent {
 
 export interface CommunityMemberSettings {
   is_owner: boolean
+  can_manage_roles: boolean
   notification_mode: 'all' | 'mentions' | 'none'
   is_muted: boolean
   allow_direct_messages: boolean
@@ -191,4 +194,56 @@ export async function leaveCommunity(communityId: string): Promise<void> {
 
 export async function deleteCommunity(communityId: string): Promise<void> {
   await apiRequest<void>(`/api/v1/communities/${encodeURIComponent(communityId)}`, { method: 'DELETE' })
+}
+
+export interface CommunityRole {
+  id: string
+  community_id: string
+  name: string
+  color: string
+  position: number
+  permissions: number
+  is_default: boolean
+}
+
+export async function listCommunityRoles(communityId: string): Promise<CommunityRole[]> {
+  return apiRequest<CommunityRole[]>(`/api/v1/communities/${encodeURIComponent(communityId)}/roles`)
+}
+
+export async function createCommunityRole(
+  communityId: string,
+  payload: { name: string; color: string; permissions: number },
+): Promise<CommunityRole> {
+  return apiRequest<CommunityRole>(`/api/v1/communities/${encodeURIComponent(communityId)}/roles`, {
+    method: 'POST',
+    body: payload,
+  })
+}
+
+export async function updateCommunityRole(
+  communityId: string,
+  roleId: string,
+  payload: Partial<{ name: string; color: string; permissions: number }>,
+): Promise<CommunityRole> {
+  return apiRequest<CommunityRole>(`/api/v1/communities/${encodeURIComponent(communityId)}/roles/${encodeURIComponent(roleId)}`, {
+    method: 'PATCH',
+    body: payload,
+  })
+}
+
+export async function deleteCommunityRole(communityId: string, roleId: string): Promise<void> {
+  await apiRequest<void>(`/api/v1/communities/${encodeURIComponent(communityId)}/roles/${encodeURIComponent(roleId)}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function updateCommunityMemberRole(
+  communityId: string,
+  userId: string,
+  roleId: string | null,
+): Promise<CommunityRole> {
+  return apiRequest<CommunityRole>(`/api/v1/communities/${encodeURIComponent(communityId)}/members/${encodeURIComponent(userId)}/role`, {
+    method: 'PATCH',
+    body: { role_id: roleId },
+  })
 }

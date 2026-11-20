@@ -76,4 +76,5 @@ export interface Attachment {
   name: string
   type: string
   url: string
+  mediaId?: string
 }

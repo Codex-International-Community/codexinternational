@@ -33,9 +33,9 @@ return ack
 #[derive(Debug,FromRow)]
 struct AccessRow{community_id:Option<Uuid>,member:bool,permissions:i64,timed_out:bool,last_seq_id:i64}
 #[derive(Debug,FromRow)]
-struct AuthorRow{display_name:String,username:String}
+struct AuthorRow{display_name:String,username:String,role:Option<String>}
 #[derive(Debug,FromRow)]
-struct MessageRow{id:Uuid,channel_id:Uuid,seq_id:i64,client_msg_id:Uuid,sender_id:Option<Uuid>,content:Option<String>,reply_to_id:Option<Uuid>,created_at:DateTime<Utc>,edited_at:Option<DateTime<Utc>>,author:String}
+struct MessageRow{id:Uuid,channel_id:Uuid,seq_id:i64,client_msg_id:Uuid,sender_id:Option<Uuid>,content:Option<String>,media_id:Option<Uuid>,reply_to_id:Option<Uuid>,created_at:DateTime<Utc>,edited_at:Option<DateTime<Utc>>,author:String,role:Option<String>}
 #[derive(Debug,Deserialize)]
 pub struct SendMessageInput{pub client_msg_id:Uuid,pub content:Option<String>,pub media_id:Option<Uuid>,pub reply_to_id:Option<Uuid>,pub reply_to_story_id:Option<Uuid>}
 
@@ -65,11 +65,17 @@ pub async fn enqueue(state:&AppState,user:&AuthUser,channel:Uuid,input:SendMessa
   let ok=sqlx::query_scalar::<_,bool>("SELECT EXISTS(SELECT 1 FROM messages WHERE id=$1 AND channel_id=$2)").bind(reply).bind(channel).fetch_one(&state.pg).await?;
   if !ok{return Err(AppError::BadRequest("reply target is not in this channel".into()));}
  }
- let author=sqlx::query_as::<_,AuthorRow>("SELECT display_name,username FROM users WHERE id=$1").bind(user.user_id).fetch_optional(&state.pg).await?.ok_or_else(||AppError::Unauthorized("user account no longer exists".into()))?;
+ let author=sqlx::query_as::<_,AuthorRow>("SELECT u.display_name,u.username,r.name AS role FROM users u LEFT JOIN channels ch ON ch.id=$2 LEFT JOIN community_members cm ON cm.community_id=ch.community_id AND cm.user_id=u.id LEFT JOIN community_roles r ON r.id=cm.role_id WHERE u.id=$1").bind(user.user_id).bind(channel).fetch_optional(&state.pg).await?.ok_or_else(||AppError::Unauthorized("user account no longer exists".into()))?;
+ let attachment=if let Some(media_id)=input.media_id{
+  let row=sqlx::query_as::<_,(String,String,i64,String)>("SELECT file_name,mime_type,COALESCE(size_bytes,0),r2_key FROM media_assets WHERE id=$1 AND uploader_id=$2 AND purpose='chat' AND status='READY'")
+   .bind(media_id).bind(user.user_id).fetch_optional(&state.pg).await?
+   .ok_or_else(||AppError::BadRequest("uploaded attachment is unavailable or does not belong to you".into()))?;
+  Some(crate::media::attachment_from_record(&state.config,media_id,row.0,row.1,row.2,row.3)?)
+ }else{None};
  let initials=author.display_name.split_whitespace().filter_map(|p|p.chars().next()).take(2).collect::<String>().to_uppercase();
  let record=MessageStreamRecord{id:Uuid::now_v7(),channel_id:channel,seq_id:0,client_msg_id:input.client_msg_id,sender_id:user.user_id,
  content:if content.is_empty(){None}else{Some(content.to_string())},media_id:input.media_id,reply_to_id:input.reply_to_id,reply_to_story_id:input.reply_to_story_id,
- created_at:Utc::now(),author:author.display_name,username:author.username,initials};
+ created_at:Utc::now(),author:author.display_name,username:author.username,initials,role:author.role,attachment};
  let ack:String=state.valkey.eval(ENQUEUE_LUA,
  vec![format!("ch:{channel}:seq"),format!("msg:idem:{}",input.client_msg_id),MESSAGE_STREAM.into(),format!("pubsub:ch:{channel}")],
  vec![last.to_string(),user.user_id.to_string(),channel.to_string(),serde_json::to_string(&record).map_err(|e|AppError::Internal(e.into()))?,input.client_msg_id.to_string()])
@@ -80,13 +86,16 @@ pub async fn enqueue(state:&AppState,user:&AuthUser,channel:Uuid,input:SendMessa
 pub async fn history(state:&AppState,channel:Uuid,after:i64,limit:i64)->Result<Vec<ClientMessage>,AppError>{
  let n=limit.clamp(1,100);
  let rows=sqlx::query_as::<_,MessageRow>(
- "SELECT m.id,m.channel_id,m.seq_id,m.client_msg_id,m.sender_id,m.content,m.reply_to_id,m.created_at,m.edited_at,COALESCE(u.display_name,'Deleted user') AS author
- FROM messages m LEFT JOIN users u ON u.id=m.sender_id WHERE m.channel_id=$1 AND m.seq_id>$2 AND m.deleted_at IS NULL ORDER BY m.seq_id ASC LIMIT $3")
+ "SELECT m.id,m.channel_id,m.seq_id,m.client_msg_id,m.sender_id,m.content,m.media_id,m.reply_to_id,m.created_at,m.edited_at,COALESCE(u.display_name,'Deleted user') AS author,r.name AS role
+ FROM messages m LEFT JOIN users u ON u.id=m.sender_id LEFT JOIN channels ch ON ch.id=m.channel_id LEFT JOIN community_members cm ON cm.community_id=ch.community_id AND cm.user_id=m.sender_id LEFT JOIN community_roles r ON r.id=cm.role_id WHERE m.channel_id=$1 AND m.seq_id>$2 AND m.deleted_at IS NULL ORDER BY m.seq_id ASC LIMIT $3")
  .bind(channel).bind(after.max(0)).bind(n).fetch_all(&state.pg).await?;
- let mut out=rows.into_iter().map(|r|{
-  let author_id=r.sender_id.unwrap_or(Uuid::nil());let initials=r.author.split_whitespace().filter_map(|p|p.chars().next()).take(2).collect::<String>().to_uppercase();
-  ClientMessage{id:r.id.to_string(),channel_id:r.channel_id.to_string(),seq_id:r.seq_id,client_msg_id:r.client_msg_id.to_string(),author_id:author_id.to_string(),author:r.author,initials,tone:"member".into(),time:r.created_at.format("%H:%M").to_string(),created_at:r.created_at,text:r.content.unwrap_or_default(),reactions:serde_json::json!({}),reply_to:r.reply_to_id.map(|id|id.to_string()),edited:r.edited_at.is_some()}
- }).collect::<Vec<_>>();
+ let mut out=Vec::with_capacity(rows.len());
+ for r in rows {
+  let author_id=r.sender_id.unwrap_or(Uuid::nil());
+  let initials=r.author.split_whitespace().filter_map(|p|p.chars().next()).take(2).collect::<String>().to_uppercase();
+  let attachment=if let Some(media_id)=r.media_id{crate::media::attachment_for(state,media_id).await?}else{None};
+  out.push(ClientMessage{id:r.id.to_string(),channel_id:r.channel_id.to_string(),seq_id:r.seq_id,client_msg_id:r.client_msg_id.to_string(),author_id:author_id.to_string(),author:r.author,initials,tone:"member".into(),time:r.created_at.format("%H:%M").to_string(),created_at:r.created_at,text:r.content.unwrap_or_default(),reactions:serde_json::json!({}),role:r.role,attachment,reply_to:r.reply_to_id.map(|id|id.to_string()),edited:r.edited_at.is_some()});
+ }
  let tail:Result<Vec<(String,HashMap<String,String>)>,_>=state.valkey.xrange_values(MESSAGE_STREAM,"-","+",Some(1000)).await;
  if let Ok(entries)=tail{
   let mut seen=out.iter().map(|m|m.id.clone()).collect::<HashSet<_>>();let key=channel.to_string();

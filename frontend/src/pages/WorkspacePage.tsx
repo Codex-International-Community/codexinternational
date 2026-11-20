@@ -5,7 +5,7 @@ import '../styles/adaptive.css'
 
 import type { AuthSession } from '../api/client'
 import { ApiError } from '../api/client'
-import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, listPinnedMessages, mapChatMessage, pinMessage, postMessage, toggleMessageReaction, unpinMessage, type ChatMessageWire } from '../api/chat'
+import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, listPinnedMessages, mapChatMessage, pinMessage, postMessage, toggleMessageReaction, unpinMessage, uploadChatMedia, type ChatMessageWire } from '../api/chat'
 import { createChannel as createChannelApi, createCommunity, createCommunityCategory, createCommunityEvent, createOrGetDm, deleteCommunity, getCommunityInvite, getCommunityMemberSettings, joinCommunity, leaveCommunity, listChannels, listCommunities, listCommunityCategories, listCommunityMembers, updateCommunity, updateCommunityMemberSettings, updateCommunityNickname, type CommunityCategory, type CommunityMemberSettings } from '../api/communities'
 import type { ViewportInfo } from '../hooks/useViewport'
 import type { Attachment, View } from '../types/common'
@@ -295,6 +295,7 @@ export function WorkspacePage({
   const [serverCreating, setServerCreating] = useState(false)
   const [toast, setToast] = useState('')
   const [attachment, setAttachment] = useState<Attachment | null>(null)
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null)
   const [muted, setMuted] = useState(false)
   const [cameraOn, setCameraOn] = useState(false)
   const [screenSharing, setScreenSharing] = useState(false)
@@ -1200,13 +1201,13 @@ export function WorkspacePage({
   const sendMessage = async (e?: FormEvent) => {
     e?.preventDefault()
     const clean = composer.trim()
-    if (attachment) {
-      notify('File uploads are not connected yet. Text messages are ready.')
-      return
-    }
-    if (!clean || !activeChatChannelId) return
+    if ((!clean && !attachment) || !activeChatChannelId) return
 
     if (editingId) {
+      if (attachment) {
+        notify('Remove the attachment before editing a message.')
+        return
+      }
       try {
         const updated = await editChatMessage(editingId, clean)
         const mapped = mapChatMessage(updated, session.user.id)
@@ -1231,12 +1232,29 @@ export function WorkspacePage({
     sendingMessageRef.current = true
     const clientMessageId = crypto.randomUUID()
     try {
-      // Use the acknowledged HTTP path for sends. The WebSocket is the live
-      // delivery path; relying on a fire-and-forget frame here hid server-side
-      // SEND_MESSAGE errors and cleared the composer before persistence was confirmed.
+      let mediaId = attachment?.mediaId
+      if (attachment && !mediaId) {
+        if (!attachmentFile) throw new Error('Select the attachment again before sending.')
+        const uploaded = await uploadChatMedia(attachmentFile, activeChatChannelId)
+        mediaId = uploaded.attachment.id
+        setAttachment((previous) => {
+          if (!previous) return previous
+          revokeBlobUrl(previous.url)
+          return {
+            ...previous,
+            mediaId,
+            url: uploaded.attachment.url,
+            type: uploaded.attachment.mimeType,
+            name: uploaded.attachment.name,
+          }
+        })
+        setAttachmentFile(null)
+      }
+
       const ack = await postMessage(activeChatChannelId, {
         client_msg_id: clientMessageId,
         content: clean,
+        media_id: mediaId,
         reply_to_id: replyTo?.id,
       })
       const persisted = await listMessages(activeChatChannelId, Math.max(0, ack.seq_id - 1), 5)
@@ -1259,6 +1277,11 @@ export function WorkspacePage({
 
       setComposer('')
       setReplyTo(null)
+      setAttachment((previous) => {
+        revokeBlobUrl(previous?.url)
+        return null
+      })
+      setAttachmentFile(null)
     } catch (error) {
       notify(error instanceof Error ? error.message : 'Message could not be sent.')
     } finally {
@@ -1732,18 +1755,29 @@ export function WorkspacePage({
                 }}
                 onAttachmentSelect={(file) => {
                   if (!file) return
+                  if (file.size > 10 * 1024 * 1024) {
+                    notify('Attachments are limited to 10 MB.')
+                    return
+                  }
+                  const supportedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'text/csv', 'application/zip', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation']
+                  if (!supportedTypes.includes(file.type)) {
+                    notify('Supported: images, PDF, TXT, CSV, ZIP, Word, Excel and PowerPoint.')
+                    return
+                  }
                   const url = URL.createObjectURL(file)
                   blobUrlsRef.current.add(url)
                   setAttachment((prev) => {
                     revokeBlobUrl(prev?.url)
                     return { name: file.name, type: file.type, url }
                   })
+                  setAttachmentFile(file)
                 }}
                 onRemoveAttachment={() => {
                   setAttachment((prev) => {
                     revokeBlobUrl(prev?.url)
                     return null
                   })
+                  setAttachmentFile(null)
                 }}
                 onAddEmoji={(emoji) => setComposer((v) => `${v} ${emoji}`)}
                 onReact={(id, emoji) => {
@@ -1889,7 +1923,9 @@ export function WorkspacePage({
           mode={serverOptionsMode}
           serverName={server.name}
           communityId={server.id}
+          currentUserId={session.user.id}
           isOwner={Boolean(serverMenuPreferences?.is_owner)}
+          canManageRoles={Boolean(serverMenuPreferences?.can_manage_roles)}
           {...serverOptionsForm}
           busy={serverOptionsBusy}
           error={serverOptionsError}

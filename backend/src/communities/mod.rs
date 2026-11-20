@@ -3,6 +3,7 @@
 pub mod channels;
 pub mod handlers;
 pub mod permissions;
+pub mod roles;
 pub mod server_menu;
 
 use std::sync::Arc;
@@ -26,6 +27,18 @@ pub fn router() -> Router<Arc<AppState>> {
         .route(
             "/{community_id}/invite",
             get(handlers::get_community_invite),
+        )
+        .route(
+            "/{community_id}/roles",
+            get(roles::list_roles).post(roles::create_role),
+        )
+        .route(
+            "/{community_id}/roles/{role_id}",
+            axum::routing::patch(roles::update_role).delete(roles::delete_role),
+        )
+        .route(
+            "/{community_id}/members/{user_id}/role",
+            axum::routing::patch(roles::assign_member_role),
         )
         .route(
             "/{community_id}/categories",

@@ -38,6 +38,25 @@ interface ChatPanelProps {
   onBrowsePeople: () => void
 }
 
+function localDayKey(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return [date.getFullYear(), date.getMonth(), date.getDate()].join('-')
+}
+
+function localDayLabel(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  const now = new Date()
+  const todayKey = [now.getFullYear(), now.getMonth(), now.getDate()].join('-')
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)
+  const yesterdayKey = [yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate()].join('-')
+  const key = localDayKey(value)
+  if (key === todayKey) return 'Today'
+  if (key === yesterdayKey) return 'Yesterday'
+  return new Intl.DateTimeFormat(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(date)
+}
+
 export function ChatPanel({
   isDm,
   currentDm,
@@ -153,21 +172,34 @@ export function ChatPanel({
           </div>
         </div>
 
-        {messages.map((message) => (
-          <MessageItem
-            key={message.id}
-            message={message}
-            isPinned={pinnedMessageIds.includes(message.id)}
-            isMenuOpen={activeMenuId === message.id}
-            onReact={onReact}
-            onReply={handleStartReply}
-            onEdit={(item) => { onEdit(item); setActiveMenuId(null) }}
-            onRemove={(item) => { onRemove(item); setActiveMenuId(null) }}
-            onTogglePin={(item) => { onTogglePin(item); setActiveMenuId(null) }}
-            onToggleMenu={(id) => setActiveMenuId((current) => current === id ? null : id)}
-            onReplyReferenceClick={(id) => onNotify(`Reply reference: ${id}`)}
-          />
-        ))}
+        {messages.map((message, index) => {
+          const dayKey = message.createdAt ? localDayKey(message.createdAt) : ''
+          const previousDayKey = index > 0 && messages[index - 1].createdAt
+            ? localDayKey(messages[index - 1].createdAt!)
+            : ''
+          const showDayDivider = Boolean(dayKey && dayKey !== previousDayKey)
+          return (
+            <div key={message.id} className="message-day-group">
+              {showDayDivider && (
+                <div className="message-date-divider" role="separator" aria-label={localDayLabel(message.createdAt!)}>
+                  <span>{localDayLabel(message.createdAt!)}</span>
+                </div>
+              )}
+              <MessageItem
+                message={message}
+                isPinned={pinnedMessageIds.includes(message.id)}
+                isMenuOpen={activeMenuId === message.id}
+                onReact={onReact}
+                onReply={handleStartReply}
+                onEdit={(item) => { onEdit(item); setActiveMenuId(null) }}
+                onRemove={(item) => { onRemove(item); setActiveMenuId(null) }}
+                onTogglePin={(item) => { onTogglePin(item); setActiveMenuId(null) }}
+                onToggleMenu={(id) => setActiveMenuId((current) => current === id ? null : id)}
+                onReplyReferenceClick={(id) => onNotify(`Reply reference: ${id}`)}
+              />
+            </div>
+          )
+        })}
 
         {messages.length === 0 && (
           <div className="empty-state">
