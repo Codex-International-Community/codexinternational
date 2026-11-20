@@ -1,6 +1,8 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { Icon } from '../common/Icon'
 import type { AuthUserProfile } from '../../api/client'
+import { ApiError } from '../../api/client'
+import { setOrChangePassword, toggleUidLogin } from '../../api/auth'
 import type { Theme } from '../../types/common'
 
 interface SettingsViewProps {
@@ -23,6 +25,80 @@ export function SettingsView({
   onLogout,
 }: SettingsViewProps) {
   const displayNameId = useId()
+  const newPasswordId = useId()
+  const confirmPasswordId = useId()
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [uidBusy, setUidBusy] = useState(false)
+  const [passwordBusy, setPasswordBusy] = useState(false)
+  const [uidError, setUidError] = useState('')
+  const [uidInfo, setUidInfo] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordInfo, setPasswordInfo] = useState('')
+
+  const handleCopyUid = async () => {
+    if (!authUser?.uid) return
+    try {
+      await navigator.clipboard.writeText(authUser.uid)
+      setCopyStatus('copied')
+      window.setTimeout(() => setCopyStatus('idle'), 1800)
+    } catch {
+      setCopyStatus('failed')
+      window.setTimeout(() => setCopyStatus('idle'), 2200)
+    }
+  }
+
+  const handleToggleUidLogin = async () => {
+    if (!authUser || uidBusy) return
+    setUidError('')
+    setUidInfo('')
+    if (!authUser.has_password && !authUser.uid_login_enabled) {
+      setUidError('Set a password first before enabling UID login.')
+      return
+    }
+    setUidBusy(true)
+    try {
+      const updated = await toggleUidLogin(!authUser.uid_login_enabled)
+      setUidInfo(
+        updated.uid_login_enabled
+          ? 'UID login is now enabled.'
+          : 'UID login has been disabled.',
+      )
+    } catch (err) {
+      setUidError(err instanceof ApiError ? err.message : 'Failed to update UID login setting.')
+    } finally {
+      setUidBusy(false)
+    }
+  }
+
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!authUser || passwordBusy) return
+    setPasswordError('')
+    setPasswordInfo('')
+
+    if (newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Password confirmation does not match.')
+      return
+    }
+
+    setPasswordBusy(true)
+    try {
+      await setOrChangePassword({ new_password: newPassword })
+      setNewPassword('')
+      setConfirmPassword('')
+      setPasswordInfo('Password saved. You can now enable UID login.')
+    } catch (err) {
+      setPasswordError(err instanceof ApiError ? err.message : 'Failed to save password.')
+    } finally {
+      setPasswordBusy(false)
+    }
+  }
 
   return (
     <div className="page-scroll">
@@ -46,6 +122,77 @@ export function SettingsView({
               </button>
             )}
           </div>
+
+          <div className="setting-row" style={{ marginTop: 14, alignItems: 'flex-start' }}>
+            <div>
+              <strong>UID: {authUser.uid}</strong>
+              <small>Use your UID for profile/friend sharing. Login with UID is optional and can be enabled below.</small>
+            </div>
+            <button type="button" className="setting-action" onClick={handleCopyUid}>
+              <Icon name="link" size={15} />
+              {copyStatus === 'copied' ? 'Copied' : copyStatus === 'failed' ? 'Copy failed' : 'Copy UID'}
+            </button>
+          </div>
+
+          <div className="setting-row" style={{ marginTop: 14 }}>
+            <div>
+              <strong>Allow login using UID</strong>
+              <small>
+                {authUser.has_password
+                  ? 'When enabled, you can sign in with your UID in addition to username or email.'
+                  : 'Set a password first (OAuth/OTP accounts) before enabling UID login.'}
+              </small>
+            </div>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: authUser.has_password || authUser.uid_login_enabled ? 'pointer' : 'not-allowed' }}>
+              <input
+                type="checkbox"
+                checked={authUser.uid_login_enabled}
+                onChange={handleToggleUidLogin}
+                disabled={uidBusy || (!authUser.has_password && !authUser.uid_login_enabled)}
+                aria-label="Allow login using UID"
+              />
+              <span>{uidBusy ? 'Saving…' : authUser.uid_login_enabled ? 'Enabled' : 'Disabled'}</span>
+            </label>
+          </div>
+          {uidError && <p style={{ marginTop: 8, color: 'var(--danger, #ef4444)' }}>{uidError}</p>}
+          {uidInfo && <p style={{ marginTop: 8, color: 'var(--success, #22c55e)' }}>{uidInfo}</p>}
+
+          {!authUser.has_password && (
+            <form onSubmit={handleSetPassword} style={{ marginTop: 16, display: 'grid', gap: 10 }}>
+              <div>
+                <strong>Set password</strong>
+                <small style={{ display: 'block', marginTop: 4 }}>
+                  Your account was created via OAuth/OTP and does not have a password yet. Set one to enable UID login.
+                </small>
+              </div>
+              <label htmlFor={newPasswordId}>New password (min 8 chars)</label>
+              <input
+                id={newPasswordId}
+                type="password"
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                disabled={passwordBusy}
+              />
+              <label htmlFor={confirmPasswordId}>Confirm new password</label>
+              <input
+                id={confirmPasswordId}
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={passwordBusy}
+              />
+              <div>
+                <button type="submit" className="setting-action" disabled={passwordBusy}>
+                  {passwordBusy ? 'Saving…' : 'Set password'}
+                </button>
+              </div>
+              {passwordError && <p style={{ color: 'var(--danger, #ef4444)' }}>{passwordError}</p>}
+              {passwordInfo && <p style={{ color: 'var(--success, #22c55e)' }}>{passwordInfo}</p>}
+            </form>
+          )}
+
           {onOpenBots && (
             <div className="setting-row" style={{ marginTop: 14 }}>
               <div>

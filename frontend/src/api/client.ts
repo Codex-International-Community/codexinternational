@@ -11,6 +11,9 @@
 
 export interface AuthUserProfile {
   id: string
+  uid: string
+  uid_login_enabled: boolean
+  has_password: boolean
   username: string
   display_name: string
   email: string

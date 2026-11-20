@@ -194,3 +194,25 @@ export async function completeOAuthCallback(
   setSession(session)
   return session
 }
+
+
+export async function setOrChangePassword(payload: {
+  current_password?: string
+  new_password: string
+}): Promise<AuthUserProfile> {
+  const res = await apiRequest<{ user: AuthUserProfile }>('/api/v1/auth/password', {
+    method: 'PUT',
+    body: payload,
+  })
+  updateSessionUser(res.user)
+  return res.user
+}
+
+export async function toggleUidLogin(enabled: boolean): Promise<AuthUserProfile> {
+  const res = await apiRequest<{ user: AuthUserProfile }>('/api/v1/auth/uid-login', {
+    method: 'PATCH',
+    body: { enabled },
+  })
+  updateSessionUser(res.user)
+  return res.user
+}

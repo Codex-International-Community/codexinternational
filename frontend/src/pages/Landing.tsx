@@ -293,13 +293,13 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
 
   const renderPasswordSection = () => (
     <form className="landing-form" onSubmit={handlePasswordLogin} noValidate>
-      <label className="landing-field-label" htmlFor="login-id">USERNAME OR EMAIL</label>
+      <label className="landing-field-label" htmlFor="login-id">USERNAME, EMAIL, OR UID</label>
       <input
         id="login-id"
         type="text"
         autoComplete="username"
         className="landing-input"
-        placeholder="username or email"
+        placeholder="username, email, or UID"
         value={identifier}
         onChange={(e) => setIdentifier(e.target.value)}
         disabled={busy}
