@@ -1002,8 +1002,10 @@ export function WorkspacePage({
       setCurrentServerNickname(nickname)
       setServerOptionsForm((previous) => ({
         ...previous,
-        name: community?.name ?? server.name,
-        description: community?.description ?? '',
+        name: mode === 'category' || mode === 'event' ? '' : (community?.name ?? server.name),
+        description: mode === 'event' ? '' : (community?.description ?? ''),
+        startsAt: mode === 'event' ? '' : previous.startsAt,
+        location: mode === 'event' ? '' : previous.location,
         isPublic: community?.is_public ?? true,
         notificationMode: preferences.notification_mode,
         serverMuted: preferences.is_muted,
@@ -1886,6 +1888,8 @@ export function WorkspacePage({
         <ServerOptionsDialog
           mode={serverOptionsMode}
           serverName={server.name}
+          communityId={server.id}
+          isOwner={Boolean(serverMenuPreferences?.is_owner)}
           {...serverOptionsForm}
           busy={serverOptionsBusy}
           error={serverOptionsError}
@@ -1901,6 +1905,22 @@ export function WorkspacePage({
           onChangeHideMutedChannels={(hideMutedChannels) => setServerOptionsForm((previous) => ({ ...previous, hideMutedChannels }))}
           onChangeNickname={(nickname) => setServerOptionsForm((previous) => ({ ...previous, nickname }))}
           onSubmit={(event) => void handleSubmitServerOptions(event)}
+          onCreateChannel={() => {
+            setServerOptionsMode(null)
+            setSelectedChannelCategoryId('')
+            setModalValue('')
+            setModal('channel')
+          }}
+          onCreateCategory={() => void openServerOptions('category')}
+          onCreateEvent={() => void openServerOptions('event')}
+          onDeleteServer={() => {
+            setServerOptionsMode(null)
+            void handleDeleteServer()
+          }}
+          onLeaveServer={() => {
+            setServerOptionsMode(null)
+            void handleLeaveServer()
+          }}
           onClose={() => setServerOptionsMode(null)}
         />
       )}

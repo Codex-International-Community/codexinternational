@@ -146,6 +146,14 @@ export async function createCommunityCategory(communityId: string, name: string)
   })
 }
 
+export async function listCommunityEvents(communityId: string): Promise<CommunityEvent[]> {
+  return apiRequest<CommunityEvent[]>(`/api/v1/communities/${encodeURIComponent(communityId)}/events`)
+}
+
+export async function deleteCommunityCategory(communityId: string, categoryId: string): Promise<void> {
+  await apiRequest<void>(`/api/v1/communities/${encodeURIComponent(communityId)}/categories/${encodeURIComponent(categoryId)}`, { method: 'DELETE' })
+}
+
 export async function createCommunityEvent(
   communityId: string,
   payload: { name: string; description?: string; starts_at: string; location?: string },
