@@ -81,6 +81,22 @@ pub fn app_router(state: Arc<AppState>) -> Router {
             "/api/v1/dev/users/{id}/assign-uid",
             post(auth::uid::assign_reserved_uid),
         )
+        .route(
+            "/api/v1/dev/on-duty/start",
+            post(auth::dev_governance::start_on_duty),
+        )
+        .route(
+            "/api/v1/dev/on-duty/stop",
+            post(auth::dev_governance::stop_on_duty),
+        )
+        .route(
+            "/api/v1/dev/audit-logs",
+            get(auth::dev_governance::list_dev_audit_logs),
+        )
+        .route(
+            "/api/v1/communities/{id}/audit-logs",
+            get(auth::dev_governance::list_community_audit_logs),
+        )
         .route("/api/v1/devices/fcm", put(auth::devices::register_fcm))
         .layer(DefaultBodyLimit::max(REST_BODY_LIMIT_BYTES))
         .layer(middleware::from_fn(rest_timeout_middleware));
