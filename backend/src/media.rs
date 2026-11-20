@@ -113,7 +113,7 @@ pub fn presigned_r2_url(
 fn safe_file_name(raw: Option<&str>, fallback_extension: &str) -> String {
     let raw = raw.unwrap_or("attachment").trim();
     let base = raw
-        .rsplit(|ch| ch == '/' || ch == '\\')
+        .rsplit(['/', '\\'])
         .next()
         .unwrap_or("attachment");
     let cleaned = base
