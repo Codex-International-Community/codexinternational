@@ -288,7 +288,7 @@ codexinternational/
   1. **Red:** Tulis test validasi limit ukuran (`> 5 MB` image & `> 50 MB` video ditolak `413`) & MIME type (`image/avif`, `image/webp`, `image/png`, `video/*`, plus `image/jpeg` khusus `bypass_compress`), test `bypass_compress = true` ditolak `403` bila `can_bypass_compress = FALSE`, test `bypass_compress = true` menargetkan `original/` dan langsung `READY` tanpa invoke Lambda, verifikasi `Content-Type` & `Cache-Control` parity saat presigning R2 (`P§7` #1), penolakan `/complete` bila objek belum ada di R2 (`400`/`404`) atau ukuran aktual melebihi batas (`INV-8`), dan respons `playback_url` `/raw` untuk video saat `PROCESSING`.
   2. **Green:** Konfigurasi `aws_sdk_s3::Client` untuk R2 (`region("auto")` + endpoint override), `aws_sdk_lambda::Client` untuk async invoke (`InvocationType::Event`), serta handler presign + complete.
 - **DoD:**
-  - [ ] Presigned PUT URL ter-generate valid untuk gambar (`avif`/`webp`/`png`) maupun video di R2, `HeadObject` memvalidasi keberadaan objek, dan video sudah mengembalikan URL `/raw` saat `PROCESSING`.
+  - [x] Presigned PUT URL ter-generate valid untuk gambar (`avif`/`webp`/`png`) maupun video di R2, `HeadObject` memvalidasi keberadaan objek, dan video sudah mengembalikan URL `/raw` saat `PROCESSING`.
 
 ### Task 3.2 — Crate `lambda-video-compressor` (Rust + Static FFmpeg)
 
