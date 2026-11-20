@@ -211,16 +211,35 @@ async fn test_inv15_bot_approval_and_token_auth_lifecycle() {
         .await
         .unwrap();
 
+    let owner_device_id = Uuid::now_v7();
+    let dev_device_id = Uuid::now_v7();
+
+    sqlx::query("INSERT INTO user_devices (id, user_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')")
+        .bind(owner_device_id)
+        .bind(owner_id)
+        .bind(format!("hash_own_{tag}"))
+        .execute(&state.pg)
+        .await
+        .unwrap();
+
+    sqlx::query("INSERT INTO user_devices (id, user_id, refresh_token_hash, expires_at) VALUES ($1, $2, $3, NOW() + INTERVAL '7 days')")
+        .bind(dev_device_id)
+        .bind(dev_id)
+        .bind(format!("hash_dev_{tag}"))
+        .execute(&state.pg)
+        .await
+        .unwrap();
+
     let owner_jwt = encode_access_token(
         owner_id,
-        Uuid::now_v7(),
+        owner_device_id,
         "user",
         cfg.jwt_secret.expose(),
         900,
     )
     .unwrap();
     let dev_jwt =
-        encode_access_token(dev_id, Uuid::now_v7(), "dev", cfg.jwt_secret.expose(), 900).unwrap();
+        encode_access_token(dev_id, dev_device_id, "dev", cfg.jwt_secret.expose(), 900).unwrap();
 
     let pg = state.pg.clone();
     let app = app_router(Arc::new(state));
