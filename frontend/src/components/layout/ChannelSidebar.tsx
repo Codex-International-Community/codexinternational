@@ -26,6 +26,16 @@ interface ChannelSidebarProps {
   onCopyServerId: () => void
   onInvitePeople: () => void
   onOpenServerSettings: () => void
+  onCreateCategory: () => void
+  onCreateEvent: () => void
+  onOpenNotificationSettings: () => void
+  onOpenPrivacySettings: () => void
+  onEditServerProfile: () => void
+  onToggleHideMutedChannels: () => void
+  hideMutedChannels: boolean
+  canDeleteServer: boolean
+  onLeaveServer: () => void
+  onDeleteServer: () => void
   onSelectSocialTab: (tab: SocialTab) => void
   onOpenQuickSearch: () => void
   onSelectChannel: (channel: Channel) => void
@@ -67,6 +77,16 @@ export function ChannelSidebar({
   onCopyServerId,
   onInvitePeople,
   onOpenServerSettings,
+  onCreateCategory,
+  onCreateEvent,
+  onOpenNotificationSettings,
+  onOpenPrivacySettings,
+  onEditServerProfile,
+  onToggleHideMutedChannels,
+  hideMutedChannels,
+  canDeleteServer,
+  onLeaveServer,
+  onDeleteServer,
   onSelectSocialTab,
   onOpenQuickSearch,
   onSelectChannel,
@@ -89,6 +109,9 @@ export function ChannelSidebar({
   const isDirectMessageHome = view === 'home' || view === 'dm'
   const textChannels = channels.filter((channel) => channel.type !== 'voice')
   const voiceChannels = channels.filter((channel) => channel.type === 'voice')
+  const categoryNames = [...new Set(textChannels.map((channel) => channel.categoryName).filter((name): name is string => Boolean(name)))]
+  const uncategorizedChannels = textChannels.filter((channel) => !channel.categoryName)
+  const categoryChannels = categoryNames.map((name) => ({ name, channels: textChannels.filter((channel) => channel.categoryName === name) }))
 
   const serverHeaderSub =
     view === 'social'
@@ -132,6 +155,9 @@ export function ChannelSidebar({
       )}
       {server && view === 'channel' && serverMenuOpen && (
         <div className="server-menu" role="menu" aria-label={`${server.name} server menu`}>
+          <button className="server-menu-item server-menu-item--disabled" type="button" role="menuitem" disabled title="Server Boost is not available in Codex yet">
+            <Icon name="sparkles" size={16} /> Server Boost <small>Unavailable</small>
+          </button>
           <button className="server-menu-item server-menu-item--invite" type="button" role="menuitem" onClick={() => { onInvitePeople(); onToggleServerMenu() }}>
             <Icon name="users" size={16} /> Invite People
           </button>
@@ -142,7 +168,39 @@ export function ChannelSidebar({
           <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onCreateChannelModal(); onToggleServerMenu() }}>
             <Icon name="plus" size={16} /> Create Channel
           </button>
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onCreateCategory(); onToggleServerMenu() }}>
+            <Icon name="hash" size={16} /> Create Category
+          </button>
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onCreateEvent(); onToggleServerMenu() }}>
+            <Icon name="calendar" size={16} /> Create Event
+          </button>
+          <button className="server-menu-item server-menu-item--disabled" type="button" role="menuitem" disabled title="The app directory is not available in Codex yet">
+            <Icon name="compass" size={16} /> App Directory <small>Unavailable</small>
+          </button>
           <div className="server-menu-divider" />
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onOpenNotificationSettings(); onToggleServerMenu() }}>
+            <Icon name="bell" size={16} /> Notification Settings
+          </button>
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onOpenPrivacySettings(); onToggleServerMenu() }}>
+            <Icon name="shield" size={16} /> Privacy Settings
+          </button>
+          <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onEditServerProfile(); onToggleServerMenu() }}>
+            <Icon name="user" size={16} /> Edit Server Profile
+          </button>
+          <button className="server-menu-item server-menu-item--toggle" type="button" role="menuitemcheckbox" aria-checked={hideMutedChannels} onClick={onToggleHideMutedChannels}>
+            <span className={`server-menu-check ${hideMutedChannels ? 'checked' : ''}`}>{hideMutedChannels ? <Icon name="check" size={12} /> : null}</span>
+            Hide Muted Channels
+          </button>
+          <div className="server-menu-divider" />
+          {canDeleteServer ? (
+            <button className="server-menu-item server-menu-item--danger" type="button" role="menuitem" onClick={() => { onDeleteServer(); onToggleServerMenu() }}>
+              <Icon name="trash" size={16} /> Delete Server
+            </button>
+          ) : (
+            <button className="server-menu-item server-menu-item--danger" type="button" role="menuitem" onClick={() => { onLeaveServer(); onToggleServerMenu() }}>
+              <Icon name="logout" size={16} /> Leave Server
+            </button>
+          )}
           <button className="server-menu-item" type="button" role="menuitem" onClick={onCopyServerId}>
             <Icon name="copy" size={16} /> Copy Server ID
           </button>
@@ -254,17 +312,22 @@ export function ChannelSidebar({
                   <Icon name="plus" size={14} />
                 </button>
               </div>
-              {textChannels.map((channel) => (
-                <button
-                  type="button"
-                  key={channel.id}
-                  className={`channel-item ${channelId === channel.id ? 'chosen' : ''}`}
-                  aria-current={channelId === channel.id ? 'page' : undefined}
-                  onClick={() => onSelectChannel(channel)}
-                >
-                  <Icon name="hash" size={16} />
-                  <span>{channel.name}</span>
+              {uncategorizedChannels.map((channel) => (
+                <button type="button" key={channel.id} className={`channel-item ${channelId === channel.id ? 'chosen' : ''}`}
+                  aria-current={channelId === channel.id ? 'page' : undefined} onClick={() => onSelectChannel(channel)}>
+                  <Icon name="hash" size={16} /><span>{channel.name}</span>
                 </button>
+              ))}
+              {categoryChannels.map((group) => (
+                <div className="server-channel-category" key={group.name}>
+                  <div className="section-label"><span>{group.name.toUpperCase()}</span></div>
+                  {group.channels.map((channel) => (
+                    <button type="button" key={channel.id} className={`channel-item ${channelId === channel.id ? 'chosen' : ''}`}
+                      aria-current={channelId === channel.id ? 'page' : undefined} onClick={() => onSelectChannel(channel)}>
+                      <Icon name="hash" size={16} /><span>{channel.name}</span>
+                    </button>
+                  ))}
+                </div>
               ))}
               {textChannels.length === 0 && <p className="sidebar-empty">No text channels yet.</p>}
             </section>

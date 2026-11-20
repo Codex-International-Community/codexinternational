@@ -13,6 +13,8 @@ export interface Channel {
   id: string
   name: string
   type: 'text' | 'announcement' | 'voice'
+  categoryId?: string | null
+  categoryName?: string | null
 }
 
 export interface User {
