@@ -771,6 +771,17 @@ button:active {
   letter-spacing: -.03em;
 }
 
+.discover-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.discover-heading {
+  align-self: stretch;
+}
+
 .page-subtitle,
 .discover-heading p {
   font-size: 0.875rem;

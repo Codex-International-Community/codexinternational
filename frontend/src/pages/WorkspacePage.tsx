@@ -1443,6 +1443,7 @@ export function WorkspacePage({
           setModalValue('')
         }}
         onNavigateDiscover={() => navigateView('discover')}
+        onNavigateSocial={() => navigateView('social')}
         onOpenBots={() => navigateView('bots')}
       />
 
@@ -1526,7 +1527,7 @@ export function WorkspacePage({
           onNavigateSettings={() => navigateView('settings')}
           onNavigateDiscover={() => navigateView('discover')}
           onToggleTheme={() => setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))}
-          onOpenBots={() => navigateView('bots')}
+          onOpenProfile={() => openProfile(session.user.id)}
           onLogout={() => void onLogout()}
         />
       )}
