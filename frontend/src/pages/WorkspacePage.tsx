@@ -1289,7 +1289,23 @@ export function WorkspacePage({
       let mediaId = attachment?.mediaId
       if (attachment && !mediaId) {
         if (!attachmentFile) throw new Error('Select the attachment again before sending.')
-        const uploaded = await uploadChatMedia(attachmentFile, activeChatChannelId)
+        const durationSecs = attachmentFile.type.startsWith('video/')
+          ? await new Promise<number | undefined>((resolve) => {
+              const videoEl = document.createElement('video')
+              const probeUrl = URL.createObjectURL(attachmentFile)
+              videoEl.preload = 'metadata'
+              videoEl.onloadedmetadata = () => {
+                URL.revokeObjectURL(probeUrl)
+                resolve(Number.isFinite(videoEl.duration) ? Math.ceil(videoEl.duration) : undefined)
+              }
+              videoEl.onerror = () => {
+                URL.revokeObjectURL(probeUrl)
+                resolve(undefined)
+              }
+              videoEl.src = probeUrl
+            })
+          : undefined
+        const uploaded = await uploadChatMedia(attachmentFile, activeChatChannelId, durationSecs)
         mediaId = uploaded.attachment.id
         setAttachment((previous) => {
           if (!previous) return previous
@@ -1812,16 +1828,41 @@ export function WorkspacePage({
                 }}
                 onAttachmentSelect={(file) => {
                   if (!file) return
-                  if (file.size > 10 * 1024 * 1024) {
-                    notify('Attachments are limited to 10 MB.')
+                  const isVideo = file.type.startsWith('video/')
+                  const maxBytes = isVideo ? 200 * 1024 * 1024 : 10 * 1024 * 1024
+                  if (file.size > maxBytes) {
+                    notify(isVideo ? 'Videos are limited to 50 MB (Standard) / 200 MB (Pro).' : 'Attachments are limited to 10 MB.')
                     return
                   }
-                  const supportedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'text/plain', 'text/csv', 'application/zip', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation']
+                  const supportedTypes = ['image/avif', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime', 'application/pdf', 'text/plain', 'text/csv', 'application/zip', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation']
                   if (!supportedTypes.includes(file.type)) {
-                    notify('Supported: images, PDF, TXT, CSV, ZIP, Word, Excel and PowerPoint.')
+                    notify('Supported: images, videos (MP4/WEBM/MOV), PDF, TXT, CSV, ZIP, Word, Excel and PowerPoint.')
                     return
                   }
                   const url = URL.createObjectURL(file)
+                  if (isVideo) {
+                    const probe = document.createElement('video')
+                    probe.preload = 'metadata'
+                    probe.onloadedmetadata = () => {
+                      if (Number.isFinite(probe.duration) && probe.duration > 300) {
+                        URL.revokeObjectURL(url)
+                        notify('Video duration cannot exceed 5 minutes (300 seconds).')
+                        return
+                      }
+                      blobUrlsRef.current.add(url)
+                      setAttachment((prev) => {
+                        revokeBlobUrl(prev?.url)
+                        return { name: file.name, type: file.type, url }
+                      })
+                      setAttachmentFile(file)
+                    }
+                    probe.onerror = () => {
+                      URL.revokeObjectURL(url)
+                      notify('Could not read video metadata.')
+                    }
+                    probe.src = url
+                    return
+                  }
                   blobUrlsRef.current.add(url)
                   setAttachment((prev) => {
                     revokeBlobUrl(prev?.url)

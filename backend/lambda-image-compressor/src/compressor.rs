@@ -1,7 +1,10 @@
 use std::io::Cursor;
 
 use anyhow::{Context, Result};
-use image::{ImageFormat, imageops::FilterType};
+use image::{ImageFormat, ImageReader, Limits, imageops::FilterType};
+
+const MAX_IMAGE_DIM: u32 = 8192;
+const MAX_IMAGE_ALLOC_BYTES: u64 = 256 * 1024 * 1024;
 
 #[derive(Debug, Clone, Copy)]
 pub struct CompressOptions {
@@ -26,10 +29,19 @@ pub struct CompressedImage {
     pub mime_type: &'static str,
 }
 
-/// Decodes an image from memory, downscales it proportionally if it exceeds
-/// `max_width` / `max_height`, and encodes it as WebP (stripping EXIF metadata).
+/// Decodes an image from memory with strict dimension/allocation limits (anti-image-bomb),
+/// downscales it proportionally if it exceeds `max_width` / `max_height`, and encodes it as WebP.
 pub fn compress_to_webp(input: &[u8], opts: CompressOptions) -> Result<CompressedImage> {
-    let img = image::load_from_memory(input).context("failed to decode input image")?;
+    let mut reader = ImageReader::new(Cursor::new(input))
+        .with_guessed_format()
+        .context("failed to guess input image format")?;
+    let mut limits = Limits::default();
+    limits.max_image_width = Some(MAX_IMAGE_DIM);
+    limits.max_image_height = Some(MAX_IMAGE_DIM);
+    limits.max_alloc = Some(MAX_IMAGE_ALLOC_BYTES);
+    reader.limits(limits);
+
+    let img = reader.decode().context("failed to decode input image")?;
 
     let (orig_w, orig_h) = (img.width(), img.height());
     let processed = if orig_w > opts.max_width || orig_h > opts.max_height {

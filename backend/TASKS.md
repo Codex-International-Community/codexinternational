@@ -279,38 +279,38 @@ codexinternational/
 
 **Fokus Utama:** Mengamankan upload gambar & video langsung ke **Cloudflare R2** (tanpa AWS S3) serta transcoding video asynchronous melalui **AWS Lambda Rust + FFmpeg** yang dipicu oleh Axum.
 
-### Task 3.1 — R2 Presigner Service & Lambda Async Trigger (`INV-8`, Gotcha `P§7` #1)
+### Task 3.1 — R2 Presigner Service, Quality Tier & Zip Bomb Guard (`INV-8`, Gotcha `P§7` #1)
 
-- **Goal:** Mengimplementasikan `POST /api/v1/media/presign` (Presigned PUT ke R2: `compressed/images/` untuk `image/avif`/`image/webp`/`image/png` maks **5 MB** [`5_242_880` bytes] dengan `Cache-Control: public, max-age=31536000, immutable`, `raw/videos/` untuk video maks **50 MB** [`52_428_800` bytes], atau `original/` bila `bypass_compress = true` & `users.can_bypass_compress = TRUE`) dan `POST /api/v1/media/{id}/complete` (`HeadObject` verification termasuk cek `content_length`; image atau `bypass_compress = true` -> langsung `READY` tanpa Lambda; video normal -> `PROCESSING` dengan `playback_url` `/raw` + invoke AWS Lambda async).
-- **Files:** `backend/src/shared/storage.rs`, `backend/src/media/handlers.rs`.
+- **Goal:** Mengimplementasikan `POST /api/v1/media/presign` (Presigned PUT ke R2 satu jalur: `compressed/images/` untuk gambar `standard` maks **5 MB** / `pro` maks **10 MB** dengan `Cache-Control: public, max-age=31536000, immutable`, `raw/videos/` untuk video `standard` maks **50 MB** & durasi **<= 3 menit (`180s`)** / `pro` maks **200 MB** & durasi **<= 5 menit (`300s`)**, serta `attachments/` maks **10 MB**), `POST /api/v1/media/{id}/complete` (`HeadObject` verification termasuk cek `content_length` sesuai `quality_tier`; image/file -> `READY`; video -> `PROCESSING` dengan `playback_url` `/raw` + invoke AWS Lambda async membawa `quality_tier`), dan `ZipBombGuard` streaming pada upload file/arsip (`kind = 'file'`).
+- **Files:** `backend/src/media.rs`, `backend/tests/media_test.rs`.
 - **Dependencies:** `Phase Gate 2`.
 - **Steps:**
-  1. **Red:** Tulis test validasi limit ukuran (`> 5 MB` image & `> 50 MB` video ditolak `413`) & MIME type (`image/avif`, `image/webp`, `image/png`, `video/*`, plus `image/jpeg` khusus `bypass_compress`), test `bypass_compress = true` ditolak `403` bila `can_bypass_compress = FALSE`, test `bypass_compress = true` menargetkan `original/` dan langsung `READY` tanpa invoke Lambda, verifikasi `Content-Type` & `Cache-Control` parity saat presigning R2 (`P§7` #1), penolakan `/complete` bila objek belum ada di R2 (`400`/`404`) atau ukuran aktual melebihi batas (`INV-8`), dan respons `playback_url` `/raw` untuk video saat `PROCESSING`.
-  2. **Green:** Konfigurasi `aws_sdk_s3::Client` untuk R2 (`region("auto")` + endpoint override), `aws_sdk_lambda::Client` untuk async invoke (`InvocationType::Event`), serta handler presign + complete.
+  1. **Red:** Tulis test validasi limit ukuran & durasi per `quality_tier` (`standard` vs `pro`: gambar 5 MB/10 MB, video 50 MB & 180s / 200 MB & 300s; permintaan `quality_tier = 'pro'` oleh user `standard` ditolak `403`), test MIME type (`image/*`, `video/mp4`, `video/webm`, `video/quicktime`, dokumen/arsip), test `ZipBombGuard` (tolak rasio tinggi, total bytes aktual `> 250 MB`, entry `> 1.000`, nested zip `> 1` level), verifikasi `Content-Type` & `Cache-Control` parity saat presigning R2 (`P§7` #1), dan penolakan `/complete` bila objek belum ada di R2 (`400`/`404`) atau ukuran aktual melebihi batas (`INV-8`).
+  2. **Green:** Konfigurasi R2 presigner (`region("auto")` + endpoint override), `QualityTier`, `ZipBombGuard`, serta handler `presign`, `complete`, dan `upload`.
 - **DoD:**
-  - [x] Presigned PUT URL ter-generate valid untuk gambar (`avif`/`webp`/`png`) maupun video di R2, `HeadObject` memvalidasi keberadaan objek, dan video sudah mengembalikan URL `/raw` saat `PROCESSING`.
+  - [x] Presigned PUT URL ter-generate valid untuk gambar, video (`raw/videos/`), maupun file di R2; validasi `quality_tier` + batas durasi video per tier (maks 5 menit) serta `ZipBombGuard` lulus unit test.
 
-### Task 3.2 — Crate `lambda-video-compressor` (Rust + Static FFmpeg)
+### Task 3.2 — Crate Compressor Lambda (Rust + Image Limits + FFmpeg Video Bomb Guard)
 
-- **Goal:** Membangun AWS Lambda worker berbasis `lambda_runtime` + `aws-sdk-s3` (pointed ke R2) + static `ffmpeg` untuk mengompresi video dari R2 `raw/videos/` ke MP4 H.264/AAC `+faststart` + thumbnail WebP, upload ke R2 `compressed/videos/` & `compressed/thumbs/` dengan header `Cache-Control: public, max-age=31536000, immutable`, lalu kirim HMAC webhook (biarkan `/raw` dibersihkan oleh R2 Lifecycle Policy 24 jam agar playback detik ke-0 tidak terputus).
-- **Files:** `backend/lambda-video-compressor/Cargo.toml`, `backend/lambda-video-compressor/src/main.rs`, `backend/lambda-video-compressor/src/ffmpeg.rs`.
+- **Goal:** Membangun AWS Lambda worker berbasis `lambda_runtime` + `aws-sdk-s3` (pointed ke R2) + static `ffmpeg` dengan dua profil `quality_tier` (`standard` 1080p CRF 27 / `-maxrate 2.5M` / AAC 128k / maks 180s vs `pro` 4K 2160p CRF 21 / `-maxrate 8M` / AAC 192–256k / maks 300s), `+faststart` + thumbnail WebP, pertahanan **Image Bomb** (`ImageReader` + `Limits`) dan **Video Bomb** (`ffprobe` pre-flight timeout `10s`, hard flags `-map 0:v:0 -map 0:a:0?`, `-t`, `-fs`, `-max_muxing_queue_size 1024`, `tokio::time::timeout(90s)` + `kill()` + cleanup `/tmp`, stream R2 ke `/tmp`, `DeleteObject` + webhook `FAILED` jika bomb terdeteksi).
+- **Files:** `backend/lambda-image-compressor/src/compressor.rs`, `backend/lambda-image-compressor/src/video.rs`, `backend/lambda-image-compressor/src/main.rs`.
 - **Dependencies:** `Task 3.1`.
 - **Steps:**
-  1. **Red:** Tulis unit test untuk generator signature `HMAC-SHA256` payload callback dan parser metadata durasi/resolusi video dari `ffprobe`.
-  2. **Green:** Implementasikan `function_handler(event: LambdaEvent<VideoJobPayload>)`: download dari R2 `raw/videos/` ke `/tmp` → `ffmpeg` transcode & thumbnail → upload ke R2 (`compressed/videos/` & `compressed/thumbs/`, `Cache-Control: public, max-age=31536000, immutable`) → HTTP POST callback ke `/internal/v1/media/ready`. Siapkan target build **ARM64 (Graviton2)** via `cargo-lambda` (`aarch64-unknown-linux-gnu`/`musl`).
+  1. **Red:** Tulis unit test untuk `ImageReader` `Limits`, parser metadata `ffprobe`, penolakan Video Bomb (resolusi ekstrem `> 4096` / `> 8_294_400` px, durasi melebihi batas tier, `nb_streams > 4`, FPS abnormal), dan generator argumen FFmpeg per `quality_tier`.
+  2. **Green:** Implementasikan `compressor.rs` (`Limits` anti image bomb) dan `video.rs` (`QualityTier`, `validate_ffprobe_metadata`, `build_ffmpeg_args`). Siapkan target build **ARM64 (Graviton2)** via `cargo-lambda` (`aarch64-unknown-linux-gnu`/`musl`, Memory `2048–3008 MB`, `/tmp` `2048–3072 MB`).
 - **DoD:**
-  - [ ] `cargo check -p lambda-video-compressor` bersih; pengujian lokal terhadap sampel MP4 menghasilkan output MP4 terkompresi + thumbnail WebP di `/compressed/` dengan `Cache-Control` immutable.
+  - [x] `cargo test` di `lambda-image-compressor` bersih untuk image limits, `ffprobe` video bomb guard, dan profil FFmpeg `standard` vs `pro`.
 
 ### Task 3.3 — Internal HMAC Media Callback & WS `MEDIA_READY` (`INV-8`)
 
-- **Goal:** Menangani callback dari AWS Lambda secara aman (`HMAC-SHA256` constant-time verify + replay timestamp window `<= 5 menit`), memperbarui URL video DB/Valkey ke `/compressed/`, dan memancarkan `MEDIA_READY` lewat Valkey Pub/Sub.
-- **Files:** `backend/src/media/internal_webhook.rs`.
+- **Goal:** Menangani callback dari AWS Lambda secara aman (`HMAC-SHA256` constant-time verify + replay timestamp window `<= 5 menit`), memperbarui status `media_assets` (`READY` dengan `/compressed/` atau `FAILED` dengan `error_reason`), dan memancarkan `MEDIA_READY` lewat Valkey Pub/Sub.
+- **Files:** `backend/src/media.rs`, `backend/src/lib.rs`, `backend/tests/media_test.rs`.
 - **Dependencies:** `Task 3.2`.
 - **Steps:**
-  1. **Red:** Tulis test penolakan signature invalid (`401`), timestamp kadaluarsa > 5 menit (`401`), dan test sukses mengupdate status `READY` + mengganti `playback_url` ke `/compressed/` + mem-publish `MEDIA_READY` (`INV-8`).
-  2. **Green:** Implementasikan handler `POST /internal/v1/media/ready` dengan constant-time signature check.
+  1. **Red:** Tulis test penolakan signature invalid (`401`), timestamp kadaluarsa > 5 menit (`401`), dan test verifikasi HMAC valid (`INV-8`).
+  2. **Green:** Implementasikan handler `POST /internal/v1/media/ready` dengan constant-time signature check (`subtle`).
 - **DoD:**
-  - [ ] `test_inv8_hmac_webhook_verification` lulus.
+  - [x] `test_inv8_hmac_webhook_verification` lulus.
 
 ### Phase Gate 3
 

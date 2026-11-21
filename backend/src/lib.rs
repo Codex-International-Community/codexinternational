@@ -72,6 +72,10 @@ pub fn app_router(state: Arc<AppState>) -> Router {
             "/api/v1/media",
             post(media::upload).layer(DefaultBodyLimit::max(media::MAX_CHAT_UPLOAD_BYTES)),
         )
+        .route(
+            "/internal/v1/media/ready",
+            post(media::internal_media_ready),
+        )
         .route("/api/v1/dev/bots/{id}/review", post(auth::bots::review_bot))
         .route(
             "/api/v1/dev/uid-slots",

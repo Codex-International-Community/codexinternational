@@ -1,4 +1,5 @@
 mod compressor;
+mod video;
 mod webhook;
 
 use std::sync::Arc;
