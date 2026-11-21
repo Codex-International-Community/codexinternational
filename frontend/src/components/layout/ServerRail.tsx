@@ -37,7 +37,7 @@ export function ServerRail({
         title="Friends and direct messages"
         onClick={onSelectHome}
       >
-        c
+        <Icon name="home" size={20} />
       </button>
 
       <button

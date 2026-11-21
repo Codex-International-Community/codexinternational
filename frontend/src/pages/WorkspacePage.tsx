@@ -155,6 +155,8 @@ function buildWorkspacePath({ view, serverId, channelId, dmId, path }: Workspace
       return '/bots'
     case 'not-found':
       return path ?? '/404'
+    case 'profile':
+      return '/settings'
   }
 }
 
@@ -210,13 +212,13 @@ export function WorkspacePage({
     const previousView = previousViewRef.current
     previousViewRef.current = view
     if (previousView === view) return
-    const navbarOrder: View[] = ['home', 'channel', 'dm', 'social', 'channels', 'people']
+    const navbarOrder: View[] = ['home', 'channel', 'dm', 'social', 'channels', 'people', 'discover', 'settings', 'bots', 'notifications', 'pinned', 'profile']
     const previousIndex = navbarOrder.indexOf(previousView)
     const nextIndex = navbarOrder.indexOf(view)
     if (previousIndex >= 0 && nextIndex >= 0) {
       setPageTransition(nextIndex >= previousIndex ? 'slide-forward' : 'slide-backward')
     } else {
-      setPageTransition('rocket')
+      setPageTransition('slide-forward')
     }
   }, [view])
 
