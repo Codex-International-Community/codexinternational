@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use anyhow::{Result, bail};
 use serde::Deserialize;
 
@@ -10,9 +8,10 @@ pub const MAX_STREAMS: usize = 4;
 pub const MAX_FPS: f64 = 120.0;
 pub const FFMPEG_MAX_OUTPUT_BYTES: u64 = 104_857_600; // 100 MB hard cap
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum QualityTier {
+    #[default]
     Standard,
     Pro,
 }
@@ -22,6 +21,13 @@ impl QualityTier {
         match self {
             Self::Standard => 180.0, // 3 minutes
             Self::Pro => 300.0,      // 5 minutes
+        }
+    }
+
+    pub fn max_input_bytes(self) -> u64 {
+        match self {
+            Self::Standard => 50 * 1024 * 1024,
+            Self::Pro => 200 * 1024 * 1024,
         }
     }
 

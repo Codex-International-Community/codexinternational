@@ -1,5 +1,4 @@
 mod compressor;
-mod video;
 mod webhook;
 mod zip_guard;
 
@@ -19,13 +18,16 @@ use tracing_subscriber::EnvFilter;
 use crate::{
     compressor::{CompressOptions, compress_to_webp},
     webhook::{MediaReadyCallback, send_callback},
+    zip_guard::ZipBombGuard,
 };
 
 #[derive(Debug, Deserialize)]
-struct ImageJobPayload {
+struct MediaJobPayload {
     media_id: String,
     source_key: String,
     dest_key: String,
+    #[serde(default)]
+    kind: Option<String>,
     #[serde(default)]
     max_width: Option<u32>,
     #[serde(default)]
@@ -35,13 +37,14 @@ struct ImageJobPayload {
 }
 
 #[derive(Debug, Serialize)]
-struct ImageJobResult {
+struct MediaJobResult {
     media_id: String,
-    dest_key: String,
+    status: &'static str,
+    dest_key: Option<String>,
     size_bytes: usize,
     width: u32,
     height: u32,
-    mime_type: &'static str,
+    mime_type: String,
 }
 
 struct AppContext {
@@ -65,16 +68,70 @@ fn build_r2_client(account_id: &str, access_key_id: &str, secret_access_key: &st
     S3Client::from_conf(conf)
 }
 
+async fn reject_and_cleanup(
+    ctx: &AppContext,
+    media_id: &str,
+    source_key: &str,
+    callback_url: Option<String>,
+    reason: String,
+) -> MediaJobResult {
+    tracing::warn!(media_id = %media_id, source_key = %source_key, reason = %reason, "rejecting media");
+
+    if let Err(err) = ctx
+        .s3
+        .delete_object()
+        .bucket(&ctx.bucket)
+        .key(source_key)
+        .send()
+        .await
+    {
+        tracing::error!(media_id = %media_id, error = %err, "failed to delete rejected R2 object");
+    }
+
+    if let Some(url) = callback_url
+        && !ctx.webhook_secret.is_empty()
+    {
+        let cb = MediaReadyCallback {
+            media_id: media_id.to_string(),
+            status: "FAILED".to_string(),
+            r2_key: None,
+            r2_thumb_key: None,
+            error_reason: Some(reason),
+            size_bytes: 0,
+            width: 0,
+            height: 0,
+            mime_type: "application/octet-stream".to_string(),
+        };
+        if let Err(err) = send_callback(&ctx.http, &url, &ctx.webhook_secret, &cb).await {
+            tracing::error!(media_id = %media_id, error = %err, "failed to send FAILED webhook");
+        }
+    }
+
+    MediaJobResult {
+        media_id: media_id.to_string(),
+        status: "FAILED",
+        dest_key: None,
+        size_bytes: 0,
+        width: 0,
+        height: 0,
+        mime_type: "application/octet-stream".to_string(),
+    }
+}
+
 async fn function_handler(
     ctx: Arc<AppContext>,
-    event: LambdaEvent<ImageJobPayload>,
-) -> Result<ImageJobResult, LambdaError> {
+    event: LambdaEvent<MediaJobPayload>,
+) -> Result<MediaJobResult, LambdaError> {
     let payload = event.payload;
+    let kind = payload.kind.as_deref().unwrap_or("image");
+    let callback_url = payload.callback_url.or_else(|| ctx.webhook_url.clone());
+
     tracing::info!(
         media_id = %payload.media_id,
+        kind = %kind,
         source_key = %payload.source_key,
         dest_key = %payload.dest_key,
-        "starting image compression job"
+        "starting lightweight media job"
     );
 
     let obj = ctx
@@ -84,7 +141,7 @@ async fn function_handler(
         .key(&payload.source_key)
         .send()
         .await
-        .context("failed to download source image from R2")?;
+        .context("failed to download source object from R2")?;
 
     let raw_bytes = obj
         .body
@@ -93,14 +150,83 @@ async fn function_handler(
         .context("failed to read R2 object body")?
         .into_bytes();
 
+    if kind == "file" {
+        let lower_key = payload.source_key.to_ascii_lowercase();
+        let is_office = lower_key.ends_with(".docx")
+            || lower_key.ends_with(".xlsx")
+            || lower_key.ends_with(".pptx");
+        let is_zip_container = is_office || lower_key.ends_with(".zip");
+
+        if is_zip_container {
+            let bytes_clone = raw_bytes.clone();
+            let guard_res = tokio::task::spawn_blocking(move || {
+                ZipBombGuard::inspect_zip_bytes(&bytes_clone, is_office)
+            })
+            .await
+            .context("zip guard task panicked")?;
+
+            if let Err(err) = guard_res {
+                return Ok(reject_and_cleanup(
+                    &ctx,
+                    &payload.media_id,
+                    &payload.source_key,
+                    callback_url,
+                    format!("SECURITY_REJECTED: decompression bomb detected ({err})"),
+                )
+                .await);
+            }
+        }
+
+        let size_bytes = raw_bytes.len();
+        if let Some(url) = callback_url
+            && !ctx.webhook_secret.is_empty()
+        {
+            let cb = MediaReadyCallback {
+                media_id: payload.media_id.clone(),
+                status: "READY".to_string(),
+                r2_key: Some(payload.source_key.clone()),
+                r2_thumb_key: None,
+                error_reason: None,
+                size_bytes,
+                width: 0,
+                height: 0,
+                mime_type: "application/octet-stream".to_string(),
+            };
+            send_callback(&ctx.http, &url, &ctx.webhook_secret, &cb).await?;
+        }
+
+        return Ok(MediaJobResult {
+            media_id: payload.media_id,
+            status: "READY",
+            dest_key: Some(payload.source_key),
+            size_bytes,
+            width: 0,
+            height: 0,
+            mime_type: "application/octet-stream".to_string(),
+        });
+    }
+
     let opts = CompressOptions {
         max_width: payload.max_width.unwrap_or(1920),
         max_height: payload.max_height.unwrap_or(1920),
     };
 
-    let compressed = tokio::task::spawn_blocking(move || compress_to_webp(&raw_bytes, opts))
+    let compressed = match tokio::task::spawn_blocking(move || compress_to_webp(&raw_bytes, opts))
         .await
-        .context("compression task panicked")??;
+        .context("compression task panicked")?
+    {
+        Ok(res) => res,
+        Err(err) => {
+            return Ok(reject_and_cleanup(
+                &ctx,
+                &payload.media_id,
+                &payload.source_key,
+                callback_url,
+                format!("SECURITY_REJECTED: decompression bomb detected ({err})"),
+            )
+            .await);
+        }
+    };
 
     let size_bytes = compressed.bytes.len();
 
@@ -115,13 +241,15 @@ async fn function_handler(
         .await
         .context("failed to upload compressed WebP image to R2")?;
 
-    let callback_url = payload.callback_url.or_else(|| ctx.webhook_url.clone());
     if let Some(url) = callback_url
         && !ctx.webhook_secret.is_empty()
     {
         let cb = MediaReadyCallback {
             media_id: payload.media_id.clone(),
-            r2_key: payload.dest_key.clone(),
+            status: "READY".to_string(),
+            r2_key: Some(payload.dest_key.clone()),
+            r2_thumb_key: None,
+            error_reason: None,
             size_bytes,
             width: compressed.width,
             height: compressed.height,
@@ -130,13 +258,14 @@ async fn function_handler(
         send_callback(&ctx.http, &url, &ctx.webhook_secret, &cb).await?;
     }
 
-    Ok(ImageJobResult {
+    Ok(MediaJobResult {
         media_id: payload.media_id,
-        dest_key: payload.dest_key,
+        status: "READY",
+        dest_key: Some(payload.dest_key),
         size_bytes,
         width: compressed.width,
         height: compressed.height,
-        mime_type: compressed.mime_type,
+        mime_type: compressed.mime_type.to_string(),
     })
 }
 
