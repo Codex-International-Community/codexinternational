@@ -215,23 +215,87 @@ pub async fn enqueue(
     serde_json::from_str(&ack).map_err(|e| AppError::Internal(e.into()))
 }
 
-pub async fn history(
+type StreamTail = std::sync::Arc<Vec<(String, HashMap<String, String>)>>;
+type TailCache = tokio::sync::Mutex<Option<(std::time::Instant, StreamTail)>>;
+
+static TAIL_CACHE: std::sync::OnceLock<TailCache> = std::sync::OnceLock::new();
+const TAIL_TTL: std::time::Duration = std::time::Duration::from_millis(250);
+
+/// Unflushed stream entries, shared across concurrent `history` calls for `TAIL_TTL`.
+/// The lock is held while refreshing so concurrent callers wait for one XRANGE
+/// instead of each issuing their own (XRANGE of 1000 entries blocks Valkey ~3 ms).
+async fn pending_tail(state: &AppState) -> Option<StreamTail> {
+    let cache = TAIL_CACHE.get_or_init(|| tokio::sync::Mutex::new(None));
+    let mut guard = cache.lock().await;
+    if let Some((at, entries)) = guard.as_ref()
+        && at.elapsed() < TAIL_TTL
+    {
+        return Some(entries.clone());
+    }
+    let fetched: Result<Vec<(String, HashMap<String, String>)>, _> = state
+        .valkey
+        .xrange_values(MESSAGE_STREAM, "-", "+", Some(1000))
+        .await;
+    let entries = std::sync::Arc::new(fetched.ok()?);
+    *guard = Some((std::time::Instant::now(), entries.clone()));
+    Some(entries)
+}
+
+type HistoryKey = (Uuid, i64, i64);
+type HistorySlot = std::sync::Arc<
+    tokio::sync::Mutex<Option<(std::time::Instant, std::sync::Arc<Vec<ClientMessage>>)>>,
+>;
+
+static HISTORY_CACHE: std::sync::OnceLock<std::sync::Mutex<HashMap<HistoryKey, HistorySlot>>> =
+    std::sync::OnceLock::new();
+const HISTORY_TTL: std::time::Duration = std::time::Duration::from_millis(300);
+const HISTORY_MAX_KEYS: usize = 2000;
+
+/// Postgres part of `history`, shared across concurrent callers for `HISTORY_TTL`.
+/// One caller per key queries the DB while the rest await its result.
+/// Pending (unflushed) messages are merged fresh by `history` via `pending_tail`.
+async fn history_db_cached(
     state: &AppState,
     channel: Uuid,
     after: i64,
-    limit: i64,
+    n: i64,
+) -> Result<std::sync::Arc<Vec<ClientMessage>>, AppError> {
+    let key: HistoryKey = (channel, after.max(0), n);
+    let slot = {
+        let map = HISTORY_CACHE.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+        let mut map = map.lock().unwrap_or_else(|e| e.into_inner());
+        if map.len() >= HISTORY_MAX_KEYS && !map.contains_key(&key) {
+            map.clear();
+        }
+        map.entry(key).or_default().clone()
+    };
+    let mut guard = slot.lock().await;
+    if let Some((at, rows)) = guard.as_ref()
+        && at.elapsed() < HISTORY_TTL
+    {
+        return Ok(rows.clone());
+    }
+    let rows = std::sync::Arc::new(history_db(state, channel, after, n).await?);
+    *guard = Some((std::time::Instant::now(), rows.clone()));
+    Ok(rows)
+}
+
+async fn history_db(
+    state: &AppState,
+    channel: Uuid,
+    after: i64,
+    n: i64,
 ) -> Result<Vec<ClientMessage>, AppError> {
-    let n = limit.clamp(1, 100);
     let rows=sqlx::query_as::<_,MessageRow>(
  "SELECT m.id,m.channel_id,m.seq_id,m.client_msg_id,m.sender_id,m.content,m.media_id,m.reply_to_id,m.created_at,m.edited_at,COALESCE(u.display_name,'Deleted user') AS author,r.name AS role,
          ma.file_name AS media_file_name,ma.mime_type AS media_mime_type,COALESCE(ma.size_bytes,0) AS media_size_bytes,ma.r2_key AS media_r2_key
- FROM messages m
+ FROM (SELECT * FROM messages WHERE channel_id=$1 AND seq_id>$2 AND deleted_at IS NULL ORDER BY seq_id ASC LIMIT $3) m
  LEFT JOIN users u ON u.id=m.sender_id
  LEFT JOIN channels ch ON ch.id=m.channel_id
  LEFT JOIN community_members cm ON cm.community_id=ch.community_id AND cm.user_id=m.sender_id
  LEFT JOIN community_roles r ON r.id=cm.role_id
  LEFT JOIN media_assets ma ON ma.id=m.media_id AND ma.purpose='chat' AND ma.status='READY'
- WHERE m.channel_id=$1 AND m.seq_id>$2 AND m.deleted_at IS NULL ORDER BY m.seq_id ASC LIMIT $3")
+ ORDER BY m.seq_id ASC")
  .bind(channel).bind(after.max(0)).bind(n).fetch_all(&state.pg).await?;
     let mut out = Vec::with_capacity(rows.len());
     for r in rows {
@@ -280,14 +344,23 @@ pub async fn history(
             edited: r.edited_at.is_some(),
         });
     }
-    let tail: Result<Vec<(String, HashMap<String, String>)>, _> = state
-        .valkey
-        .xrange_values(MESSAGE_STREAM, "-", "+", Some(1000))
-        .await;
-    if let Ok(entries) = tail {
+    Ok(out)
+}
+
+pub async fn history(
+    state: &AppState,
+    channel: Uuid,
+    after: i64,
+    limit: i64,
+) -> Result<Vec<ClientMessage>, AppError> {
+    let n = limit.clamp(1, 100);
+    let db_rows = history_db_cached(state, channel, after, n).await?;
+    let mut out: Vec<ClientMessage> = (*db_rows).clone();
+    let tail = pending_tail(state).await;
+    if let Some(entries) = tail {
         let mut seen = out.iter().map(|m| m.id.clone()).collect::<HashSet<_>>();
         let key = channel.to_string();
-        for (_, fields) in entries {
+        for (_, fields) in entries.iter() {
             if fields.get("channel_id").map(String::as_str) != Some(key.as_str()) {
                 continue;
             }

@@ -398,6 +398,23 @@ codexinternational/
   1. Jalankan load test minimal `2.000 MPS` selama 60 detik lintas beberapa channel.
   2. Pantau `XLEN stream:messages`, `XPENDING stream:messages pg_flusher`, latensi transaksi batch 250ms Postgres, serta latensi WS p95/p99.
   3. Verifikasi jumlah baris di tabel `messages` Postgres sama persis dengan total `MESSAGE_ACK` sukses (0 pesan hilang).
+  4. **Optimasi Infra VPS Produksi (Shell):**
+     - Matikan `docker-proxy` userland agar akses loopback `127.0.0.1:5432` / `6379` langsung tanpa overhead proxy:
+
+       ```bash
+       echo '{"userland-proxy": false}' | sudo tee /etc/docker/daemon.json
+       sudo systemctl restart docker
+       sudo systemctl restart codexter-backend
+       ```
+
+     - Aktifkan `pg_stat_statements` di PostgreSQL untuk profiling query:
+
+       ```bash
+       docker exec -i codexter-postgres psql -U codexter -d codexinternational -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_stat_statements'" -c "ALTER SYSTEM SET pg_stat_statements.track = 'all'"
+       docker restart codexter-postgres
+       docker exec -i codexter-postgres psql -U codexter -d codexinternational -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements"
+       ```
+
 - **DoD:**
   - [ ] Sustained `>= 2.000 MPS` stabil, WS fan-out `p95 < 50ms`, backlog stream terkuras habis dalam `<= 1 detik` setelah beban berhenti, dan `count(messages) == count(ACK)`.
 
