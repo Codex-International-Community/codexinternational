@@ -270,10 +270,8 @@ pub async fn assign_reserved_uid(
                 &auth.platform_role,
                 actor_badge.as_deref(),
             );
-            let target_w = crate::auth::dev_governance::platform_weight(
-                &target_role,
-                target_badge.as_deref(),
-            );
+            let target_w =
+                crate::auth::dev_governance::platform_weight(&target_role, target_badge.as_deref());
             if target_w >= actor_w {
                 return Err(AppError::Forbidden(
                     "cannot modify a platform user with equal or higher hierarchy weight"
