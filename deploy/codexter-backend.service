@@ -14,6 +14,7 @@ EnvironmentFile=/home/rallc/projects/codexinternational/.env
 ExecStart=/home/rallc/projects/codexinternational/backend/target/release/backend
 Restart=always
 RestartSec=3
+LimitNOFILE=65535
 
 [Install]
 WantedBy=multi-user.target

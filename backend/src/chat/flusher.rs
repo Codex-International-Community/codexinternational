@@ -3,14 +3,30 @@ use super::{
     repo::{MESSAGE_GROUP, MESSAGE_STREAM, persist_batch},
 };
 use crate::{error::AppError, state::AppState};
-use fred::{interfaces::StreamsInterface, types::streams::XReadResponse};
+use fred::{
+    interfaces::{ClientLike, StreamsInterface},
+    types::streams::XReadResponse,
+};
 use std::{sync::Arc, time::Duration};
 use tokio::time::sleep;
 const CONSUMER: &str = "pg_flusher_local";
 
 pub async fn run_message_flusher(state: Arc<AppState>) {
-    let group: Result<String, _> = state
-        .valkey
+    // Use a dedicated Valkey connection for `XREADGROUP BLOCK 0` so blocking
+    // stream reads never stall commands on the shared `state.valkey` pool.
+    let flusher_client = match state.build_valkey_client() {
+        Ok(client) => client,
+        Err(e) => {
+            tracing::error!(error = %e, "failed to build dedicated flusher valkey client");
+            return;
+        }
+    };
+    if let Err(e) = flusher_client.init().await {
+        tracing::error!(error = %e, "failed to connect dedicated flusher valkey client");
+        return;
+    }
+
+    let group: Result<String, _> = flusher_client
         .xgroup_create(MESSAGE_STREAM, MESSAGE_GROUP, "0", true)
         .await;
     if let Err(e) = group
@@ -20,8 +36,7 @@ pub async fn run_message_flusher(state: Arc<AppState>) {
         return;
     }
     loop {
-        let pending: Result<XReadResponse<String, String, String, String>, _> = state
-            .valkey
+        let pending: Result<XReadResponse<String, String, String, String>, _> = flusher_client
             .xreadgroup_map(
                 MESSAGE_GROUP,
                 CONSUMER,
@@ -45,8 +60,7 @@ pub async fn run_message_flusher(state: Arc<AppState>) {
         // Redis/Valkey returns a null reply when a finite BLOCK timeout expires without
         // new entries. fred's map helper cannot decode that null as XReadResponse, so
         // BLOCK 0 waits for the next entry and avoids spurious "Cannot convert to map" errors.
-        let fresh: Result<XReadResponse<String, String, String, String>, _> = state
-            .valkey
+        let fresh: Result<XReadResponse<String, String, String, String>, _> = flusher_client
             .xreadgroup_map(
                 MESSAGE_GROUP,
                 CONSUMER,
