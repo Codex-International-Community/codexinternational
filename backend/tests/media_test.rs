@@ -6,21 +6,15 @@ use backend::{
     app_router,
     config::AppConfig,
     media::{
-        QualityTier, ZipBombGuard, generate_r2_key, validate_video_duration_for_tier,
-        verify_webhook_signature,
+        QualityTier, generate_r2_key, validate_video_duration_for_tier, verify_webhook_signature,
     },
     state::AppState,
 };
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
-use std::{
-    collections::HashMap,
-    io::{Cursor, Write},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 use tower::ServiceExt;
 use uuid::Uuid;
-use zip::{ZipWriter, write::SimpleFileOptions};
 
 #[tokio::test]
 async fn media_routes_reject_anonymous_requests() {
@@ -92,32 +86,6 @@ fn test_quality_tier_and_video_duration_limits() {
     assert!(validate_video_duration_for_tier(QualityTier::Pro, Some(300)).is_ok());
     assert!(validate_video_duration_for_tier(QualityTier::Pro, Some(301)).is_err());
     assert!(validate_video_duration_for_tier(QualityTier::Pro, Some(0)).is_err());
-}
-
-fn build_zip(entries: &[(&str, &[u8])]) -> Vec<u8> {
-    let mut buf = Cursor::new(Vec::new());
-    {
-        let mut writer = ZipWriter::new(&mut buf);
-        for (name, data) in entries {
-            writer
-                .start_file(*name, SimpleFileOptions::default())
-                .expect("start file");
-            writer.write_all(data).expect("write data");
-        }
-        writer.finish().expect("finish zip");
-    }
-    buf.into_inner()
-}
-
-#[test]
-fn test_zip_bomb_guard_valid_and_nested_rejection() {
-    let valid = build_zip(&[("notes.txt", b"hello codexinternational")]);
-    assert!(ZipBombGuard::inspect_zip_bytes(&valid, false).is_ok());
-
-    let inner = build_zip(&[("payload.txt", b"nested")]);
-    let outer = build_zip(&[("inner.zip", &inner)]);
-    let nested = build_zip(&[("outer.zip", &outer)]);
-    assert!(ZipBombGuard::inspect_zip_bytes(&nested, false).is_err());
 }
 
 #[test]

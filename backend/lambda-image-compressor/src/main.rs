@@ -1,6 +1,7 @@
 mod compressor;
 mod video;
 mod webhook;
+mod zip_guard;
 
 use std::sync::Arc;
 
