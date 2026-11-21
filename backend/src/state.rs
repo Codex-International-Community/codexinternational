@@ -117,6 +117,28 @@ impl AppState {
         })
     }
 
+    /// Builds a dedicated, non-pooled Valkey `Client` for long-lived blocking
+    /// operations (such as `XREADGROUP BLOCK 0` in the message flusher) so they
+    /// never cause head-of-line blocking on the shared `valkey` command pool.
+    pub fn build_valkey_client(&self) -> Result<Client, StateError> {
+        let valkey_url = normalize_valkey_url(self.config.valkey_url.expose());
+        let fred_cfg = Config::from_url(&valkey_url)?;
+        let reconnect = ReconnectPolicy::new_exponential(0, 100, 5_000, 2);
+
+        let client = Builder::from_config(fred_cfg)
+            .set_policy(reconnect)
+            .with_connection_config(|c| {
+                c.connection_timeout = Duration::from_secs(2);
+                c.tcp = TcpConfig {
+                    nodelay: Some(true),
+                    ..Default::default()
+                };
+            })
+            .build()?;
+
+        Ok(client)
+    }
+
     /// Replaces external email/OAuth clients (intended for deterministic integration tests).
     pub fn with_auth_clients(
         mut self,
