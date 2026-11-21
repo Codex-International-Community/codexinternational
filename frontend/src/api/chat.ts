@@ -97,7 +97,11 @@ interface PresignMediaResponse {
   maxBytes: number
 }
 
-export async function uploadChatMedia(file: File, channelId: string): Promise<ChatMediaUploadResult> {
+export async function uploadChatMedia(
+  file: File,
+  channelId: string,
+  durationSecs?: number,
+): Promise<ChatMediaUploadResult> {
   const safeName = file.name
     .replace(/[^a-zA-Z0-9._-]/g, '_')
     .replace(/^\.+/, '')
@@ -112,6 +116,7 @@ export async function uploadChatMedia(file: File, channelId: string): Promise<Ch
         fileName: safeName,
         mimeType: file.type || 'application/octet-stream',
         sizeBytes: file.size,
+        ...(durationSecs !== undefined ? { durationSecs } : {}),
       },
     })
 

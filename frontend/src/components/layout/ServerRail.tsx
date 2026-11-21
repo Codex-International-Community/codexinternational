@@ -10,6 +10,7 @@ interface ServerRailProps {
   onSelectServer: (id: string) => void
   onCreateServer: () => void
   onNavigateDiscover: () => void
+  onNavigateSocial: () => void
   onOpenBots: () => void
 }
 
@@ -21,9 +22,10 @@ export function ServerRail({
   onSelectServer,
   onCreateServer,
   onNavigateDiscover,
+  onNavigateSocial,
   onOpenBots,
 }: ServerRailProps) {
-  const homeActive = activeView === 'home' || activeView === 'dm' || activeView === 'social'
+  const homeActive = activeView === 'home' || activeView === 'dm'
 
   return (
     <aside className="server-rail" aria-label="Server navigation">
@@ -35,7 +37,18 @@ export function ServerRail({
         title="Friends and direct messages"
         onClick={onSelectHome}
       >
-        c
+        <Icon name="home" size={20} />
+      </button>
+
+      <button
+        type="button"
+        className={`rail-discover ${activeView === 'social' ? 'active' : ''}`}
+        aria-label="Threads"
+        aria-current={activeView === 'social' ? 'page' : undefined}
+        title="Threads"
+        onClick={onNavigateSocial}
+      >
+        <Icon name="thread" size={19} />
       </button>
 
       <div className="rail-rule" />

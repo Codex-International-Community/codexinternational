@@ -54,7 +54,7 @@ interface ChannelSidebarProps {
   onNavigateSettings: () => void
   onNavigateDiscover: () => void
   onToggleTheme: () => void
-  onOpenBots?: () => void
+  onOpenProfile: () => void
   onLogout?: () => void
 }
 
@@ -107,7 +107,7 @@ export function ChannelSidebar({
   onNavigateSettings,
   onNavigateDiscover,
   onToggleTheme,
-  onOpenBots,
+  onOpenProfile,
   onLogout,
 }: ChannelSidebarProps) {
   const activeVoiceChannel = channels.find((channel) => channel.id === voiceId)
@@ -450,17 +450,15 @@ export function ChannelSidebar({
         <div className="profile-menu">
           <strong>{displayName}</strong>
           <span>Account and preferences</span>
+          <button type="button" onClick={() => { onOpenProfile(); onToggleProfileMenu() }}>
+            <Icon name="user" size={15} /> View profile
+          </button>
           <button type="button" onClick={() => { onNavigateSettings(); onToggleProfileMenu() }}>
-            <Icon name="user" size={15} /> Edit profile
+            <Icon name="settings" size={15} /> Edit profile &amp; settings
           </button>
           <button type="button" onClick={() => { onToggleTheme(); onToggleProfileMenu() }}>
             <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} /> Switch theme
           </button>
-          {onOpenBots && (
-            <button type="button" onClick={() => { onOpenBots(); onToggleProfileMenu() }}>
-              <Icon name="shield" size={15} /> Bot Portal
-            </button>
-          )}
           {onLogout && (
             <button type="button" onClick={() => { onToggleProfileMenu(); onLogout() }}>
               <Icon name="logout" size={15} /> Sign out

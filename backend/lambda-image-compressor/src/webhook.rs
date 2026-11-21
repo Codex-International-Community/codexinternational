@@ -6,9 +6,13 @@ use sha2::Sha256;
 type HmacSha256 = Hmac<Sha256>;
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MediaReadyCallback {
     pub media_id: String,
-    pub r2_key: String,
+    pub status: String,
+    pub r2_key: Option<String>,
+    pub r2_thumb_key: Option<String>,
+    pub error_reason: Option<String>,
     pub size_bytes: usize,
     pub width: u32,
     pub height: u32,
@@ -43,7 +47,7 @@ pub async fn send_callback(
         .post(url)
         .header("content-type", "application/json")
         .header("x-timestamp", ts.to_string())
-        .header("x-signature", sig)
+        .header("x-signature-256", format!("sha256={sig}"))
         .body(body)
         .send()
         .await

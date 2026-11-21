@@ -93,7 +93,7 @@ CREATE TABLE users (
     avatar_media_id UUID, -- FK added after media_assets
     bio TEXT NOT NULL DEFAULT '',
     platform_role VARCHAR(20) NOT NULL DEFAULT 'user', -- 'dev' (highest platform role), 'moderator', 'user'
-    can_bypass_compress BOOLEAN NOT NULL DEFAULT FALSE, -- Add-on entitlement (future paid perk)
+    quality_tier VARCHAR(20) NOT NULL DEFAULT 'standard', -- 'standard' (free) | 'pro' (paid perk)
     suspended_until TIMESTAMPTZ,
     suspended_reason TEXT,
     global_xp BIGINT NOT NULL DEFAULT 0,
@@ -161,7 +161,7 @@ CREATE TABLE media_assets (
     kind VARCHAR(20) NOT NULL, -- 'image', 'video', 'file'
     purpose VARCHAR(30) NOT NULL, -- 'avatar', 'community_icon', 'chat', 'story', 'contribution'
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING', -- 'PENDING', 'PROCESSING', 'READY', 'FAILED'
-    bypass_compress BOOLEAN NOT NULL DEFAULT FALSE,
+    quality_tier VARCHAR(20) NOT NULL DEFAULT 'standard', -- 'standard' | 'pro'
     r2_key TEXT,
     r2_thumb_key TEXT,
     r2_raw_key TEXT,
@@ -169,7 +169,7 @@ CREATE TABLE media_assets (
     size_bytes BIGINT,
     width INT,
     height INT,
-    duration_ms INT,
+    duration_secs INT,
     error_reason TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     ready_at TIMESTAMPTZ
@@ -375,8 +375,8 @@ CREATE TABLE contribution_likes (
 | `/api/v1/channels/{id}/notifications` | Auth + Member | PATCH | Set `notification_mode` (`all`/`mentions`/`none`) & `muted_until`. |
 | `/api/v1/channels/{id}/messages` | Auth + `VIEW_CHANNEL` | GET / POST | Pull history & gap-sync (`after_seq`, `before_seq`, `limit`) atau kirim pesan fallback REST. |
 | `/api/v1/messages/{id}` | Auth + Owner/Mod | PATCH / DELETE | Edit konten atau soft-delete pesan (`deleted_at = NOW()`), broadcast via Pub/Sub. |
-| `/api/v1/media/presign` | Auth (rate-limited) | POST | Return Presigned PUT URL ke **Cloudflare R2** (`compressed/images/` maks **5 MB**, `raw/videos/` maks **50 MB**; jika `bypass_compress = true` [wajib `users.can_bypass_compress = TRUE`, else `403`], target permanen di `original/images/` atau `original/videos/` agar bebas R2 Lifecycle 24h) + `media_id`. |
-| `/api/v1/media/{id}/complete` | Auth | POST | Verifikasi objek & ukuran di R2 via `HeadObject` (`<= 5 MB` image / `<= 50 MB` video): image atau `bypass_compress = true` -> langsung `READY` (skip Lambda); video normal -> `PROCESSING` (`playback_url` `/raw`) & invoke AWS Lambda async. |
+| `/api/v1/media/presign` | Auth (rate-limited) | POST | Return Presigned PUT URL ke **Cloudflare R2** (`compressed/images/` maks **5 MB** `standard` / **10 MB** `pro`, `raw/videos/` maks **50 MB** & durasi **<= 3 menit (`180s`)** `standard` / maks **200 MB** & durasi **<= 5 menit (`300s`)** `pro`, `attachments/` maks **10 MB**; jika meminta `quality_tier = 'pro'` padahal `users.quality_tier != 'pro'`, ditolak `403`) + `media_id`. |
+| `/api/v1/media/{id}/complete` | Auth | POST | Verifikasi objek & ukuran di R2 via `HeadObject` sesuai batas `quality_tier`: image/file -> langsung `READY` (skip Lambda); video -> `PROCESSING` (`playback_url` `/raw`) & invoke AWS Lambda async membawa `quality_tier`. |
 | `/internal/v1/media/ready` | **INTERNAL HMAC** | POST | Webhook dari AWS Lambda video compressor (`X-Signature-256` + timestamp) -> `READY`/`FAILED` + WS notify. |
 | `/api/v1/stories` | Auth | POST | Buat WA Status 24h dengan `visibility` (`public`, `all_communities`, `selected_communities`, `contacts`). |
 | `/api/v1/stories/feed` | Auth | GET | Ambil story aktif (`expires_at > NOW()`) sesuai aturan visibilitas pembuat. |
@@ -444,7 +444,19 @@ Seluruh object storage menggunakan **Cloudflare R2** (tanpa AWS S3; AWS hanya di
   - **Detik ke-0:** Client (atau Native Kotlin `WorkManager`) mengunggah video via Presigned PUT ke R2 (`raw/videos/{media_id}.mp4`) lalu memanggil `POST /media/{id}/complete`. Axum memverifikasi `HeadObject`, menyetel `status = 'PROCESSING'` dengan `r2_raw_key`, mengembalikan `playback_url` ke `/raw` (sehingga penerima langsung bisa memutar video, sementara pengirim memakai file lokal secara optimistic UI), dan meng-invoke **AWS Lambda (`lambda_runtime` + static FFmpeg)** secara async (`InvocationType::Event` via `aws-sdk-lambda`).
   - **Detik ke-5 s/d ke-10 (Background):** Lambda mengunduh dari R2 `/raw`, transcode ke MP4 H.264/AAC `+faststart` (hemat kuota 70–80%) + ekstrak thumbnail WebP, lalu mengunggah ke R2 (`compressed/videos/...` dan `compressed/thumbs/...`) dengan `Cache-Control: public, max-age=31536000, immutable`, dan mengirim callback `POST /internal/v1/media/ready` ber-HMAC-SHA256.
   - **Transisi & Cleanup:** Axum memperbarui `media_assets` (`status = 'READY'`, `r2_key`, `r2_thumb_key`) serta cache Valkey dan memancarkan WS `MEDIA_READY` agar pembaca berikutnya otomatis memakai URL `/compressed`. Lambda **tidak** langsung menghapus `/raw` agar streaming user yang kebetulan memutar `/raw` tidak terputus; folder `raw/videos/` dibersihkan otomatis oleh **R2 Lifecycle Policy setelah 24 jam**.
-  - **Bypass Compress Add-On (`bypass_compress = true`):** Jika `users.can_bypass_compress = TRUE` (untuk fitur berbayar/perk member), client dapat meminta `bypass_compress = true` pada `/media/presign`: gambar boleh dikirim dalam format asli (`image/jpeg`/`image/png`/`image/webp`/`image/avif`) tanpa kompresi paksa, dan video langsung diunggah ke prefix permanen `original/videos/` (bukan `raw/videos/` yang kena Lifecycle 24h) sehingga `/complete` langsung menandai `READY` tanpa memicu AWS Lambda. Jika `can_bypass_compress = FALSE`, permintaan `bypass_compress = true` ditolak `403 Forbidden`.
+  - **Profil Kompresi Seragam (`quality_tier`: `standard` vs `pro`):** Seluruh media melewati satu jalur kompresi seragam tanpa jalur bypass atau folder `original/`:
+    - **Video (AWS Lambda FFmpeg):**
+      - `standard` (Gratis): Resolusi maks `1080p`, CRF `26–28`, `-maxrate 2.5M -bufsize 5M`, AAC `128 kbps`, ukuran upload maks `50 MB`, **durasi maks 3 menit (`180` detik)**.
+      - `pro` (Berbayar): Resolusi maks `2160p` (4K, `force_divisible_by=2`), CRF `20–22`, `-maxrate 8M -bufsize 16M`, AAC `192–256 kbps`, ukuran upload maks `200 MB`, **durasi maks 5 menit (`300` detik)**.
+      - Lambda memakai Memory `2048–3008 MB`, Ephemeral `/tmp` `2048–3072 MB`, `-preset veryfast` (atau `faster`), dan timeout internal `90s` (< timeout Lambda `120s`).
+    - **Gambar (Client Web Worker / Kotlin + Server/Lambda Guard):**
+      - `standard`: Downscale sisi terpanjang ke `1600px–1920px`, AVIF/WebP quality `72–75`, ukuran maks `5 MB`.
+      - `pro`: Pertahankan hingga `3840px` (4K), AVIF/WebP quality `85–90`, ukuran maks `10 MB`.
+  - **Pertahanan Decompression Bomb (Video, Image & Zip/Office):**
+    - **Video Bomb (`compressor.rs`):** Pre-flight `ffprobe` (dibungkus `tokio::time::timeout(10s)`) menolak jika `width > 4096 || height > 4096 || width * height > 8_294_400`, `duration > tier_max_duration` (maks `180s` / `300s`), `nb_streams > 4`, atau FPS abnormal (`> 120 fps`). Eksekusi `ffmpeg` memakai hard flags `-map 0:v:0 -map 0:a:0?`, `-t <tier_max_duration>`, `-fs 104857600`, `-max_muxing_queue_size 1024`, `-fps_mode vfr`, dibungkus `tokio::time::timeout(90s)` dengan `kill()` + cleanup `/tmp`. Unduhan dari R2 di-stream ke `/tmp` (bukan buffer penuh di RAM).
+    - **Image Bomb (`lambda-image-compressor`):** Decode memakai `ImageReader` + `Limits` (`max_image_width: 8192`, `max_image_height: 8192`, `max_alloc: 256 MB`) sebelum alokasi piksel penuh.
+    - **Zip Bomb (`kind = 'file'`, `ZipBombGuard`):** Inspeksi streaming di memori dengan `std::io::Read::take(MAX_TOTAL_BYTES + 1)` tanpa ekstrak ke disk: rasio kompresi maks `25×` (arsip umum) / `100×` (Office `.docx`/`.xlsx`/`.pptx`, atau bypass rasio bila total aktual `< 10 MB`), total dekompresi aktual maks `250 MB` (anti-overlap), maks `1.000` entry, dan kedalaman arsip bersarang maks `1` level.
+    - **Aksi Penolakan:** Hapus sisa file `/tmp`, panggil `DeleteObject` R2 untuk menghapus objek berbahaya, kirim callback `POST /internal/v1/media/ready` dengan `status: "FAILED"` & `error_reason: "SECURITY_REJECTED: decompression bomb detected"`, lalu return `Ok(...)` agar Lambda tidak me-retry file bomb.
 
 ### P§2.3 Smart FCM HTTP v1 & Aturan Offline 10 Menit
 
@@ -493,11 +505,9 @@ codex-media/                                    # Bucket 1: Publik via R2_PUBLIC
 │   ├── avatars/{user_id}/{media_id}.avif       # Fallback .webp; Cache-Control: immutable
 │   ├── icons/{community_id}/{media_id}.avif    # Icon komunitas
 │   ├── images/{yyyy}/{mm}/{media_id}.avif      # Gambar chat/story/contrib (fallback .webp/.png)
-│   ├── videos/{yyyy}/{mm}/{media_id}.mp4       # Output Lambda FFmpeg
+│   ├── videos/{yyyy}/{mm}/{media_id}.mp4       # Output Lambda FFmpeg (standard 1080p / pro 4K)
 │   └── thumbs/{yyyy}/{mm}/{media_id}.webp      # Thumbnail video dari Lambda
-└── original/                                   # Add-on bypass_compress = true (permanen)
-    ├── images/{yyyy}/{mm}/{media_id}.{ext}
-    └── videos/{yyyy}/{mm}/{media_id}.{ext}
+└── attachments/{user_id}/{yyyy}/{mm}/{media_id}.{ext} # File dokumen & arsip terverifikasi ZipBombGuard
 
 codex-backups/                                  # Bucket 2: 100% PRIVAT (tanpa Custom Domain & tanpa CORS)
 └── postgres/
@@ -570,7 +580,7 @@ codexinternational/
 | **INV-5** | Menghapus user (`ON DELETE SET NULL`) tidak boleh menggagalkan query atau menghapus riwayat pesan komunitas. | `messages.sender_id` nullable; seluruh query chat menangani `sender_id = NULL` sebagai `[Deleted User]`. |
 | **INV-6** | Reply pesan berumur `< 250ms` (yang induknya masih dalam window batch flush) tidak boleh gagal Foreign Key constraint. | `messages.id` memakai `UUIDv7` pra-generated di server + batch diurutkan berdasar `(channel_id, seq_id)` + FK `reply_to_id` bersifat `DEFERRABLE INITIALLY DEFERRED`. |
 | **INV-7** | DM 1-on-1 antara pasangan user `(A, B)` wajib selalu memetakan ke tepat 1 `channel_id`. | `channels.dm_pair_key = min(A,B):max(A,B)` bertipe `UNIQUE` dengan insert idempoten. |
-| **INV-8** | Seluruh Presigned PUT URL wajib mengunci `Content-Type` dan batas ukuran (gambar maks **5 MB**, video maks **50 MB**), serta webhook Lambda wajib terautentikasi HMAC-SHA256 + anti-replay timestamp. | Validasi limit di `/media/presign`, verifikasi `content_length` via R2 `HeadObject` di `/media/{id}/complete`, dan verifikasi `Signature` + window timestamp (`<= 5 menit`) pada `/internal/v1/media/ready`. |
+| **INV-8** | Seluruh Presigned PUT URL wajib mengunci `Content-Type`, batas ukuran, dan durasi video per `quality_tier` (`standard`: gambar **5 MB**, video **50 MB** & maks **3 menit / 180s**; `pro`: gambar **10 MB**, video **200 MB** & maks **5 menit / 300s**), seluruh file/arsip/media wajib lolos pertahanan *decompression bomb*, serta webhook Lambda wajib terautentikasi HMAC-SHA256 + anti-replay timestamp. | Validasi limit tier & durasi di `/media/presign`, verifikasi `content_length` via R2 `HeadObject` di `/media/{id}/complete`, `ZipBombGuard` + `ffprobe`/FFmpeg hard limits, dan verifikasi `Signature` + window timestamp (`<= 5 menit`) pada `/internal/v1/media/ready`. |
 | **INV-9** | User yang sedang aktif membuka channel di WebSocket tidak boleh menerima duplikasi notifikasi push FCM dari channel tersebut. | Cek `ws:active:{user_id}:{channel_id}` di Valkey sebelum enqueue ke `fcm_dispatcher`. |
 | **INV-10** | Tag non-individual (`@everyone`, `@here`, `@all`, mode channel `all`) **dilarang** masuk antrean notifikasi FCM bagi user yang offline `>= 10 menit`. | Evaluasi `(now - ZSCORE users:last_seen user_id) < 600` di `fcm_dispatcher`. |
 | **INV-11** | Story yang sudah melewati `expires_at` (`> 24 jam`) tidak boleh tampil di feed maupun menyisakan file yatim di R2. | Query feed memfilter `expires_at > NOW()`; `story_cleaner` per jam menghapus object R2 sebelum hapus row DB. |
@@ -617,7 +627,7 @@ codexinternational/
 7. **Cloudflare R2 Bucket CORS & Lifecycle Policy:** Bucket R2 wajib mengizinkan CORS method `PUT`, `GET`, `HEAD` beserta header `Content-Type` dan `Cache-Control` untuk origin Desktop Web maupun Capacitor (`https://localhost` / `capacitor://localhost`), serta memasang Lifecycle Rule auto-delete 24 jam pada prefix `raw/videos/`. Arahkan `R2_PUBLIC_BASE_URL` ke Custom Domain Cloudflare agar `Cache-Control: immutable` bekerja penuh di edge PoP.
 8. **Graceful Shutdown (`SIGTERM` / `Ctrl+C`):** `msg_flusher` (250ms) dan `counter_flusher` (500ms) wajib mendengarkan `CancellationToken` / sinyal `SIGTERM` untuk menyelesaikan batch yang sedang berjalan dan mengeksekusi **final flush** ke Postgres sebelum proses berhenti.
 9. **Proteksi SSRF pada URL Eksternal:** Validasi `proof_url` di `contributions` (serta fitur link preview OpenGraph bila ditambahkan di Fase 2+) wajib memblokir skema non-`http(s)` dan resolusi DNS ke IP privat/loopback/link-local (`127.0.0.0/8`, `10.0.0.0/8`, `169.254.169.254`, `::1`).
-10. **AWS Lambda ARM64 (`cargo-lambda`) & Strategi Partitioning `messages`:** Kompilasi `lambda-video-compressor` ke target **ARM64 (Graviton2)** via `cargo-lambda` dengan static `ffmpeg` `aarch64` (dan pastikan `/tmp` Lambda cukup untuk video 50–100 MB). Pada `messages`, Fase 1 memakai 1 tabel dengan index `(channel_id, seq_id DESC)`; bila jumlah baris mulai menembus belasan juta, migrasikan ke PostgreSQL `PARTITION BY RANGE (created_at)` (catatan: PK/UNIQUE wajib menyertakan `created_at` dan FK `reply_to_id` dilepas jadi soft reference lintas partisi).
-11. **Fondasi Add-On Berbayar (Nitro-like Perks) & Keamanan Bio SVG:** Fase 1 sudah menyiapkan `users.can_bypass_compress` + `media_assets.bypass_compress` (`5 MB` / `50 MB`). Bila kelak diperluas ke paket berbayar (*Supporter* / *Pro Builder*: Animated GIF/WebP banner, border animasi, limit upload 100 MB, Story 10 menit, dan **Bio SVG**), **dilarang keras** merender raw `<svg>` langsung ke DOM (risiko Stored XSS); simpan SVG di R2 dan tampilkan lewat `<img src="...">` atau gunakan preset badge.
+10. **AWS Lambda ARM64 (`cargo-lambda`) & Strategi Partitioning `messages`:** Kompilasi `lambda-video-compressor` ke target **ARM64 (Graviton2)** via `cargo-lambda` dengan static `ffmpeg` `aarch64` (set Memory `2048–3008 MB` dan Ephemeral `/tmp` `2048–3072 MB` untuk mendukung input 2K–4K `pro` hingga 200 MB). Pada `messages`, Fase 1 memakai 1 tabel dengan index `(channel_id, seq_id DESC)`; bila jumlah baris mulai menembus belasan juta, migrasikan ke PostgreSQL `PARTITION BY RANGE (created_at)` (catatan: PK/UNIQUE wajib menyertakan `created_at` dan FK `reply_to_id` dilepas jadi soft reference lintas partisi).
+11. **Fondasi Add-On Berbayar (`quality_tier`) & Keamanan Bio SVG:** Fase 1 menggunakan `users.quality_tier` + `media_assets.quality_tier` (`standard` vs `pro`) agar semua media tetap melewati satu jalur kompresi seragam tanpa folder `original/`. Bila kelak diperluas ke paket berbayar (*Supporter* / *Pro Builder*: Animated GIF/WebP banner, border animasi, Story 10 menit, dan **Bio SVG**), **dilarang keras** merender raw `<svg>` langsung ke DOM (risiko Stored XSS); simpan SVG di R2 dan tampilkan lewat `<img src="...">` atau gunakan preset badge.
 12. **One-Time Reveal Credential untuk Bot Token (`bot_tokens`):** Plaintext token **Fairy Godmother Bot** (singkatan: **Godmother Bot**) berformat `fgdm-{kataacak+angkaacak}cdxintrcom` yang diterbitkan oleh `POST /api/v1/bots/{id}/tokens` hanya dikembalikan **satu kali** saat pembuatan (pola *one-time reveal* seperti PAT/API key) agar user menyalin dan menyimpannya sendiri di `.env` VPS, Notepad, atau Secret Manager. Backend hanya menyimpan hash SHA-256 di `bot_tokens` sehingga token tidak dapat dilihat atau dipulihkan lagi di dashboard; jika hilang atau bocor, user harus melakukan revoke (`DELETE`) lalu membuat token baru.
 13. **Managed Bot Hosting via Pterodactyl Application API (VPS Terpisah):** Untuk paket add-on berbayar *Managed Bot*, backend memanggil Pterodactyl Application API (`POST /api/application/servers`, `suspend`, `unsuspend`, `delete`) dengan `external_id` idempoten milik `bot_id` pada **VPS Wings terpisah** dari VPS inti (PostgreSQL, Valkey, Caddy, Axum). Syarat mutlak: (a) tetap wajib melewati gate `approval_status == 'APPROVED'` oleh `dev` (`INV-15`) sebelum server/token dibuat dan dilarang mengaktifkan `BOT_ADMIN` bit `8`; (b) `CODEXTER_BOT_TOKEN` hanya di-inject ke environment startup container saat provisioning tanpa menyimpan plaintext-nya di DB Codexter; (c) jaringan Docker Wings wajib memblokir IP privat/loopback/metadata (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.169.254`) serta membatasi kuota CPU/RAM/Disk/PID agar container bot tetap harus lewat endpoint publik seperti bot eksternal.

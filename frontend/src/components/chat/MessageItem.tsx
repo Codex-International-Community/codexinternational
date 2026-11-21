@@ -94,20 +94,32 @@ export function MessageItem({
 
         {message.attachment && (
           message.attachment.url ? (
-            <a
-              className="attachment-preview"
-              href={message.attachment.url}
-              download={message.attachment.name}
-            >
-              {message.attachment.type.startsWith('image/') ? (
-                <img src={message.attachment.url} alt={message.attachment.name} />
-              ) : (
-                <span>
-                  <Icon name="paperclip" />
-                  {message.attachment.name}
-                </span>
-              )}
-            </a>
+            message.attachment.type.startsWith('video/') ? (
+              <div className="attachment-preview attachment-preview--video">
+                <video
+                  controls
+                  preload="metadata"
+                  src={message.attachment.url}
+                  aria-label={message.attachment.name}
+                  style={{ maxWidth: '100%', maxHeight: 360, borderRadius: 8 }}
+                />
+              </div>
+            ) : (
+              <a
+                className="attachment-preview"
+                href={message.attachment.url}
+                download={message.attachment.name}
+              >
+                {message.attachment.type.startsWith('image/') ? (
+                  <img src={message.attachment.url} alt={message.attachment.name} />
+                ) : (
+                  <span>
+                    <Icon name="paperclip" />
+                    {message.attachment.name}
+                  </span>
+                )}
+              </a>
+            )
           ) : (
             <div className="attachment-preview attachment-preview--expired">
               <span>
