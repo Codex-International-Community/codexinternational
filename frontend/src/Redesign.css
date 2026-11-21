@@ -779,7 +779,23 @@ button:active {
 }
 
 .discover-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
   align-self: stretch;
+}
+
+.discover-heading > div {
+  min-width: 0;
+}
+
+.discover-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin-top: 4px;
 }
 
 .page-subtitle,

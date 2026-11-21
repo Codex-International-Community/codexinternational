@@ -16,6 +16,8 @@ export function DiscoverView({ onCreateCommunity }: DiscoverViewProps) {
             <h1>Discover communities</h1>
             <p>Find communities to join. Available communities will appear here.</p>
           </div>
+        </div>
+        <div className="discover-actions">
           <button className="primary-action" onClick={onCreateCommunity}>
             <Icon name="plus" size={15} /> Create community
           </button>
