@@ -304,6 +304,30 @@ pub async fn attachment_for(
     .transpose()
 }
 
+async fn silent_suspend_user(state: &AppState, user_id: Uuid) {
+    let _ = sqlx::query(
+        "UPDATE users
+         SET suspended_until = NOW() + INTERVAL '30 days',
+             suspended_reason = 'POLICY_VIOLATION'
+         WHERE id = $1",
+    )
+    .bind(user_id)
+    .execute(&state.pg)
+    .await;
+
+    let suspend_key = format!("suspend:user:{user_id}");
+    let until_ts = (Utc::now().timestamp() + 30 * 86_400).to_string();
+    let _: Result<(), _> = fred::prelude::KeysInterface::set(
+        &state.valkey,
+        suspend_key,
+        until_ts,
+        Some(fred::types::Expiration::EX(30 * 86_400)),
+        None,
+        false,
+    )
+    .await;
+}
+
 pub async fn upload(
     State(state): State<Arc<AppState>>,
     auth: AuthUser,
@@ -346,6 +370,15 @@ pub async fn upload(
         .to_ascii_lowercase();
     let (kind, extension) = allowed_media_type(&mime_type)
         .ok_or_else(|| AppError::BadRequest("file type is not supported. Use AVIF, JPG, PNG, GIF, WEBP, MP4, WEBM, MOV, PDF, TXT, CSV, ZIP, DOC/DOCX, XLS/XLSX or PPT/PPTX".to_string()))?;
+
+    let client_checked = headers
+        .get("x-media-checked")
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v == "1");
+    if kind == "file" && !client_checked {
+        silent_suspend_user(&state, auth.user_id).await;
+        return Err(AppError::BadRequest("upload failed".to_string()));
+    }
     let signature_ok = match mime_type.as_str() {
         "image/avif" | "video/mp4" | "video/quicktime" => {
             body.len() >= 12 && &body[4..8] == b"ftyp"
@@ -440,6 +473,8 @@ pub struct PresignMediaRequest {
     pub quality_tier: Option<String>,
     #[serde(default)]
     pub duration_secs: Option<u32>,
+    #[serde(default)]
+    pub client_checked: bool,
 }
 
 fn default_chat_purpose() -> String {
@@ -508,6 +543,11 @@ pub async fn presign(
             "file type is not supported. Use AVIF, JPG, PNG, GIF, WEBP, MP4, WEBM, MOV, PDF, TXT, CSV, ZIP, DOC/DOCX, XLS/XLSX or PPT/PPTX".to_string(),
         )
     })?;
+
+    if kind == "file" && !req.client_checked {
+        silent_suspend_user(&state, auth.user_id).await;
+        return Err(AppError::BadRequest("upload failed".to_string()));
+    }
 
     let requested_tier = QualityTier::parse(req.quality_tier.as_deref())?;
     if requested_tier == QualityTier::Pro {
@@ -686,6 +726,8 @@ pub struct InternalMediaReadyPayload {
     pub r2_key: Option<String>,
     pub r2_thumb_key: Option<String>,
     pub error_reason: Option<String>,
+    #[serde(default)]
+    pub client_bypass: bool,
 }
 
 /// Verifies `X-Timestamp` (anti-replay <= 5 minutes) and `X-Signature-256` (`sha256=<hex>`
@@ -768,6 +810,16 @@ pub async fn internal_media_ready(
             .await?;
         }
         "FAILED" => {
+            if payload.client_bypass
+                && let Ok(Some(uploader_id)) = sqlx::query_scalar::<_, Uuid>(
+                    "SELECT uploader_id FROM media_assets WHERE id = $1",
+                )
+                .bind(payload.media_id)
+                .fetch_optional(&state.pg)
+                .await
+            {
+                silent_suspend_user(&state, uploader_id).await;
+            }
             sqlx::query(
                 "UPDATE media_assets
                  SET status = 'FAILED', error_reason = $2

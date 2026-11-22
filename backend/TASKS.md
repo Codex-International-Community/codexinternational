@@ -293,13 +293,13 @@ codexinternational/
 ### Task 3.2 — Crate Compressor Lambda (Rust + Image Limits + FFmpeg Video Bomb Guard)
 
 - **Goal:** Membangun AWS Lambda worker berbasis `lambda_runtime` + `aws-sdk-s3` (pointed ke R2) + static `ffmpeg` dengan dua profil `quality_tier` (`standard` 1080p CRF 27 / `-maxrate 2.5M` / AAC 128k / maks 180s vs `pro` 4K 2160p CRF 21 / `-maxrate 8M` / AAC 192–256k / maks 300s), `+faststart` + thumbnail WebP, pertahanan **Image Bomb** (`ImageReader` + `Limits`) dan **Video Bomb** (`ffprobe` pre-flight timeout `10s`, hard flags `-map 0:v:0 -map 0:a:0?`, `-t`, `-fs`, `-max_muxing_queue_size 1024`, `tokio::time::timeout(90s)` + `kill()` + cleanup `/tmp`, stream R2 ke `/tmp`, `DeleteObject` + webhook `FAILED` jika bomb terdeteksi).
-- **Files:** `backend/lambda-image-compressor/src/compressor.rs`, `backend/lambda-image-compressor/src/video.rs`, `backend/lambda-image-compressor/src/main.rs`.
+- **Files:** `backend/lambda-light-media-compressor/src/compressor.rs`, `backend/lambda-light-media-compressor/src/zip_guard.rs`, `backend/lambda-video-compressor/src/video.rs`, `backend/lambda-video-compressor/src/main.rs`.
 - **Dependencies:** `Task 3.1`.
 - **Steps:**
   1. **Red:** Tulis unit test untuk `ImageReader` `Limits`, parser metadata `ffprobe`, penolakan Video Bomb (resolusi ekstrem `> 4096` / `> 8_294_400` px, durasi melebihi batas tier, `nb_streams > 4`, FPS abnormal), dan generator argumen FFmpeg per `quality_tier`.
   2. **Green:** Implementasikan `compressor.rs` (`Limits` anti image bomb) dan `video.rs` (`QualityTier`, `validate_ffprobe_metadata`, `build_ffmpeg_args`). Siapkan target build **ARM64 (Graviton2)** via `cargo-lambda` (`aarch64-unknown-linux-gnu`/`musl`, Memory `2048–3008 MB`, `/tmp` `2048–3072 MB`).
 - **DoD:**
-  - [x] `cargo test` di `lambda-image-compressor` bersih untuk image limits, `ffprobe` video bomb guard, dan profil FFmpeg `standard` vs `pro`.
+  - [x] `cargo test` di `lambda-light-media-compressor` & `lambda-video-compressor` bersih untuk image limits, `ffprobe` video bomb guard, dan profil FFmpeg `standard` vs `pro`.
 
 ### Task 3.3 — Internal HMAC Media Callback & WS `MEDIA_READY` (`INV-8`)
 
