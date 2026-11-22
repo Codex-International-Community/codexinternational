@@ -128,7 +128,10 @@ async fn function_handler(
 ) -> Result<MediaJobResult, LambdaError> {
     let payload = event.payload;
     let kind = payload.kind.as_deref().unwrap_or("image");
-    let callback_url = payload.callback_url.or_else(|| ctx.webhook_url.clone());
+    let callback_url = ctx
+        .webhook_url
+        .clone()
+        .or_else(|| payload.callback_url.filter(|u| u.starts_with("https://")));
 
     tracing::info!(
         media_id = %payload.media_id,
@@ -138,7 +141,8 @@ async fn function_handler(
         "starting lightweight media job"
     );
 
-    let obj = ctx
+    const MAX_SOURCE_BYTES: usize = 25 * 1024 * 1024;
+    let mut obj = ctx
         .s3
         .get_object()
         .bucket(&ctx.bucket)
@@ -147,12 +151,24 @@ async fn function_handler(
         .await
         .context("failed to download source object from R2")?;
 
-    let raw_bytes = obj
+    if obj
+        .content_length()
+        .is_some_and(|len| len as usize > MAX_SOURCE_BYTES)
+    {
+        return Err(anyhow::anyhow!("source object exceeds maximum allowed size").into());
+    }
+    let mut raw_bytes = Vec::new();
+    while let Some(chunk) = obj
         .body
-        .collect()
+        .try_next()
         .await
-        .context("failed to read R2 object body")?
-        .into_bytes();
+        .context("failed to stream R2 object body")?
+    {
+        if raw_bytes.len().saturating_add(chunk.len()) > MAX_SOURCE_BYTES {
+            return Err(anyhow::anyhow!("source object exceeds maximum allowed size").into());
+        }
+        raw_bytes.extend_from_slice(&chunk);
+    }
 
     if kind == "file" {
         let client_bypass = payload.client_checked == Some(false);
@@ -306,7 +322,12 @@ async fn main() -> Result<(), LambdaError> {
     let webhook_url = std::env::var("LAMBDA_WEBHOOK_URL")
         .ok()
         .filter(|s| !s.trim().is_empty());
-    let webhook_secret = std::env::var("LAMBDA_WEBHOOK_SECRET").unwrap_or_default();
+    let webhook_secret =
+        std::env::var("LAMBDA_WEBHOOK_SECRET").expect("LAMBDA_WEBHOOK_SECRET must be set");
+    assert!(
+        !webhook_secret.trim().is_empty(),
+        "LAMBDA_WEBHOOK_SECRET must not be empty"
+    );
 
     let ctx = Arc::new(AppContext {
         s3: build_r2_client(&account_id, &access_key, &secret_key),

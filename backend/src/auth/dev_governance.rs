@@ -246,17 +246,36 @@ pub async fn list_community_audit_logs(
     auth: AuthUser,
     Path(community_id): Path<Uuid>,
 ) -> Result<Json<Vec<AuditLogEntry>>, AppError> {
-    let is_member: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM community_members WHERE community_id = $1 AND user_id = $2)",
+    let has_community_priv: bool = sqlx::query_scalar(
+        "SELECT EXISTS(
+            SELECT 1 FROM communities WHERE id = $1 AND owner_id = $2
+        ) OR EXISTS(
+            SELECT 1
+            FROM community_members cm
+            JOIN community_roles r ON r.id = cm.role_id
+            WHERE cm.community_id = $1
+              AND cm.user_id = $2
+              AND (r.permissions & $3) <> 0
+        )",
     )
     .bind(community_id)
     .bind(auth.user_id)
+    .bind(
+        crate::communities::permissions::PERM_ADMINISTRATOR
+            | crate::communities::permissions::PERM_MODERATE_MEMBERS,
+    )
     .fetch_one(&state.pg)
     .await?;
 
-    if !is_member && auth.platform_role != "dev" {
+    let is_on_duty_dev = if !has_community_priv && auth.platform_role == "dev" {
+        is_dev_on_duty(&state.pg, auth.user_id, community_id).await?
+    } else {
+        false
+    };
+
+    if !has_community_priv && !is_on_duty_dev {
         return Err(AppError::Forbidden(
-            "only community members can view this server's audit logs".to_string(),
+            "only community moderators/admins or on-duty devs can view audit logs".to_string(),
         ));
     }
 

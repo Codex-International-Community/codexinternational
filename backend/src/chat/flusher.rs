@@ -103,7 +103,35 @@ async fn flush(
     state: &AppState,
     batch: Vec<(String, MessageStreamRecord)>,
 ) -> Result<(), AppError> {
-    persist_batch(&state.pg, &batch).await?;
+    if let Err(batch_err) = persist_batch(&state.pg, &batch).await {
+        tracing::warn!(error = %batch_err, count = batch.len(), "batch persist failed; isolating per-record");
+        let mut ack_ids = Vec::with_capacity(batch.len());
+        for (id, rec) in batch {
+            let single = [(id.clone(), rec)];
+            match persist_batch(&state.pg, &single).await {
+                Ok(()) => ack_ids.push(id),
+                Err(AppError::Internal(err))
+                    if err
+                        .downcast_ref::<sqlx::Error>()
+                        .and_then(|se| se.as_database_error())
+                        .and_then(|de| de.code())
+                        .is_some_and(|c| c.starts_with("23") || c.starts_with("22")) =>
+                {
+                    tracing::error!(stream_id = %id, error = %err, "dropping poison stream record after permanent SQL constraint error");
+                    ack_ids.push(id);
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        if !ack_ids.is_empty() {
+            let _: i64 = state
+                .valkey
+                .xack(MESSAGE_STREAM, MESSAGE_GROUP, ack_ids.clone())
+                .await?;
+            let _: i64 = state.valkey.xdel(MESSAGE_STREAM, ack_ids).await?;
+        }
+        return Ok(());
+    }
     let ids = batch.iter().map(|(id, _)| id.clone()).collect::<Vec<_>>();
     let _: i64 = state
         .valkey

@@ -12,7 +12,7 @@ use axum::extract::{
 use chrono::Utc;
 use fred::interfaces::{EventInterface, KeysInterface, PubsubInterface};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{
     sync::mpsc,
     time::{interval, timeout},
@@ -75,8 +75,7 @@ async fn run_socket(mut socket: WebSocket, state: Arc<AppState>) {
     }
 
     let (tx, mut rx) = mpsc::channel::<String>(128);
-    let mut subscribed = HashSet::new();
-    let mut jobs = Vec::new();
+    let mut subscribed: HashMap<Uuid, tokio::task::JoinHandle<()>> = HashMap::new();
     let mut focused: Option<Uuid> = None;
     let mut beat = interval(Duration::from_secs(30));
     let presence = format!("presence:user:{}", claims.sub);
@@ -101,12 +100,17 @@ async fn run_socket(mut socket: WebSocket, state: Arc<AppState>) {
            ClientFrame::Auth{..}=>{let _=send(&mut socket,serde_json::json!({"type":"ERROR","code":"ALREADY_AUTHENTICATED"})).await;}
            ClientFrame::Ping=>{let _=send(&mut socket,serde_json::json!({"type":"PONG"})).await;}
            ClientFrame::SubscribeChannels{channels}=>for sub in channels{
-            if subscribed.contains(&sub.channel_id){continue;}
+            if subscribed.contains_key(&sub.channel_id){continue;}
+            if subscribed.len() >= 200 {
+             let _=send(&mut socket,serde_json::json!({"type":"ERROR","code":"SUBSCRIPTION_LIMIT","channelId":sub.channel_id})).await;
+             continue;
+            }
             if let Err(e)=channel_access(&state,sub.channel_id,claims.sub,PERM_VIEW_CHANNEL,false).await{let _=send(&mut socket,serde_json::json!({"type":"ERROR","channelId":sub.channel_id,"message":e.to_string()})).await;continue;}
             let(receiver,first)=state.ws_registry.subscribe(sub.channel_id).await;
             if first{let _=state.valkey_sub.subscribe(format!("pubsub:ch:{}",sub.channel_id)).await;}
-            let sender=tx.clone();jobs.push(tokio::spawn(async move{let mut receiver=receiver;loop{match receiver.recv().await{Ok(v)=>if sender.send(v).await.is_err(){break;},Err(tokio::sync::broadcast::error::RecvError::Lagged(_))=>continue,Err(tokio::sync::broadcast::error::RecvError::Closed)=>break,}}}));
-            subscribed.insert(sub.channel_id);
+            let sender=tx.clone();
+            let handle = tokio::spawn(async move{let mut receiver=receiver;loop{match receiver.recv().await{Ok(v)=>if sender.send(v).await.is_err(){break;},Err(tokio::sync::broadcast::error::RecvError::Lagged(_))=>continue,Err(tokio::sync::broadcast::error::RecvError::Closed)=>break,}}});
+            subscribed.insert(sub.channel_id, handle);
             match history(&state,sub.channel_id,sub.last_seen_seq_id,100).await{Ok(messages)=>{let _=send(&mut socket,serde_json::json!({"type":"GAP_SYNC_BATCH","channelId":sub.channel_id,"messages":messages,"resyncRequired":false})).await;},Err(e)=>{let _=send(&mut socket,serde_json::json!({"type":"ERROR","channelId":sub.channel_id,"message":e.to_string()})).await;}}
            },
            ClientFrame::SendMessage{channel_id,client_msg_id,content,media_id,reply_to_id,reply_to_story_id}=>{
@@ -127,16 +131,35 @@ async fn run_socket(mut socket: WebSocket, state: Arc<AppState>) {
           }
          },
          _=beat.tick()=>{
+          let still_valid=sqlx::query_scalar::<_,bool>("SELECT EXISTS(SELECT 1 FROM user_devices WHERE id=$1 AND user_id=$2 AND revoked_at IS NULL AND expires_at>NOW()) AND EXISTS(SELECT 1 FROM users WHERE id=$2 AND (suspended_until IS NULL OR suspended_until<=NOW()))")
+           .bind(claims.sid).bind(claims.sub).fetch_one(&state.pg).await.unwrap_or(false);
+          if !still_valid {
+           let _=socket.send(Message::Close(None)).await;
+           break;
+          }
+          let ch_ids: Vec<Uuid> = subscribed.keys().copied().collect();
+          for ch_id in ch_ids {
+           if channel_access(&state, ch_id, claims.sub, PERM_VIEW_CHANNEL, false).await.is_err() {
+            if let Some(handle) = subscribed.remove(&ch_id) {
+             handle.abort();
+             if state.ws_registry.unsubscribe(ch_id).await {
+              let _ = state.valkey_sub.unsubscribe(format!("pubsub:ch:{ch_id}")).await;
+             }
+            }
+            if focused == Some(ch_id) {
+             focused = None;
+             let _: Result<i64, _> = state.valkey.del(format!("ws:active:{}:{ch_id}", claims.sub)).await;
+            }
+           }
+          }
           let _:Result<(),_>=state.valkey.set(&presence,Utc::now().timestamp().to_string(),Some(fred::types::Expiration::EX(90)),None,false).await;
           let _=sqlx::query("UPDATE users SET last_seen_at=NOW() WHERE id=$1").bind(claims.sub).execute(&state.pg).await;
           if let Some(id)=focused{let _:Result<(),_>=state.valkey.set(format!("ws:active:{}:{id}",claims.sub),"1",Some(fred::types::Expiration::EX(90)),None,false).await;}
          }
         }
     }
-    for job in jobs {
+    for (id, job) in subscribed {
         job.abort();
-    }
-    for id in subscribed {
         if state.ws_registry.unsubscribe(id).await {
             let _ = state
                 .valkey_sub

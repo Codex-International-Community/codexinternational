@@ -269,9 +269,21 @@ pub async fn rate_limit_middleware(
         Ok(Err(err @ AppError::TooManyRequests { .. })) => return Err(err),
         Ok(Err(err)) => {
             tracing::warn!(error = %err, scope = policy.scope, "rate limiter valkey unavailable");
+            if path.starts_with("/api/v1/auth/") || path.starts_with("/api/v1/media") {
+                return Err(AppError::ServiceUnavailable {
+                    retry_after_secs: 5,
+                    message: "rate limiter unavailable".to_string(),
+                });
+            }
         }
         Err(_) => {
             tracing::warn!(scope = policy.scope, "rate limiter valkey check timed out");
+            if path.starts_with("/api/v1/auth/") || path.starts_with("/api/v1/media") {
+                return Err(AppError::ServiceUnavailable {
+                    retry_after_secs: 5,
+                    message: "rate limiter unavailable".to_string(),
+                });
+            }
         }
     }
 
@@ -345,9 +357,16 @@ pub fn extract_client_ip(req: &Request<Body>, trusted_proxies: &[String]) -> Str
         .get("x-forwarded-for")
         .and_then(|v| v.to_str().ok())
         .and_then(|s| {
-            s.rsplit(',')
-                .map(str::trim)
-                .find(|p| p.parse::<IpAddr>().is_ok())
+            let mut last_valid: Option<&str> = None;
+            for part in s.rsplit(',').map(str::trim) {
+                if let Ok(parsed) = part.parse::<IpAddr>() {
+                    last_valid = Some(part);
+                    if !is_trusted_proxy(&parsed, trusted_proxies) {
+                        return Some(part);
+                    }
+                }
+            }
+            last_valid
         })
     {
         return xff.to_string();

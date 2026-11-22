@@ -51,7 +51,9 @@ impl ZipBombGuard {
 
             let entry_name = entry
                 .name()
-                .map_err(|_| anyhow::anyhow!("SECURITY_REJECTED: invalid or corrupted zip archive"))?
+                .map_err(|_| {
+                    anyhow::anyhow!("SECURITY_REJECTED: invalid or corrupted zip archive")
+                })?
                 .to_ascii_lowercase();
             let is_nested_archive = entry_name.ends_with(".zip")
                 || entry_name.ends_with(".gz")

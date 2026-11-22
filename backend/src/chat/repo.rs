@@ -142,6 +142,26 @@ pub async fn enqueue(
             ));
         }
     }
+    if let Some(story_id) = input.reply_to_story_id {
+        let ok = sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM stories WHERE id=$1)")
+            .bind(story_id)
+            .fetch_one(&state.pg)
+            .await?;
+        if !ok {
+            return Err(AppError::BadRequest(
+                "reply story target does not exist".into(),
+            ));
+        }
+    }
+    let already_persisted = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM messages WHERE client_msg_id=$1)",
+    )
+    .bind(input.client_msg_id)
+    .fetch_one(&state.pg)
+    .await?;
+    if already_persisted {
+        return Err(AppError::Conflict("duplicate client_msg_id".into()));
+    }
     let author=sqlx::query_as::<_,AuthorRow>("SELECT u.display_name,u.username,r.name AS role FROM users u LEFT JOIN channels ch ON ch.id=$2 LEFT JOIN community_members cm ON cm.community_id=ch.community_id AND cm.user_id=u.id LEFT JOIN community_roles r ON r.id=cm.role_id WHERE u.id=$1").bind(user.user_id).bind(channel).fetch_optional(&state.pg).await?.ok_or_else(||AppError::Unauthorized("user account no longer exists".into()))?;
     let attachment = if let Some(media_id) = input.media_id {
         let row=sqlx::query_as::<_,(String,String,i64,String)>("SELECT file_name,mime_type,COALESCE(size_bytes,0),r2_key FROM media_assets WHERE id=$1 AND uploader_id=$2 AND purpose='chat' AND status='READY'")

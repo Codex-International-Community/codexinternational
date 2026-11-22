@@ -116,6 +116,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          fingerprint: ${{ secrets.VPS_SSH_FINGERPRINT }}
           script: |
             set -euo pipefail
             [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"

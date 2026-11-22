@@ -20,6 +20,9 @@ pub struct MediaReadyCallback {
 /// Computes `HMAC-SHA256` hex signature over `{timestamp}.{body}` for
 /// `/internal/v1/media/ready` webhook verification (`INV-8`).
 pub fn sign_hmac_sha256(secret: &str, timestamp: i64, body: &[u8]) -> Result<String> {
+    if secret.trim().is_empty() {
+        anyhow::bail!("LAMBDA_WEBHOOK_SECRET must not be empty");
+    }
     let mut mac =
         HmacSha256::new_from_slice(secret.as_bytes()).context("invalid HMAC secret key")?;
     mac.update(timestamp.to_string().as_bytes());

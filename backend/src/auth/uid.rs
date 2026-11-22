@@ -253,33 +253,14 @@ pub async fn assign_reserved_uid(
         ));
     }
 
-    if auth.user_id != target_user_id {
-        let actor_badge: Option<String> =
-            sqlx::query_scalar("SELECT platform_badge FROM users WHERE id = $1")
-                .bind(auth.user_id)
-                .fetch_optional(&state.pg)
-                .await?
-                .flatten();
-        let target_row: Option<(String, Option<String>)> =
-            sqlx::query_as("SELECT platform_role, platform_badge FROM users WHERE id = $1")
-                .bind(target_user_id)
-                .fetch_optional(&state.pg)
-                .await?;
-        if let Some((target_role, target_badge)) = target_row {
-            let actor_w = crate::auth::dev_governance::platform_weight(
-                &auth.platform_role,
-                actor_badge.as_deref(),
-            );
-            let target_w =
-                crate::auth::dev_governance::platform_weight(&target_role, target_badge.as_deref());
-            if target_w >= actor_w {
-                return Err(AppError::Forbidden(
-                    "cannot modify a platform user with equal or higher hierarchy weight"
-                        .to_string(),
-                ));
-            }
-        }
-    }
+    let actor_badge: Option<String> =
+        sqlx::query_scalar("SELECT platform_badge FROM users WHERE id = $1")
+            .bind(auth.user_id)
+            .fetch_optional(&state.pg)
+            .await?
+            .flatten();
+    let actor_w =
+        crate::auth::dev_governance::platform_weight(&auth.platform_role, actor_badge.as_deref());
 
     let next_platform_role = match req.platform_role.as_deref() {
         Some(r) => {
@@ -293,6 +274,39 @@ pub async fn assign_reserved_uid(
         }
         None => None,
     };
+
+    if auth.user_id != target_user_id {
+        let target_row: Option<(String, Option<String>)> =
+            sqlx::query_as("SELECT platform_role, platform_badge FROM users WHERE id = $1")
+                .bind(target_user_id)
+                .fetch_optional(&state.pg)
+                .await?;
+        if let Some((target_role, target_badge)) = target_row {
+            let target_w =
+                crate::auth::dev_governance::platform_weight(&target_role, target_badge.as_deref());
+            if target_w >= actor_w {
+                return Err(AppError::Forbidden(
+                    "cannot modify a platform user with equal or higher hierarchy weight"
+                        .to_string(),
+                ));
+            }
+            if let Some(ref next_role) = next_platform_role {
+                let next_w = crate::auth::dev_governance::platform_weight(
+                    next_role,
+                    target_badge.as_deref(),
+                );
+                if next_w >= actor_w {
+                    return Err(AppError::Forbidden(
+                        "cannot promote a user to equal or higher hierarchy weight".to_string(),
+                    ));
+                }
+            }
+        }
+    } else if req.slot_number == 1 && actor_w < 100 {
+        return Err(AppError::Forbidden(
+            "only Founder can claim reserved slot 1".to_string(),
+        ));
+    }
 
     let mut tx = state.pg.begin().await?;
 
@@ -358,6 +372,10 @@ pub async fn assign_reserved_uid(
     .await?;
 
     tx.commit().await?;
+
+    if next_platform_role.is_some() {
+        let _ = crate::auth::devices::revoke_all_user_devices(&state, target_user_id).await;
+    }
 
     Ok(Json(MeResponse { user: updated }))
 }

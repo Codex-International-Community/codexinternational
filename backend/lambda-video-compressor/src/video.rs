@@ -166,6 +166,8 @@ pub fn build_ffmpeg_args(input_path: &str, output_path: &str, tier: QualityTier)
 
     vec![
         "-y".to_string(),
+        "-protocol_whitelist".to_string(),
+        "file".to_string(),
         "-i".to_string(),
         input_path.to_string(),
         "-map".to_string(),
