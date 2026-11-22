@@ -33,6 +33,8 @@ struct MediaJobPayload {
     #[serde(default)]
     max_height: Option<u32>,
     #[serde(default)]
+    client_checked: Option<bool>,
+    #[serde(default)]
     callback_url: Option<String>,
 }
 
@@ -74,6 +76,7 @@ async fn reject_and_cleanup(
     source_key: &str,
     callback_url: Option<String>,
     reason: String,
+    client_bypass: bool,
 ) -> MediaJobResult {
     tracing::warn!(media_id = %media_id, source_key = %source_key, reason = %reason, "rejecting media");
 
@@ -97,6 +100,7 @@ async fn reject_and_cleanup(
             r2_key: None,
             r2_thumb_key: None,
             error_reason: Some(reason),
+            client_bypass,
             size_bytes: 0,
             width: 0,
             height: 0,
@@ -151,6 +155,7 @@ async fn function_handler(
         .into_bytes();
 
     if kind == "file" {
+        let client_bypass = payload.client_checked == Some(false);
         let lower_key = payload.source_key.to_ascii_lowercase();
         let is_office = lower_key.ends_with(".docx")
             || lower_key.ends_with(".xlsx")
@@ -172,9 +177,22 @@ async fn function_handler(
                     &payload.source_key,
                     callback_url,
                     format!("SECURITY_REJECTED: decompression bomb detected ({err})"),
+                    client_bypass,
                 )
                 .await);
             }
+        }
+
+        if client_bypass {
+            return Ok(reject_and_cleanup(
+                &ctx,
+                &payload.media_id,
+                &payload.source_key,
+                callback_url,
+                "upload failed".to_string(),
+                true,
+            )
+            .await);
         }
 
         let size_bytes = raw_bytes.len();
@@ -187,6 +205,7 @@ async fn function_handler(
                 r2_key: Some(payload.source_key.clone()),
                 r2_thumb_key: None,
                 error_reason: None,
+                client_bypass: false,
                 size_bytes,
                 width: 0,
                 height: 0,
@@ -223,6 +242,7 @@ async fn function_handler(
                 &payload.source_key,
                 callback_url,
                 format!("SECURITY_REJECTED: decompression bomb detected ({err})"),
+                false,
             )
             .await);
         }
@@ -250,6 +270,7 @@ async fn function_handler(
             r2_key: Some(payload.dest_key.clone()),
             r2_thumb_key: None,
             error_reason: None,
+            client_bypass: false,
             size_bytes,
             width: compressed.width,
             height: compressed.height,

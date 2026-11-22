@@ -6,6 +6,7 @@ import '../styles/adaptive.css'
 import type { AuthSession } from '../api/client'
 import { ApiError } from '../api/client'
 import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, listPinnedMessages, mapChatMessage, pinMessage, postMessage, toggleMessageReaction, unpinMessage, uploadChatMedia, type ChatMessageWire } from '../api/chat'
+import { inspectZipFile } from '../utils/zipGuard'
 import { createChannel as createChannelApi, createCommunity, createCommunityCategory, createCommunityEvent, createOrGetDm, deleteCommunity, getCommunityInvite, getCommunityMemberSettings, joinCommunity, leaveCommunity, listChannels, listCommunities, listCommunityCategories, listCommunityMembers, updateCommunity, updateCommunityMemberSettings, updateCommunityNickname, type CommunityCategory, type CommunityMemberSettings } from '../api/communities'
 import type { ViewportInfo } from '../hooks/useViewport'
 import type { Attachment, View } from '../types/common'
@@ -1837,6 +1838,26 @@ export function WorkspacePage({
                   const supportedTypes = ['image/avif', 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime', 'application/pdf', 'text/plain', 'text/csv', 'application/zip', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation']
                   if (!supportedTypes.includes(file.type)) {
                     notify('Supported: images, videos (MP4/WEBM/MOV), PDF, TXT, CSV, ZIP, Word, Excel and PowerPoint.')
+                    return
+                  }
+                  const isZipContainer =
+                    file.type === 'application/zip' ||
+                    file.type.startsWith('application/vnd.openxmlformats-officedocument.')
+                  if (isZipContainer) {
+                    const isOffice = file.type !== 'application/zip'
+                    void inspectZipFile(file, isOffice)
+                      .then(() => {
+                        const zipUrl = URL.createObjectURL(file)
+                        blobUrlsRef.current.add(zipUrl)
+                        setAttachment((prev) => {
+                          revokeBlobUrl(prev?.url)
+                          return { name: file.name, type: file.type, url: zipUrl }
+                        })
+                        setAttachmentFile(file)
+                      })
+                      .catch((err) => {
+                        notify(err instanceof Error ? err.message : 'Archive failed safety check.')
+                      })
                     return
                   }
                   const url = URL.createObjectURL(file)

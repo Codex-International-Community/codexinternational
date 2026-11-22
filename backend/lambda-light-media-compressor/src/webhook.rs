@@ -13,6 +13,7 @@ pub struct MediaReadyCallback {
     pub r2_key: Option<String>,
     pub r2_thumb_key: Option<String>,
     pub error_reason: Option<String>,
+    pub client_bypass: bool,
     pub size_bytes: usize,
     pub width: u32,
     pub height: u32,

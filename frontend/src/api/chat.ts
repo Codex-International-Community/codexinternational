@@ -116,6 +116,7 @@ export async function uploadChatMedia(
         fileName: safeName,
         mimeType: file.type || 'application/octet-stream',
         sizeBytes: file.size,
+        clientChecked: true,
         ...(durationSecs !== undefined ? { durationSecs } : {}),
       },
     })
@@ -137,7 +138,10 @@ export async function uploadChatMedia(
     })
   } catch (error) {
     console.warn('Direct R2 presigned upload fallback to server proxy:', error)
-    return apiUpload<ChatMediaUploadResult>('/api/v1/media', file, safeName, { 'X-Channel-Id': channelId })
+    return apiUpload<ChatMediaUploadResult>('/api/v1/media', file, safeName, {
+      'X-Channel-Id': channelId,
+      'X-Media-Checked': '1',
+    })
   }
 }
 
