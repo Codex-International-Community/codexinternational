@@ -1,29 +1,40 @@
 import { Icon } from '../common/Icon'
-import type { Server } from '../../types/chat'
+import { Avatar } from '../common/Avatar'
+import type { Server, User } from '../../types/chat'
 import type { View } from '../../types/common'
 
 interface ServerRailProps {
   servers: Server[]
+  currentUser: User
   activeServerId: string
   activeView: View
+  profileMenuOpen: boolean
   onSelectHome: () => void
   onSelectServer: (id: string) => void
   onCreateServer: () => void
   onNavigateDiscover: () => void
   onNavigateSocial: () => void
-  onOpenBots: () => void
+  onToggleProfileMenu: () => void
+  onOpenProfile: () => void
+  onNavigateSettings: () => void
+  onLogout?: () => void
 }
 
 export function ServerRail({
   servers,
+  currentUser,
   activeServerId,
   activeView,
+  profileMenuOpen,
   onSelectHome,
   onSelectServer,
   onCreateServer,
   onNavigateDiscover,
   onNavigateSocial,
-  onOpenBots,
+  onToggleProfileMenu,
+  onOpenProfile,
+  onNavigateSettings,
+  onLogout,
 }: ServerRailProps) {
   const homeActive = activeView === 'home' || activeView === 'dm'
 
@@ -96,15 +107,36 @@ export function ServerRail({
 
       <div className="rail-spacer" />
 
-      <button
-        type="button"
-        className={`rail-bot ${activeView === 'bots' ? 'active' : ''}`}
-        aria-label="Bot Portal"
-        title="Bot Portal"
-        onClick={onOpenBots}
-      >
-        <Icon name="shield" size={19} />
-      </button>
+      <div className="rail-profile-wrap">
+        <button
+          type="button"
+          className={`rail-user ${activeView === 'profile' || activeView === 'settings' ? 'active' : ''}`}
+          aria-label="Profile menu"
+          aria-expanded={profileMenuOpen}
+          aria-haspopup="menu"
+          title={currentUser.name}
+          onClick={onToggleProfileMenu}
+        >
+          <Avatar user={currentUser} size="small" />
+        </button>
+        {profileMenuOpen && (
+          <div className="rail-profile-menu" role="menu" aria-label="Profile menu">
+            <strong>{currentUser.name}</strong>
+            <span>@{currentUser.handle.replace(/^@/, '')}</span>
+            <button type="button" role="menuitem" onClick={() => { onOpenProfile(); onToggleProfileMenu() }}>
+              <Icon name="user" size={15} /> View profile
+            </button>
+            <button type="button" role="menuitem" onClick={() => { onNavigateSettings(); onToggleProfileMenu() }}>
+              <Icon name="settings" size={15} /> Settings
+            </button>
+            {onLogout && (
+              <button type="button" role="menuitem" onClick={() => { onToggleProfileMenu(); onLogout() }}>
+                <Icon name="logout" size={15} /> Sign out
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </aside>
   )
 }

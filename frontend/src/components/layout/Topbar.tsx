@@ -90,7 +90,7 @@ export function Topbar({
       <div className="topbar-title">
         {view === 'discover' && onBack && (
           <button type="button" className="discover-back" onClick={onBack} aria-label="Back to previous page" title="Back">
-            <Icon name="arrow" />
+            <Icon name="arrow" size={18} style={{ transform: 'scaleX(-1)' }} />
           </button>
         )}
         <span className="channel-symbol">

@@ -202,12 +202,8 @@ export function WorkspacePage({
     parseWorkspaceRoute(window.location.pathname),
   )
   const [view, setView] = useState<View>(initialRoute.view)
-  const [pageTransition, setPageTransition] = useState<'rocket' | 'slide-forward' | 'slide-backward' | null>(null)
+  const [pageTransition, setPageTransition] = useState<'slide-forward' | 'slide-backward' | null>(null)
   const previousViewRef = useRef<View>(initialRoute.view)
-  const rocketCoverRef = useRef<HTMLDivElement>(null)
-  const rocketRef = useRef<HTMLSpanElement>(null)
-  const rocketStarsRef = useRef<HTMLDivElement>(null)
-  const rocketLabelRef = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
     const previousView = previousViewRef.current
@@ -223,62 +219,6 @@ export function WorkspacePage({
     }
   }, [view])
 
-  useLayoutEffect(() => {
-    if (pageTransition !== 'rocket') return
-    const cover = rocketCoverRef.current
-    const rocket = rocketRef.current
-    const stars = rocketStarsRef.current
-    const label = rocketLabelRef.current
-    if (!cover || !rocket || !stars || !label) return
-    let cancelled = false
-    const animations: Animation[] = []
-    const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms))
-    const animate = async (element: Element, frames: Keyframe[], duration: number, easing: string) => {
-      const animation = element.animate(frames, { duration, easing, fill: 'forwards' })
-      animations.push(animation)
-      await animation.finished.catch(() => undefined)
-    }
-
-    // Cover the newly selected route before the browser paints its first frame.
-    // The old slide-in exposed the destination page while the cover travelled in.
-    cover.style.transform = 'translate3d(0, 0, 0)'
-    cover.style.visibility = 'visible'
-    stars.replaceChildren()
-    for (let index = 0; index < 36; index += 1) {
-      const star = document.createElement('i')
-      const size = 2 + Math.random() * 3
-      star.style.cssText = `top:${Math.random() * 100}%;width:${size}px;height:${size}px`
-      stars.appendChild(star)
-      const starAnimation = star.animate(
-        [{ transform: 'translateX(-20px)' }, { transform: 'translateX(110vw)' }],
-        { duration: 700 + Math.random() * 900, iterations: Infinity, delay: -Math.random() * 1500, easing: 'linear' },
-      )
-      animations.push(starAnimation)
-    }
-    label.textContent = `Memuat ${view}…`
-    cover.classList.add('run')
-    void (async () => {
-      await animate(rocket, [
-        { transform: 'translate(110vw,-50%) rotate(-135deg)' },
-        { transform: 'translate(calc(50vw - 32px),-50%) rotate(-135deg)' },
-      ], 650, 'cubic-bezier(.22,1,.36,1)')
-      if (cancelled) return
-      await wait(450)
-      if (cancelled) return
-      await animate(rocket, [
-        { transform: 'translate(calc(50vw - 32px),-50%) rotate(-135deg)' },
-        { transform: 'translate(-20vw,-50%) rotate(-135deg)' },
-      ], 600, 'cubic-bezier(.55,0,1,.45)')
-      if (cancelled) return
-      await animate(cover, [{ transform: 'translate3d(0, 0, 0)' }, { transform: 'translate3d(-100%, 0, 0)' }], 520, 'cubic-bezier(.65,0,.35,1)')
-      if (!cancelled) setPageTransition(null)
-    })()
-    return () => {
-      cancelled = true
-      animations.forEach((animation) => animation.cancel())
-      cover.classList.remove('run')
-    }
-  }, [pageTransition, view])
   const [serverId, setServerId] = useState(initialRoute.serverId)
   const [channelId, setChannelId] = useState(initialRoute.channelId)
   const [dmId, setDmId] = useState(initialRoute.dmId)
@@ -1440,17 +1380,12 @@ export function WorkspacePage({
         'sidebar-persistent'
       } ${pageTransition ? `page-transition-${pageTransition}` : ''} view-${view} ${view === 'discover' ? 'has-no-channel-sidebar' : ''}`}
     >
-      {pageTransition === 'rocket' && (
-        <div className="route-transition-overlay" aria-hidden="true" ref={rocketCoverRef}>
-          <div className="route-transition-stars" ref={rocketStarsRef} />
-          <span className="route-transition-rocket" ref={rocketRef}><i className="fa-solid fa-rocket" aria-hidden="true" /></span>
-          <div className="route-transition-label" ref={rocketLabelRef}>Memuat…</div>
-        </div>
-      )}
       <ServerRail
         servers={data.servers}
+        currentUser={currentUser}
         activeServerId={serverId}
         activeView={view}
+        profileMenuOpen={profileMenu}
         onSelectHome={() => {
           setView('home')
           setMobileTab('home')
@@ -1463,7 +1398,13 @@ export function WorkspacePage({
         }}
         onNavigateDiscover={() => navigateView('discover')}
         onNavigateSocial={() => navigateView('social')}
-        onOpenBots={() => navigateView('bots')}
+        onToggleProfileMenu={() => {
+          setServerMenuOpen(false)
+          setProfileMenu((open) => !open)
+        }}
+        onOpenProfile={() => openProfile(session.user.id)}
+        onNavigateSettings={() => navigateView('settings')}
+        onLogout={() => void onLogout()}
       />
 
       {view !== 'discover' && view !== 'channels' && view !== 'people' && (
