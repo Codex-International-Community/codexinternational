@@ -9,6 +9,9 @@
 # - Narrow CSP `connect-src` from `https:` to `'self'` + your public R2 domain once configured.
 {
 	auto_https off
+	servers {
+		trusted_proxies static private_ranges
+	}
 }
 
 :8080 {
@@ -25,15 +28,21 @@
 	}
 
 	handle /api/* {
-		reverse_proxy 127.0.0.1:8081
+		reverse_proxy 127.0.0.1:8081 {
+			header_up -X-Real-IP
+		}
 	}
 
 	handle /health/* {
-		reverse_proxy 127.0.0.1:8081
+		reverse_proxy 127.0.0.1:8081 {
+			header_up -X-Real-IP
+		}
 	}
 
 	handle /ws {
-		reverse_proxy 127.0.0.1:8081
+		reverse_proxy 127.0.0.1:8081 {
+			header_up -X-Real-IP
+		}
 	}
 
 	handle {

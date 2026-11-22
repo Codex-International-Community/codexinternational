@@ -203,6 +203,31 @@ fn safe_file_name(raw: Option<&str>, fallback_extension: &str) -> String {
     }
 }
 
+fn magic_signature_matches(mime_type: &str, body: &[u8]) -> bool {
+    match mime_type {
+        "image/avif" | "video/mp4" | "video/quicktime" => {
+            body.len() >= 12 && &body[4..8] == b"ftyp"
+        }
+        "video/webm" => body.starts_with(&[0x1A, 0x45, 0xDF, 0xA3]),
+        "image/jpeg" => body.starts_with(&[0xFF, 0xD8, 0xFF]),
+        "image/png" => body.starts_with(b"\x89PNG\r\n\x1a\n"),
+        "image/gif" => body.starts_with(b"GIF87a") || body.starts_with(b"GIF89a"),
+        "image/webp" => body.get(8..12) == Some(&b"WEBP"[..]) && body.starts_with(b"RIFF"),
+        "application/pdf" => body.starts_with(b"%PDF-"),
+        "application/zip"
+        | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        | "application/vnd.openxmlformats-officedocument.presentationml.presentation" => {
+            body.starts_with(b"PK\x03\x04")
+        }
+        "application/msword" | "application/vnd.ms-excel" | "application/vnd.ms-powerpoint" => {
+            body.starts_with(&[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1])
+        }
+        "text/plain" | "text/csv" => !body.contains(&0),
+        _ => false,
+    }
+}
+
 fn allowed_media_type(mime: &str) -> Option<(&'static str, &'static str)> {
     match mime {
         "image/avif" => Some(("image", "avif")),
@@ -379,29 +404,7 @@ pub async fn upload(
         silent_suspend_user(&state, auth.user_id).await;
         return Err(AppError::BadRequest("upload failed".to_string()));
     }
-    let signature_ok = match mime_type.as_str() {
-        "image/avif" | "video/mp4" | "video/quicktime" => {
-            body.len() >= 12 && &body[4..8] == b"ftyp"
-        }
-        "video/webm" => body.starts_with(&[0x1A, 0x45, 0xDF, 0xA3]),
-        "image/jpeg" => body.starts_with(&[0xFF, 0xD8, 0xFF]),
-        "image/png" => body.starts_with(b"\x89PNG\r\n\x1a\n"),
-        "image/gif" => body.starts_with(b"GIF87a") || body.starts_with(b"GIF89a"),
-        "image/webp" => body.get(8..12) == Some(&b"WEBP"[..]) && body.starts_with(b"RIFF"),
-        "application/pdf" => body.starts_with(b"%PDF-"),
-        "application/zip"
-        | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        | "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        | "application/vnd.openxmlformats-officedocument.presentationml.presentation" => {
-            body.starts_with(b"PK\x03\x04")
-        }
-        "application/msword" | "application/vnd.ms-excel" | "application/vnd.ms-powerpoint" => {
-            body.starts_with(&[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1])
-        }
-        "text/plain" | "text/csv" => !body.contains(&0),
-        _ => false,
-    };
-    if !signature_ok {
+    if !magic_signature_matches(&mime_type, &body) {
         return Err(AppError::BadRequest(
             "file contents do not match the selected file type".to_string(),
         ));
@@ -516,6 +519,15 @@ pub async fn presign(
     auth: AuthUser,
     Json(req): Json<PresignMediaRequest>,
 ) -> Result<Json<PresignMediaResponse>, AppError> {
+    if !matches!(
+        req.purpose.as_str(),
+        "chat" | "avatar" | "community_icon" | "story" | "contribution"
+    ) {
+        return Err(AppError::BadRequest(
+            "unsupported upload purpose".to_string(),
+        ));
+    }
+
     if req.purpose == "chat" {
         let channel_id = req.channel_id.ok_or_else(|| {
             AppError::BadRequest("channel_id is required for chat uploads".to_string())
@@ -673,8 +685,46 @@ pub async fn complete(
     let max_bytes = tier.max_bytes_for_kind(&kind);
 
     if actual_size > max_bytes {
+        if let Ok(delete_url) = presigned_r2_url(&state.config, "DELETE", &r2_key, 60) {
+            let _ = HTTP_CLIENT.delete(delete_url).send().await;
+        }
         return Err(AppError::PayloadTooLarge(
             "uploaded file exceeds size limit".to_string(),
+        ));
+    }
+
+    if let Some(head_ct) = head_res
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split(';').next())
+        .map(|v| v.trim().to_ascii_lowercase())
+        && head_ct != mime_type
+        && head_ct != "application/octet-stream"
+    {
+        if let Ok(delete_url) = presigned_r2_url(&state.config, "DELETE", &r2_key, 60) {
+            let _ = HTTP_CLIENT.delete(delete_url).send().await;
+        }
+        return Err(AppError::BadRequest(
+            "uploaded Content-Type does not match declared MIME type".to_string(),
+        ));
+    }
+
+    if let Ok(get_url) = presigned_r2_url(&state.config, "GET", &r2_key, 60)
+        && let Ok(range_res) = HTTP_CLIENT
+            .get(get_url)
+            .header(reqwest::header::RANGE, "bytes=0-63")
+            .send()
+            .await
+        && range_res.status().is_success()
+        && let Ok(prefix) = range_res.bytes().await
+        && !magic_signature_matches(&mime_type, &prefix)
+    {
+        if let Ok(delete_url) = presigned_r2_url(&state.config, "DELETE", &r2_key, 60) {
+            let _ = HTTP_CLIENT.delete(delete_url).send().await;
+        }
+        return Err(AppError::BadRequest(
+            "uploaded file signature does not match declared MIME type".to_string(),
         ));
     }
 

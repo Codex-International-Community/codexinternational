@@ -109,6 +109,8 @@ async fn run_ffprobe(input_path: &str, tier: QualityTier) -> Result<()> {
         .args([
             "-v",
             "error",
+            "-protocol_whitelist",
+            "file",
             "-show_entries",
             "format=duration:stream=codec_type,width,height,avg_frame_rate",
             "-of",
@@ -197,18 +199,39 @@ async fn reject_and_cleanup(
     }
 }
 
+struct TmpCleanupGuard(Vec<std::path::PathBuf>);
+impl Drop for TmpCleanupGuard {
+    fn drop(&mut self) {
+        for p in &self.0 {
+            let _ = std::fs::remove_file(p);
+        }
+    }
+}
+
 async fn function_handler(
     ctx: Arc<AppContext>,
     event: LambdaEvent<VideoJobPayload>,
 ) -> Result<VideoJobResult, LambdaError> {
     let payload = event.payload;
-    let callback_url = payload.callback_url.or_else(|| ctx.webhook_url.clone());
+    if payload.media_id.is_empty()
+        || !payload
+            .media_id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
+        return Err(anyhow::anyhow!("invalid media_id").into());
+    }
+    let callback_url = ctx
+        .webhook_url
+        .clone()
+        .or_else(|| payload.callback_url.filter(|u| u.starts_with("https://")));
 
     let tmp_dir = std::env::temp_dir();
     let in_path = tmp_dir.join(format!("in-{}", payload.media_id));
     let out_path = tmp_dir.join(format!("out-{}.mp4", payload.media_id));
     let thumb_path = tmp_dir.join(format!("thumb-{}.webp", payload.media_id));
     let tmp_paths = [in_path.clone(), out_path.clone(), thumb_path.clone()];
+    let _tmp_guard = TmpCleanupGuard(tmp_paths.to_vec());
 
     if let Err(err) = stream_r2_to_file(
         &ctx,
@@ -278,6 +301,8 @@ async fn function_handler(
         let thumb_str = thumb_path.to_string_lossy().to_string();
         let thumb_args = vec![
             "-y".to_string(),
+            "-protocol_whitelist".to_string(),
+            "file".to_string(),
             "-i".to_string(),
             out_str,
             "-ss".to_string(),
@@ -347,7 +372,12 @@ async fn main() -> Result<(), LambdaError> {
     let webhook_url = std::env::var("LAMBDA_WEBHOOK_URL")
         .ok()
         .filter(|s| !s.trim().is_empty());
-    let webhook_secret = std::env::var("LAMBDA_WEBHOOK_SECRET").unwrap_or_default();
+    let webhook_secret =
+        std::env::var("LAMBDA_WEBHOOK_SECRET").expect("LAMBDA_WEBHOOK_SECRET must be set");
+    assert!(
+        !webhook_secret.trim().is_empty(),
+        "LAMBDA_WEBHOOK_SECRET must not be empty"
+    );
 
     let ctx = Arc::new(AppContext {
         s3: build_r2_client(&account_id, &access_key, &secret_key),

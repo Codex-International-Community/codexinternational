@@ -291,7 +291,13 @@ pub async fn revoke_bot_token(
     let token_hash: Option<String> = sqlx::query_scalar(
         "UPDATE bot_tokens
          SET revoked_at = NOW()
-         WHERE id = $1 AND bot_id = $2 AND (owner_id = $3 OR $4 = 'dev') AND revoked_at IS NULL
+         WHERE id = $1
+           AND bot_id = $2
+           AND EXISTS (
+               SELECT 1 FROM bots
+               WHERE id = $2 AND (owner_id = $3 OR $4 = 'dev')
+           )
+           AND revoked_at IS NULL
          RETURNING token_hash",
     )
     .bind(token_id)

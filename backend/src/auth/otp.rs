@@ -19,7 +19,6 @@ use lettre::{
 };
 use rand::{Rng, rngs::OsRng};
 use serde::{Deserialize, Serialize};
-use subtle::ConstantTimeEq;
 use uuid::Uuid;
 
 use crate::{
@@ -264,6 +263,28 @@ pub async fn send_otp(
     }))
 }
 
+const OTP_VERIFY_LUA: &str = r#"
+local stored = redis.call('HGET', KEYS[1], 'otp_hash')
+if not stored then
+    return {0, 0}
+end
+local max_attempts = tonumber(ARGV[2])
+local attempts = tonumber(redis.call('HGET', KEYS[1], 'attempts') or '0')
+if attempts >= max_attempts then
+    redis.call('DEL', KEYS[1])
+    return {-1, attempts}
+end
+if stored == ARGV[1] then
+    redis.call('DEL', KEYS[1])
+    return {1, attempts}
+end
+local next_attempts = redis.call('HINCRBY', KEYS[1], 'attempts', 1)
+if next_attempts >= max_attempts then
+    redis.call('DEL', KEYS[1])
+end
+return {2, next_attempts}
+"#;
+
 /// Verifies a 6-digit OTP against its Valkey SHA-256 hash (max 5 attempts, `INV-16`).
 pub async fn verify_otp(
     State(state): State<Arc<AppState>>,
@@ -280,42 +301,28 @@ pub async fn verify_otp(
 
     let email_hash = hash_token(&email);
     let otp_key = format!("auth:otp:{purpose}:{email_hash}");
-
-    let stored_hash: Option<String> = state.valkey.hget(&otp_key, "otp_hash").await?;
-    let attempts_raw: Option<String> = state.valkey.hget(&otp_key, "attempts").await?;
-
-    let Some(stored_hash) = stored_hash else {
-        return Err(AppError::Unauthorized("invalid or expired OTP".to_string()));
-    };
-
-    let attempts = attempts_raw
-        .as_deref()
-        .and_then(|s| s.parse::<i64>().ok())
-        .unwrap_or(0);
-
-    if attempts >= OTP_MAX_ATTEMPTS {
-        let _: i64 = state.valkey.del(&otp_key).await?;
-        return Err(AppError::Unauthorized(
-            "maximum OTP attempts exceeded; please request a new code".to_string(),
-        ));
-    }
-
     let candidate_digest = hash_token(&format!("{purpose}:{email}:{code}"));
-    let matches: bool = candidate_digest
-        .as_bytes()
-        .ct_eq(stored_hash.as_bytes())
-        .into();
 
-    if !matches {
-        let next_attempts: i64 = state.valkey.hincrby(&otp_key, "attempts", 1).await?;
-        if next_attempts >= OTP_MAX_ATTEMPTS {
-            let _: i64 = state.valkey.del(&otp_key).await?;
+    let res: Vec<i64> = state
+        .valkey
+        .eval(
+            OTP_VERIFY_LUA,
+            vec![otp_key],
+            vec![candidate_digest, OTP_MAX_ATTEMPTS.to_string()],
+        )
+        .await?;
+
+    match res.first().copied().unwrap_or(0) {
+        1 => {}
+        -1 => {
+            return Err(AppError::Unauthorized(
+                "maximum OTP attempts exceeded; please request a new code".to_string(),
+            ));
         }
-        return Err(AppError::Unauthorized("invalid or expired OTP".to_string()));
+        _ => {
+            return Err(AppError::Unauthorized("invalid or expired OTP".to_string()));
+        }
     }
-
-    // Consume OTP on successful verification (one-time use).
-    let _: i64 = state.valkey.del(&otp_key).await?;
 
     if purpose == "verify_email" {
         let res = sqlx::query(

@@ -323,13 +323,42 @@ pub async fn create_or_get_dm(
         ));
     }
 
-    let target_exists =
-        sqlx::query_scalar::<_, bool>("SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)")
-            .bind(target_user_id)
-            .fetch_one(&state.pg)
-            .await?;
+    let target_exists = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(SELECT 1 FROM users WHERE id = $1 AND (suspended_until IS NULL OR suspended_until <= NOW()))",
+    )
+    .bind(target_user_id)
+    .fetch_one(&state.pg)
+    .await?;
     if !target_exists {
         return Err(AppError::NotFound("user not found".to_string()));
+    }
+
+    let dm_allowed = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(
+            SELECT 1
+            FROM community_members cm_self
+            JOIN community_members cm_target ON cm_target.community_id = cm_self.community_id
+            LEFT JOIN community_member_settings cms
+                ON cms.community_id = cm_target.community_id AND cms.user_id = cm_target.user_id
+            WHERE cm_self.user_id = $1
+              AND cm_target.user_id = $2
+              AND COALESCE(cms.allow_direct_messages, TRUE) = TRUE
+              AND NOT EXISTS (
+                  SELECT 1 FROM community_bans cb
+                  WHERE cb.community_id = cm_self.community_id
+                    AND cb.user_id IN ($1, $2)
+                    AND (cb.expires_at IS NULL OR cb.expires_at > NOW())
+              )
+        )",
+    )
+    .bind(auth.user_id)
+    .bind(target_user_id)
+    .fetch_one(&state.pg)
+    .await?;
+    if !dm_allowed {
+        return Err(AppError::Forbidden(
+            "direct messages are not permitted with this user".to_string(),
+        ));
     }
 
     let (first, second) = if auth.user_id < target_user_id {

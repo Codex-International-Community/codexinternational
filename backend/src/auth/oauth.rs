@@ -119,7 +119,6 @@ impl ReqwestOAuthClient {
             id: i64,
             login: String,
             name: Option<String>,
-            email: Option<String>,
         }
 
         let gh_user: GhUser = self
@@ -136,10 +135,7 @@ impl ReqwestOAuthClient {
             .await
             .map_err(|_| AppError::Unauthorized("invalid github profile response".to_string()))?;
 
-        let email = match gh_user.email {
-            Some(e) if !e.is_empty() => e.to_ascii_lowercase(),
-            _ => self.fetch_github_primary_email(&token.access_token).await?,
-        };
+        let email = self.fetch_github_primary_email(&token.access_token).await?;
 
         Ok(OAuthUserInfo {
             provider_user_id: gh_user.id.to_string(),
@@ -283,9 +279,23 @@ pub async fn oauth_login(
             )));
         }
     };
-    if req.code.trim().is_empty() || req.redirect_uri.trim().is_empty() {
+    let redirect_uri = req.redirect_uri.trim();
+    if req.code.trim().is_empty() || redirect_uri.is_empty() {
         return Err(AppError::BadRequest(
             "code and redirect_uri are required".to_string(),
+        ));
+    }
+    let expected_suffix = format!("/auth/callback/{provider}");
+    let redirect_allowed = state.config.cors_allowed_origins.iter().any(|origin| {
+        let base = origin.trim_end_matches('/');
+        redirect_uri == format!("{base}{expected_suffix}")
+    }) || (state.config.env == crate::config::AppEnv::Development
+        && (redirect_uri.starts_with("http://localhost:")
+            || redirect_uri.starts_with("http://127.0.0.1:"))
+        && redirect_uri.ends_with(&expected_suffix));
+    if !redirect_allowed {
+        return Err(AppError::BadRequest(
+            "invalid OAuth redirect_uri".to_string(),
         ));
     }
     let platform = normalize_platform(req.platform.as_deref())?;
@@ -330,6 +340,12 @@ pub async fn oauth_login(
         user
     } else if let Some(existing_by_email) = find_user_by_identifier(&state.pg, &info.email).await? {
         ensure_not_suspended(&existing_by_email)?;
+        if existing_by_email.email_verified_at.is_none() {
+            return Err(AppError::Conflict(
+                "existing account email is not verified; verify email before linking OAuth"
+                    .to_string(),
+            ));
+        }
         let mut tx = state.pg.begin().await?;
         sqlx::query(
             "INSERT INTO oauth_accounts (provider, provider_user_id, user_id)

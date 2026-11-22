@@ -215,9 +215,20 @@ impl AppConfig {
             bind_addr: get_or("BIND_ADDR", "127.0.0.1:8080"),
             database_url: SecretString::new(get_or(
                 "DATABASE_URL",
-                "postgres://codexter:codex_dev_password@127.0.0.1:5432/codexinternational",
+                if env == AppEnv::Development {
+                    "postgres://codexter:codex_dev_password@127.0.0.1:5432/codexinternational"
+                } else {
+                    ""
+                },
             )),
-            valkey_url: SecretString::new(get_or("VALKEY_URL", "valkey://127.0.0.1:6379")),
+            valkey_url: SecretString::new(get_or(
+                "VALKEY_URL",
+                if env == AppEnv::Development {
+                    "valkey://127.0.0.1:6379"
+                } else {
+                    ""
+                },
+            )),
             jwt_secret: SecretString::new(get_or(
                 "JWT_SECRET",
                 if env == AppEnv::Development {

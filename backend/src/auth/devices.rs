@@ -184,11 +184,16 @@ pub async fn register_fcm(
 
     // Detach this FCM token from any older device row before binding to current device
     // (handles account switching on the same physical phone without UNIQUE violation).
-    sqlx::query("UPDATE user_devices SET fcm_token = NULL WHERE fcm_token = $1 AND id <> $2")
-        .bind(token)
-        .bind(auth.device_id)
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query(
+        "UPDATE user_devices
+         SET fcm_token = NULL
+         WHERE fcm_token = $1 AND id <> $2 AND (user_id = $3 OR revoked_at IS NOT NULL)",
+    )
+    .bind(token)
+    .bind(auth.device_id)
+    .bind(auth.user_id)
+    .execute(&mut *tx)
+    .await?;
 
     let res = if let Some(plat) = platform {
         sqlx::query(
@@ -225,7 +230,7 @@ pub async fn register_fcm(
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn revoke_all_user_devices(state: &AppState, user_id: Uuid) -> Result<(), AppError> {
+pub async fn revoke_all_user_devices(state: &AppState, user_id: Uuid) -> Result<(), AppError> {
     // Fetch all active device IDs before revoking so we can clear their Valkey caches (AUTH-01).
     let device_ids: Vec<Uuid> =
         sqlx::query_scalar("SELECT id FROM user_devices WHERE user_id = $1 AND revoked_at IS NULL")
