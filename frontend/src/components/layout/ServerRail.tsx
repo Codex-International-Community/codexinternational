@@ -122,7 +122,7 @@ export function ServerRail({
         {profileMenuOpen && (
           <div className="rail-profile-menu" role="menu" aria-label="Profile menu">
             <strong>{currentUser.name}</strong>
-            <span>@{currentUser.handle.replace(/^@/, '')}</span>
+            <span>{currentUser.username ? `@${currentUser.username.replace(/^@/, '')}` : ''}</span>
             <button type="button" role="menuitem" onClick={() => { onOpenProfile(); onToggleProfileMenu() }}>
               <Icon name="user" size={15} /> View profile
             </button>
