@@ -1690,7 +1690,6 @@ export function WorkspacePage({
                 onToggleTheme={() =>
                   setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))
                 }
-                onOpenBots={() => navigateView('bots')}
                 onLogout={() => void onLogout()}
               />
             ) : view === 'discover' ? (
