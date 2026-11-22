@@ -421,7 +421,7 @@ async fn test_oauth_login_links_and_provisions_user() {
                 .body(Body::from(
                     json!({
                         "code": "mock_code_123",
-                        "redirect_uri": "http://localhost:5173/oauth/callback"
+                        "redirect_uri": "http://localhost:5173/auth/callback/github"
                     })
                     .to_string(),
                 ))
