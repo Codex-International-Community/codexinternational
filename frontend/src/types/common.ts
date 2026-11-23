@@ -45,6 +45,7 @@ export type IconName =
   | 'flag'
   | 'link'
   | 'arrow'
+  | 'arrowLeft'
   | 'trash'
   | 'save'
   | 'moon'

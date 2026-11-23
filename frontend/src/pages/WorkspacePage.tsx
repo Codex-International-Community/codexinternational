@@ -1385,6 +1385,7 @@ export function WorkspacePage({
         currentUser={currentUser}
         activeServerId={serverId}
         activeView={view}
+        isMobile={isMobile}
         profileMenuOpen={profileMenu}
         onSelectHome={() => {
           setView('home')
@@ -1502,6 +1503,12 @@ export function WorkspacePage({
           searchOpen={searchOpen}
           notificationRead={notificationRead}
           unreadCount={data.conversations.reduce((acc, c) => acc + c.unread, 0)}
+          onNavigateHome={() => {
+            setView('home')
+            setMobileTab('home')
+          }}
+          onNavigateSocial={() => navigateView('social')}
+          onNavigateDiscover={() => navigateView('discover')}
           onBack={() => {
             const previous = discoverReturnRouteRef.current
             if (previous) {

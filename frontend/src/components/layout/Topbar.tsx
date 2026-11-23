@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../common/Icon'
 import type { Channel } from '../../types/chat'
 import type { IconName, View } from '../../types/common'
@@ -12,6 +13,9 @@ interface TopbarProps {
   notificationRead: boolean
   unreadCount: number
   onBack?: () => void
+  onNavigateHome?: () => void
+  onNavigateSocial?: () => void
+  onNavigateDiscover?: () => void
   onFocusSocialComposer: () => void
   onVoiceCallModal: () => void
   onVideoCallModal: () => void
@@ -34,6 +38,9 @@ export function Topbar({
   notificationRead,
   unreadCount,
   onBack,
+  onNavigateHome,
+  onNavigateSocial,
+  onNavigateDiscover,
   onFocusSocialComposer,
   onVoiceCallModal,
   onVideoCallModal,
@@ -45,6 +52,35 @@ export function Topbar({
   onOpenSettings,
   onCopyLink,
 }: TopbarProps) {
+  const [modeMenuOpen, setModeMenuOpen] = useState(false)
+  const modeMenuRef = useRef<HTMLDivElement>(null)
+  const canSwitchMode =
+    !isMobile &&
+    (view === 'home' || view === 'social' || view === 'discover') &&
+    Boolean(onNavigateHome && onNavigateSocial && onNavigateDiscover)
+
+  useEffect(() => {
+    setModeMenuOpen(false)
+  }, [view])
+
+  useEffect(() => {
+    if (!modeMenuOpen) return
+    const handlePointerDown = (event: MouseEvent) => {
+      if (modeMenuRef.current && !modeMenuRef.current.contains(event.target as Node)) {
+        setModeMenuOpen(false)
+      }
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setModeMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [modeMenuOpen])
+
   const symbolIcon: IconName =
     view === 'social'
       ? 'thread'
@@ -90,13 +126,74 @@ export function Topbar({
       <div className="topbar-title">
         {view === 'discover' && onBack && (
           <button type="button" className="discover-back" onClick={onBack} aria-label="Back to previous page" title="Back">
-            <Icon name="arrow" size={18} style={{ transform: 'scaleX(-1)' }} />
+            <Icon name="arrowLeft" size={18} />
           </button>
         )}
-        <span className="channel-symbol">
-          <Icon name={symbolIcon} />
-        </span>
-        <strong>{title}</strong>
+        {canSwitchMode ? (
+          <div className="topbar-mode-wrap" ref={modeMenuRef}>
+            <button
+              type="button"
+              className="topbar-mode-trigger"
+              aria-expanded={modeMenuOpen}
+              aria-haspopup="menu"
+              onClick={() => setModeMenuOpen((open) => !open)}
+              title="Switch mode"
+            >
+              <span className="channel-symbol">
+                <Icon name={symbolIcon} />
+              </span>
+              <strong>{title}</strong>
+              <Icon name="chevron" size={14} />
+            </button>
+            {modeMenuOpen && (
+              <div className="topbar-mode-menu" role="menu" aria-label="Switch workspace mode">
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={view === 'home' ? 'active' : ''}
+                  onClick={() => {
+                    setModeMenuOpen(false)
+                    onNavigateHome?.()
+                  }}
+                >
+                  <Icon name="users" size={16} />
+                  <span>Friends</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={view === 'social' ? 'active' : ''}
+                  onClick={() => {
+                    setModeMenuOpen(false)
+                    onNavigateSocial?.()
+                  }}
+                >
+                  <Icon name="thread" size={16} />
+                  <span>Threads</span>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className={view === 'discover' ? 'active' : ''}
+                  onClick={() => {
+                    setModeMenuOpen(false)
+                    onNavigateDiscover?.()
+                  }}
+                >
+                  <Icon name="compass" size={16} />
+                  <span>Discover communities</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            <span className="channel-symbol">
+              <Icon name={symbolIcon} />
+            </span>
+            <strong>{title}</strong>
+          </>
+        )}
         {!isMobile && view !== 'home' && topicText && (
           <>
             <i />

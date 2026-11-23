@@ -8,6 +8,7 @@ interface ServerRailProps {
   currentUser: User
   activeServerId: string
   activeView: View
+  isMobile?: boolean
   profileMenuOpen: boolean
   onSelectHome: () => void
   onSelectServer: (id: string) => void
@@ -25,6 +26,7 @@ export function ServerRail({
   currentUser,
   activeServerId,
   activeView,
+  isMobile = false,
   profileMenuOpen,
   onSelectHome,
   onSelectServer,
@@ -51,16 +53,18 @@ export function ServerRail({
         <Icon name="home" size={20} />
       </button>
 
-      <button
-        type="button"
-        className={`rail-discover ${activeView === 'social' ? 'active' : ''}`}
-        aria-label="Threads"
-        aria-current={activeView === 'social' ? 'page' : undefined}
-        title="Threads"
-        onClick={onNavigateSocial}
-      >
-        <Icon name="thread" size={19} />
-      </button>
+      {isMobile && (
+        <button
+          type="button"
+          className={`rail-discover ${activeView === 'social' ? 'active' : ''}`}
+          aria-label="Threads"
+          aria-current={activeView === 'social' ? 'page' : undefined}
+          title="Threads"
+          onClick={onNavigateSocial}
+        >
+          <Icon name="thread" size={19} />
+        </button>
+      )}
 
       <div className="rail-rule" />
 
@@ -94,16 +98,18 @@ export function ServerRail({
         <Icon name="plus" size={21} />
       </button>
 
-      <button
-        type="button"
-        className={`rail-discover ${activeView === 'discover' ? 'active' : ''}`}
-        aria-label="Discover communities"
-        aria-current={activeView === 'discover' ? 'page' : undefined}
-        title="Discover communities"
-        onClick={onNavigateDiscover}
-      >
-        <Icon name="compass" size={19} />
-      </button>
+      {isMobile && (
+        <button
+          type="button"
+          className={`rail-discover ${activeView === 'discover' ? 'active' : ''}`}
+          aria-label="Discover communities"
+          aria-current={activeView === 'discover' ? 'page' : undefined}
+          title="Discover communities"
+          onClick={onNavigateDiscover}
+        >
+          <Icon name="compass" size={19} />
+        </button>
+      )}
 
       <div className="rail-spacer" />
 

@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState, type FormEvent } from 'react'
+import { useDelayedLoading } from '../../hooks/useDelayedLoading'
 import { Icon } from '../common/Icon'
 import type { IconName } from '../../types/common'
 import {
@@ -192,6 +193,7 @@ export function ServerOptionsDialog(props: ServerOptionsDialogProps) {
   const [inviteCode, setInviteCode] = useState('')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
+  const showLoading = useDelayedLoading(loading, 5000)
   const [loadError, setLoadError] = useState('')
   const [localMessage, setLocalMessage] = useState('')
   const [editingRoleId, setEditingRoleId] = useState<string | null>(null)
@@ -434,7 +436,7 @@ export function ServerOptionsDialog(props: ServerOptionsDialogProps) {
           </header>
 
           <div className="server-settings-content">
-            {loading && <div className="server-settings-feedback" role="status">Loading server data…</div>}
+            {showLoading && <div className="server-settings-feedback" role="status">Loading server data…</div>}
             {loadError && <div className="server-settings-error" role="alert">{loadError}</div>}
             {localMessage && <div className="server-settings-feedback" role="status">{localMessage}</div>}
 
