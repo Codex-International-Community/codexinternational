@@ -104,7 +104,7 @@ export function SocialPostCard({
             title="Repost"
           >
             <span className="social-repost-mark" aria-hidden="true">↻</span>
-            <span>{post.reposts + (post.reposted ? 1 : 0)}</span>
+            <span>{post.reposts.toLocaleString()}</span>
           </button>
 
           <button
@@ -116,7 +116,7 @@ export function SocialPostCard({
             title="Like"
           >
             <Icon name="heart" size={17} />
-            <span>{(post.likes + (post.liked ? 1 : 0)).toLocaleString()}</span>
+            <span>{post.likes.toLocaleString()}</span>
           </button>
 
           <button
