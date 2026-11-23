@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useDelayedLoading } from '../../hooks/useDelayedLoading'
 import {
   BOT_ADMIN,
   BOT_MOD,
@@ -27,6 +28,7 @@ export function BotsView({ currentUser, isMobile, onNotify }: BotsViewProps) {
   const isDev = currentUser.platform_role === 'dev'
   const [bots, setBots] = useState<BotRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const showLoading = useDelayedLoading(loading, 5000)
   const [error, setError] = useState('')
 
   // Create bot form
@@ -270,10 +272,12 @@ export function BotsView({ currentUser, isMobile, onNotify }: BotsViewProps) {
 
         <section className="bot-list-section">
           {loading ? (
-            <div className="empty-state">
-              <Icon name="shield" size={26} />
-              <strong>Loading bots…</strong>
-            </div>
+            showLoading ? (
+              <div className="empty-state">
+                <Icon name="shield" size={26} />
+                <strong>Loading bots…</strong>
+              </div>
+            ) : null
           ) : error ? (
             <div className="empty-state">
               <Icon name="shield" size={26} />

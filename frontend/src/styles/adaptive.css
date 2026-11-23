@@ -2220,8 +2220,6 @@ dialog.bot-reveal-modal {
   }
 }
 
-.app-shell.view-discover .discover-back svg { transform: rotate(180deg); }
-
 /* Desktop directory pages must occupy the complete workspace grid. */
 @media (min-width: 768px) {
   .app-shell.view-channels,
@@ -3614,8 +3612,9 @@ button:hover > .gf-icon { opacity: 1; }
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  min-height: 54px;
-  padding: 0 22px;
+  min-height: 58px;
+  padding: 10px 22px;
+  margin-top: 4px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -3892,8 +3891,9 @@ button:hover > .gf-icon { opacity: 1; }
 
   .friends-toolbar {
     gap: 8px;
-    min-height: 52px;
-    padding: 0 10px;
+    min-height: 56px;
+    padding: 8px 12px;
+    margin-top: 2px;
   }
 
   .friends-tabs {
@@ -4313,4 +4313,97 @@ dialog.modal--discord-server::backdrop {
   color: var(--muted);
   font-size: .72rem;
   line-height: 1.4;
+}
+
+/* Desktop topbar mode switcher */
+.topbar-mode-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.topbar-mode-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 6px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease;
+}
+
+.topbar-mode-trigger:hover,
+.topbar-mode-trigger[aria-expanded="true"] {
+  background: var(--surface2);
+  border-color: var(--line);
+}
+
+.topbar-mode-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--side);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  display: grid;
+  gap: 3px;
+}
+
+.topbar-mode-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.topbar-mode-menu button:hover,
+.topbar-mode-menu button.active {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.topbar-mode-menu button.active {
+  font-weight: 600;
+}
+
+/* Discover empty state & header action polish */
+.app-shell.view-discover .discover-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.app-shell.view-discover .discover-heading .primary-action {
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.app-shell.view-discover .directory-empty {
+  padding: 52px 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
 }

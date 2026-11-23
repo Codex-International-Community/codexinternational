@@ -8,6 +8,7 @@ import {
 } from './api/auth'
 import { ApiError, getSession, setSession, subscribeSession, type AuthSession } from './api/client'
 import { useViewport } from './hooks/useViewport'
+import { useDelayedLoading } from './hooks/useDelayedLoading'
 import { Landing } from './pages/Landing'
 import { WorkspacePage } from './pages/WorkspacePage'
 import codexLogo from './assets/codex-logo.jpg'
@@ -17,9 +18,14 @@ export default function App() {
   const [session, setLocalSession] = useState<AuthSession | null>(() => getSession())
   const [bootstrapping, setBootstrapping] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
-    const hasCallback = /^\/auth\/callback\/(github|google)\/?$/.test(window.location.pathname)
-    return hasCallback || Boolean(getSession())
+    return /^\/auth\/callback\/(github|google)\/?$/.test(window.location.pathname)
   })
+  const [verifyingSession, setVerifyingSession] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    const hasCallback = /^\/auth\/callback\/(github|google)\/?$/.test(window.location.pathname)
+    return !hasCallback && Boolean(getSession())
+  })
+  const showBootLoader = useDelayedLoading(bootstrapping, 5000)
   const [authError, setAuthError] = useState('')
 
   useEffect(() => subscribeSession((next) => setLocalSession(next)), [])
@@ -68,18 +74,24 @@ export default function App() {
           }
         }
       }
-      if (!cancelled) setBootstrapping(false)
+      if (!cancelled) {
+        setBootstrapping(false)
+        setVerifyingSession(false)
+      }
     }
 
-    if (bootstrapping) {
+    if (bootstrapping || verifyingSession) {
       void bootstrap()
     }
     return () => {
       cancelled = true
     }
-  }, [bootstrapping])
+  }, [bootstrapping, verifyingSession])
 
   if (bootstrapping) {
+    if (!showBootLoader) {
+      return <div className="app-boot-screen" role="status" aria-live="polite" aria-busy="true" />
+    }
     return (
       <div className="app-boot-screen" role="status" aria-live="polite">
         <img className="landing-brand-mark" src={codexLogo} alt="Codex International" width={64} height={64} />
@@ -109,7 +121,7 @@ export default function App() {
       sessionWarning={authError}
       onRetrySessionCheck={() => {
         setAuthError('')
-        setBootstrapping(true)
+        setVerifyingSession(true)
       }}
       onDismissSessionWarning={() => setAuthError('')}
       onLogout={async () => {

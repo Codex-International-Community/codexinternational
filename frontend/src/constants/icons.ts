@@ -47,6 +47,7 @@ export const iconPaths: Record<IconName, string> = {
   flag: 'M4 22V4M4 4c7-5 9 5 16 0v11c-7 5-9-5-16 0',
   link: 'M10 13a5 5 0 0 0 7.5.5l3-3A5 5 0 0 0 13.5 3l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3A5 5 0 0 0 10.5 21l1.7-1.7',
   arrow: 'M5 12h14M13 6l6 6-6 6',
+  arrowLeft: 'M19 12H5m6 6-6-6 6-6',
   trash: 'M3 6h18M8 6V4h8v2m3 0-1 15H6L5 6m4 4v7m6-7v7',
   save: 'M5 3h12l4 4v14H3V3h2Zm2 0v6h10V3M7 21v-7h10v7',
   moon: 'M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5Z',
