@@ -1110,7 +1110,7 @@ button:disabled {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 4px;
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 7px;

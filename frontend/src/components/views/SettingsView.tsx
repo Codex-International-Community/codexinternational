@@ -11,7 +11,6 @@ interface SettingsViewProps {
   theme: Theme
   onDisplayNameChange: (name: string) => void
   onToggleTheme: () => void
-  onOpenBots?: () => void
   onLogout?: () => void
 }
 
@@ -21,7 +20,6 @@ export function SettingsView({
   theme,
   onDisplayNameChange,
   onToggleTheme,
-  onOpenBots,
   onLogout,
 }: SettingsViewProps) {
   const displayNameId = useId()
@@ -193,18 +191,6 @@ export function SettingsView({
             </form>
           )}
 
-          {onOpenBots && (
-            <div className="setting-row" style={{ marginTop: 14 }}>
-              <div>
-                <strong>Bot Portal &amp; VPS Tokens</strong>
-                <small>Register external bots and issue one-time reveal credentials.</small>
-              </div>
-              <button type="button" className="setting-action" onClick={onOpenBots}>
-                <Icon name="shield" size={15} />
-                Open Bots
-              </button>
-            </div>
-          )}
         </section>
       )}
 
