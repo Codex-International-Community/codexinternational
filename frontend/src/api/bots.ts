@@ -26,6 +26,10 @@ export interface CreateBotPayload {
   privilege_mode: number
 }
 
+export interface UpdateBotPayload {
+  display_name: string
+}
+
 export interface CreateBotTokenResponse {
   token_id: string
   bot_id: string
@@ -49,6 +53,13 @@ export async function listBots(): Promise<BotRecord[]> {
 export async function createBot(payload: CreateBotPayload): Promise<BotRecord> {
   return apiRequest<BotRecord>('/api/v1/bots', {
     method: 'POST',
+    body: payload,
+  })
+}
+
+export async function updateBot(botId: string, payload: UpdateBotPayload): Promise<BotRecord> {
+  return apiRequest<BotRecord>(`/api/v1/bots/${encodeURIComponent(botId)}`, {
+    method: 'PATCH',
     body: payload,
   })
 }

@@ -3,7 +3,7 @@
 
 /* --design-tokens-- */
 .landing-shell {
-  --bg: #111113;
+  --bg: #0f0f10;
   --black: #08080A;
   --surface: #18181B;
   --surface-hover: #222226;
@@ -27,13 +27,23 @@
   display: flex;
   justify-content: center;
   align-items: stretch;
-  background: var(--bg);
+  background: transparent;
   color: var(--text);
   font-family: var(--sans);
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+}
+
+.landing-dots-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  background: #0f0f10;
 }
 
 .landing-shell *,

@@ -1375,7 +1375,12 @@ dialog.modal {
 }
 
 .social-post-actions button.is-liked {
-  color: #ec8b98;
+  color: #ef4444;
+}
+
+.social-post-actions button.is-liked .gf-icon {
+  filter: brightness(0) saturate(100%) invert(40%) sepia(79%) saturate(2476%) hue-rotate(336deg) brightness(95%) contrast(96%);
+  opacity: 1;
 }
 
 .social-post-actions button.is-reposted {
@@ -1383,7 +1388,11 @@ dialog.modal {
 }
 
 .social-post-actions button.is-saved {
-  color: var(--accent);
+  color: #facc15;
+}
+
+.social-post-actions button.is-saved svg {
+  fill: #facc15;
 }
 
 .social-post-actions button span {

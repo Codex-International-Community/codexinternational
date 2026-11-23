@@ -17,6 +17,7 @@ import {
 import type { AuthUserProfile } from '../../api/client'
 import { Icon } from '../common/Icon'
 import { BotTokenRevealModal } from '../modals/BotTokenRevealModal'
+import { updateBot } from '../../api/bots'
 
 interface BotsViewProps {
   currentUser: AuthUserProfile
@@ -41,6 +42,7 @@ export function BotsView({ currentUser, isMobile, onNotify }: BotsViewProps) {
   // Token management per bot
   const [tokenLabels, setTokenLabels] = useState<Record<string, string>>({})
   const [revokeTokenIds, setRevokeTokenIds] = useState<Record<string, string>>({})
+  const [displayNameUpdates, setDisplayNameUpdates] = useState<Record<string, string>>({})
   const [revealedToken, setRevealedToken] = useState<CreateBotTokenResponse | null>(null)
   const [busyBotId, setBusyBotId] = useState<string | null>(null)
 
@@ -88,6 +90,7 @@ export function BotsView({ currentUser, isMobile, onNotify }: BotsViewProps) {
 
   const handleCreateBot = async (e: FormEvent) => {
     e.preventDefault()
+
     if (!name.trim() || !displayName.trim()) {
       onNotify('Bot handle and display name are required')
       return
@@ -114,6 +117,33 @@ export function BotsView({ currentUser, isMobile, onNotify }: BotsViewProps) {
       onNotify(err instanceof Error ? err.message : 'Failed to create bot')
     } finally {
       setCreating(false)
+    }
+  }
+
+  const handleUpdateBotDisplayName = async (botId: string) => {
+    const newDisplay = (displayNameUpdates[botId] ?? '').trim()
+    if (!newDisplay) {
+      onNotify('Enter a display name first')
+      return
+    }
+    if (newDisplay.length > 64) {
+      onNotify('Display name must be 1-64 characters')
+      return
+    }
+    setBusyBotId(botId)
+    try {
+      const updated = await updateBot(botId, { display_name: newDisplay })
+      setBots((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
+      setDisplayNameUpdates((prev) => {
+        const next = { ...prev }
+        delete next[botId]
+        return next
+      })
+      onNotify('Bot display name updated')
+    } catch (err) {
+      onNotify(err instanceof Error ? err.message : 'Failed to update bot display name')
+    } finally {
+      setBusyBotId(null)
     }
   }
 
@@ -307,6 +337,26 @@ export function BotsView({ currentUser, isMobile, onNotify }: BotsViewProps) {
                         <strong>{bot.display_name}</strong>
                         <small>@{bot.name} · <code>{bot.id}</code></small>
                       </div>
+                      {(isDev || bot.owner_id === currentUser.id) && (
+                        <div className="bot-dev-actions-small" style={{ display: 'flex', gap: 6, marginTop: 8, width: '100%' }}>
+                          <input
+                            type="text"
+                            value={displayNameUpdates[bot.id] ?? ''}
+                            onChange={(e) => setDisplayNameUpdates((prev) => ({ ...prev, [bot.id]: e.target.value }))}
+                            placeholder="New display name"
+                            maxLength={64}
+                            style={{ flex: 1, padding: '6px 8px', borderRadius: 6 }}
+                          />
+                          <button
+                            type="button"
+                            className="setting-action"
+                            disabled={busyBotId === bot.id}
+                            onClick={() => void handleUpdateBotDisplayName(bot.id)}
+                          >
+                            Save name
+                          </button>
+                        </div>
+                      )}
                       <span className={`bot-status-badge ${statusClass}`}>
                         {bot.approval_status}
                       </span>

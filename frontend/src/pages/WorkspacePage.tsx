@@ -1698,9 +1698,34 @@ export function WorkspacePage({
             ) : view === 'settings' ? (
               <SettingsView
                 authUser={session.user}
-                displayName={data.displayName}
                 theme={data.theme}
-                onDisplayNameChange={(name) => setData((prev) => ({ ...prev, displayName: name }))}
+                onDisplayNameChange={(name) => {
+                  setData((prev) => ({ ...prev, displayName: name }))
+                  const nextInitials =
+                    name
+                      .split(/\s+/)
+                      .filter(Boolean)
+                      .map((w) => w[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase() || 'ME'
+                  setSocialPosts((prev) =>
+                    prev.map((p) => {
+                      const isMine = p.handle === session.user.username
+                      const repliesChanged = p.replies.some((r) => r.handle === session.user.username)
+                      if (!isMine && !repliesChanged) return p
+                      return {
+                        ...p,
+                        ...(isMine ? { author: name, initials: nextInitials } : {}),
+                        replies: repliesChanged
+                          ? p.replies.map((r) =>
+                              r.handle === session.user.username ? { ...r, author: name } : r,
+                            )
+                          : p.replies,
+                      }
+                    }),
+                  )
+                }}
                 onToggleTheme={() =>
                   setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))
                 }

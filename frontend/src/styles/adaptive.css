@@ -4307,8 +4307,15 @@ dialog.modal--discord-server::backdrop {
   color: var(--muted);
   font-family: inherit;
 }
-.app-shell.view-social .social-post-actions button:hover,
-.app-shell.view-social .social-post-actions button.is-liked { color: var(--text); }
+.app-shell.view-social .social-post-actions button:hover { color: var(--text); }
+.app-shell.view-social .social-post-actions button.is-liked,
+.app-shell.view-social .social-post-actions button.is-liked:hover {
+  color: #ef4444;
+}
+.app-shell.view-social .social-post-actions button.is-liked .gf-icon {
+  filter: brightness(0) saturate(100%) invert(40%) sepia(79%) saturate(2476%) hue-rotate(336deg) brightness(95%) contrast(96%);
+  opacity: 1;
+}
 .app-shell.view-social .social-right-panel { background: var(--side); }
 @media (max-width: 767px) {
   .app-shell.view-social .social-feed-column {

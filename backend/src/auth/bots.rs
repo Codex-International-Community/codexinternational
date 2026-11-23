@@ -282,6 +282,45 @@ pub async fn create_bot_token(
     ))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct UpdateBotRequest {
+    pub display_name: String,
+}
+
+/// Updates a bot's display name (`PATCH /api/v1/bots/{id}`).
+/// Allowed for the bot owner or platform `dev`.
+pub async fn update_bot(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    Path(bot_id): Path<Uuid>,
+    Json(req): Json<UpdateBotRequest>,
+) -> Result<Json<BotRecord>, AppError> {
+    let display_name = req.display_name.trim();
+    if display_name.is_empty() || display_name.chars().count() > 64 {
+        return Err(AppError::BadRequest(
+            "display_name must be 1-64 characters".to_string(),
+        ));
+    }
+
+    let bot = sqlx::query_as::<_, BotRecord>(
+        "UPDATE bots
+         SET display_name = $1
+         WHERE id = $2
+           AND (owner_id = $3 OR $4 = 'dev')
+         RETURNING id, owner_id, name, display_name, description, privilege_mode,
+                   approval_status, approved_by, approved_at, is_active, created_at",
+    )
+    .bind(display_name)
+    .bind(bot_id)
+    .bind(auth.user_id)
+    .bind(&auth.platform_role)
+    .fetch_optional(&state.pg)
+    .await?
+    .ok_or_else(|| AppError::NotFound("bot not found".to_string()))?;
+
+    Ok(Json(bot))
+}
+
 /// Revokes a bot token (`DELETE /api/v1/bots/{id}/tokens/{token_id}`).
 pub async fn revoke_bot_token(
     State(state): State<Arc<AppState>>,

@@ -1,13 +1,12 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Icon } from '../common/Icon'
 import type { AuthUserProfile } from '../../api/client'
 import { ApiError } from '../../api/client'
-import { setOrChangePassword, toggleUidLogin } from '../../api/auth'
+import { setOrChangePassword, toggleUidLogin, updateProfile } from '../../api/auth'
 import type { Theme } from '../../types/common'
 
 interface SettingsViewProps {
   authUser?: AuthUserProfile | null
-  displayName: string
   theme: Theme
   onDisplayNameChange: (name: string) => void
   onToggleTheme: () => void
@@ -16,7 +15,6 @@ interface SettingsViewProps {
 
 export function SettingsView({
   authUser,
-  displayName,
   theme,
   onDisplayNameChange,
   onToggleTheme,
@@ -34,6 +32,16 @@ export function SettingsView({
   const [confirmPassword, setConfirmPassword] = useState('')
   const [passwordError, setPasswordError] = useState('')
   const [passwordInfo, setPasswordInfo] = useState('')
+  const [profileDraft, setProfileDraft] = useState('')
+  const [profileBusy, setProfileBusy] = useState(false)
+  const [profileError, setProfileError] = useState('')
+  const [profileInfo, setProfileInfo] = useState('')
+
+  useEffect(() => {
+    const next = authUser?.display_name?.trim() ?? ''
+    const username = authUser?.username?.trim() ?? ''
+    setProfileDraft(next && next !== username ? next : (next === username ? '' : next))
+  }, [authUser?.display_name, authUser?.username])
 
   const handleCopyUid = async () => {
     if (!authUser?.uid) return
@@ -196,13 +204,49 @@ export function SettingsView({
 
       <section className="settings-card">
         <h2>Profile</h2>
-        <label htmlFor={displayNameId}>Display name</label>
-        <input
-          id={displayNameId}
-          value={displayName}
-          onChange={(e) => onDisplayNameChange(e.target.value || 'your account')}
-        />
-        <p>This display name is currently a workspace preview preference. Profile syncing will be added with the profile API.</p>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault()
+            setProfileError('')
+            setProfileInfo('')
+            const trimmed = profileDraft.trim()
+            const len = Array.from(trimmed).length
+            if (len > 0 && (len < 4 || len > 20)) {
+              setProfileError('Display name must be 4-20 characters, or leave empty to clear.')
+              return
+            }
+            setProfileBusy(true)
+            try {
+              const updated = await updateProfile(trimmed)
+              onDisplayNameChange(updated.display_name || updated.username)
+              setProfileDraft(updated.display_name || '')
+              setProfileInfo(trimmed ? 'Display name updated.' : 'Display name cleared. Username will be shown.')
+            } catch (err) {
+              setProfileError(err instanceof ApiError ? err.message : 'Failed to update display name.')
+            } finally {
+              setProfileBusy(false)
+            }
+          }}
+          style={{ display: 'grid', gap: 8 }}
+        >
+          <label htmlFor={displayNameId}>Display name</label>
+          <input
+            id={displayNameId}
+            value={profileDraft}
+            maxLength={20}
+            placeholder="Display name"
+            onChange={(e) => setProfileDraft(e.target.value)}
+            disabled={profileBusy}
+          />
+          <small style={{ opacity: 0.75 }}>4-20 characters. Leave empty to use your username.</small>
+          <div>
+            <button type="submit" className="setting-action" disabled={profileBusy}>
+              {profileBusy ? 'Saving…' : 'Save Name'}
+            </button>
+          </div>
+          {profileError && <p style={{ color: 'var(--danger, #ef4444)' }}>{profileError}</p>}
+          {profileInfo && <p style={{ color: 'var(--success, #22c55e)' }}>{profileInfo}</p>}
+        </form>
       </section>
 
       <section className="settings-card">
