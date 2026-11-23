@@ -2088,7 +2088,21 @@ dialog.bot-reveal-modal {
   height: 100dvh;
 }
 
-.app-shell.view-discover .discover-back,
+.app-shell.view-discover .discover-back {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  margin-left: -4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .16s ease, color .16s ease, transform .16s ease;
+}
+
 .app-shell.view-discover .discover-sidebar-toggle {
   display: grid;
   place-items: center;
@@ -2103,7 +2117,15 @@ dialog.bot-reveal-modal {
   transition: background .16s ease, border-color .16s ease, color .16s ease;
 }
 
-.app-shell.view-discover .discover-back:hover,
+.app-shell.view-discover .discover-back:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.app-shell.view-discover .discover-back:active {
+  transform: translateX(-1px);
+}
+
 .app-shell.view-discover .discover-sidebar-toggle:hover {
   border-color: var(--accent-border);
   background: var(--accent-bg);
@@ -2339,56 +2361,6 @@ dialog.bot-reveal-modal {
   }
 }
 
-/* Rocket Slide transition for secondary pages (e.g. Home -> Discover). */
-.route-transition-overlay {
-  position: fixed;
-  z-index: 200;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  background: #0b1220;
-  clip-path: inset(0 0 0 100%);
-  animation: rocket-curtain 1.18s cubic-bezier(.65, 0, .35, 1) both;
-}
-
-.route-transition-stars {
-  position: absolute;
-  inset: 0;
-  opacity: .9;
-  background-image:
-    radial-gradient(2px 2px at 12% 18%, #fff 60%, transparent 100%),
-    radial-gradient(2px 2px at 26% 72%, #cbd5e1 60%, transparent 100%),
-    radial-gradient(3px 3px at 47% 32%, #fff 60%, transparent 100%),
-    radial-gradient(2px 2px at 68% 64%, #cbd5e1 60%, transparent 100%),
-    radial-gradient(2px 2px at 86% 24%, #fff 60%, transparent 100%),
-    radial-gradient(2px 2px at 92% 82%, #cbd5e1 60%, transparent 100%);
-  background-size: 100% 100%;
-}
-
-.route-transition-rocket {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  display: block;
-  font-size: clamp(42px, 7vw, 68px);
-  line-height: 1;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, .35));
-  transform: translate(-100px, -50%);
-  animation: rocket-flight 1.18s cubic-bezier(.22, 1, .36, 1) both;
-}
-
-@keyframes rocket-curtain {
-  0% { clip-path: inset(0 0 0 100%); }
-  34%, 66% { clip-path: inset(0); }
-  100% { clip-path: inset(0 100% 0 0); }
-}
-
-@keyframes rocket-flight {
-  0% { transform: translate(-100px, -50%) rotate(-8deg); }
-  52% { transform: translate(calc(50vw - 34px), -50%) rotate(-8deg); }
-  100% { transform: translate(calc(100vw + 100px), -50%) rotate(-8deg); }
-}
-
 /* Navbar destinations use a restrained horizontal slide instead. */
 .app-shell.page-transition-slide .workspace-body {
   animation: workspace-slide-in .34s cubic-bezier(.22, 1, .36, 1) both;
@@ -2409,13 +2381,10 @@ dialog.bot-reveal-modal {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .route-transition-overlay,
-  .route-transition-rocket,
   .app-shell.page-transition-slide .workspace-body,
   .app-shell.page-transition-slide .topbar {
     animation: none !important;
   }
-  .route-transition-overlay { display: none; }
 }
 
 /* Desktop directory views retain the standard navigation rail and sidebar. */
@@ -2485,68 +2454,6 @@ dialog.bot-reveal-modal {
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
-/* Rocket Slide: same cover, star field, Font Awesome rocket and timing as the reference file. */
-.route-transition-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 300;
-  overflow: hidden;
-  background: var(--cover, #0b1220);
-  color: var(--star, #e5e7eb);
-  transform: translateX(100%);
-  pointer-events: none;
-  will-change: transform;
-}
-
-.route-transition-overlay.run { pointer-events: auto; }
-
-.route-transition-stars {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-}
-
-.route-transition-stars i {
-  position: absolute;
-  left: 0;
-  display: block;
-  border-radius: 50%;
-  background: var(--star, #e5e7eb);
-  opacity: .8;
-}
-
-.route-transition-rocket {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  color: var(--star, #e5e7eb);
-  font-size: 64px;
-  line-height: 1;
-  transform: translate(110vw, -50%) rotate(-135deg);
-  will-change: transform;
-}
-
-.route-transition-rocket .fa-rocket {
-  display: block;
-  color: inherit;
-}
-
-.route-transition-label {
-  position: absolute;
-  top: calc(50% + 70px);
-  left: 0;
-  right: 0;
-  color: var(--star, #e5e7eb);
-  font-size: 14px;
-  font-weight: 600;
-  text-align: center;
-  opacity: .8;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .app-shell.page-transition-slide-forward .workspace-body,
   .app-shell.page-transition-slide-forward .topbar,
@@ -2554,19 +2461,9 @@ dialog.bot-reveal-modal {
   .app-shell.page-transition-slide-backward .topbar {
     animation: none !important;
   }
-  .route-transition-overlay { display: none !important; }
 }
 
-/* The Rocket Slide choreography is driven by Web Animations API, not CSS keyframes. */
-.route-transition-overlay {
-  animation: none !important;
-  clip-path: none !important;
-}
-.route-transition-rocket {
-  animation: none !important;
-}
-
-/* --x1-polishui: responsive drawer bounds and smoother navigation-- */
+/* -- Responsive drawer bounds and smoother navigation -- */
 
 /* Keep the mobile left drawer fully inside the viewport on Home and regular pages. */
 @media (max-width: 767px) {
@@ -2890,49 +2787,7 @@ dialog.bot-reveal-modal {
   }
 }
 
-/* Rocket transition follows the active workspace theme on every viewport. */
-.route-transition-overlay {
-  background: var(--workspace) !important;
-  color: var(--text) !important;
-  z-index: 400 !important;
-}
-.route-transition-stars i {
-  background: var(--muted, var(--text)) !important;
-}
-.route-transition-rocket {
-  color: var(--accent) !important;
-}
-.route-transition-rocket .fa-rocket {
-  color: var(--accent) !important;
-}
-.route-transition-label {
-  color: var(--text) !important;
-  font-family: var(--landing-display, inherit);
-  letter-spacing: .02em;
-}
-@media (min-width: 768px) {
-  .route-transition-rocket {
-    width: 72px;
-    height: 72px;
-    font-size: 72px;
-  }
-  .route-transition-label {
-    font-size: 16px;
-  }
-}
-@media (max-width: 767px) {
-  .route-transition-rocket {
-    width: 56px;
-    height: 56px;
-    font-size: 56px;
-  }
-  .route-transition-label {
-    top: calc(50% + 62px);
-    font-size: 14px;
-  }
-}
-
-/* -- X1 navbar sizing polish: slightly roomier navigation tabs -- */
+/* -- Navbar sizing polish: slightly roomier navigation tabs -- */
 @media (max-width: 767px) {
   .workspace {
     grid-template-rows: 56px minmax(0, 1fr) calc(68px + env(safe-area-inset-bottom, 0px));
@@ -3280,7 +3135,6 @@ button:hover > .gf-icon { opacity: 1; }
   color: var(--quiet);
 }
 .app-shell .server-rail .rail-spacer { flex: 1 1 auto; min-height: 12px; }
-.app-shell .server-rail .rail-bot,
 .app-shell .server-rail .rail-user {
   display: grid;
   place-items: center;
@@ -3294,8 +3148,6 @@ button:hover > .gf-icon { opacity: 1; }
   cursor: pointer;
   transition: border-radius .2s ease, background .2s ease, color .2s ease, transform .2s ease;
 }
-.app-shell .server-rail .rail-bot:hover,
-.app-shell .server-rail .rail-bot.active,
 .app-shell .server-rail .rail-user:hover,
 .app-shell .server-rail .rail-user.active {
   border-radius: 12px;
@@ -3622,7 +3474,6 @@ button:hover > .gf-icon { opacity: 1; }
   }
   .app-shell .server-rail .rail-add,
   .app-shell .server-rail .server-pill,
-  .app-shell .server-rail .rail-bot,
   .app-shell .server-rail .rail-user {
     width: 40px;
     height: 40px;
@@ -3648,7 +3499,6 @@ button:hover > .gf-icon { opacity: 1; }
   }
   .app-shell .server-rail .rail-add,
   .app-shell .server-rail .server-pill,
-  .app-shell .server-rail .rail-bot,
   .app-shell .server-rail .rail-user {
     width: 36px;
     height: 36px;

@@ -63,9 +63,10 @@ const gentlefaceNames: Record<IconName, string> = {
 interface IconProps {
   name: IconName
   size?: number
+  style?: React.CSSProperties
 }
 
-export function Icon({ name, size = 18 }: IconProps) {
+export function Icon({ name, size = 18, style }: IconProps) {
   // Gentleface icons are drawn on a 16px grid; use native 16px or 32px assets.
   const iconSize = size > 24 ? 32 : 16
   return (
@@ -74,6 +75,7 @@ export function Icon({ name, size = 18 }: IconProps) {
       src={`https://gentleface.com/svg/line-round/${iconSize}/${gentlefaceNames[name]}.svg`}
       width={iconSize}
       height={iconSize}
+      style={style}
       alt=""
       aria-hidden="true"
       draggable={false}
