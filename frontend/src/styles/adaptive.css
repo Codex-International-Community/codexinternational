@@ -3453,6 +3453,7 @@ button:hover > .gf-icon { opacity: 1; }
     display: none !important;
   }
   .app-shell > .workspace {
+    grid-column: 1 !important;
     min-width: 0;
     width: 100% !important;
     height: 100dvh !important;
