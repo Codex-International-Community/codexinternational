@@ -3442,30 +3442,27 @@ button:hover > .gf-icon { opacity: 1; }
 @media (max-width: 767px) {
   .app-shell {
     display: grid !important;
-    grid-template-columns: 58px minmax(0, 1fr) !important;
+    grid-template-columns: minmax(0, 1fr) !important;
     grid-template-rows: minmax(0, 1fr) !important;
     width: 100%;
     height: 100dvh;
     min-height: 0;
   }
-  .app-shell > .server-rail {
-    width: 58px !important;
-    min-width: 58px !important;
-    max-width: 58px !important;
-    padding-inline: 0;
-    overflow: hidden;
+  .app-shell > .server-rail,
+  .app-shell > .channel-sidebar {
+    display: none !important;
   }
   .app-shell > .workspace {
     min-width: 0;
     width: 100% !important;
     height: 100dvh !important;
-    grid-template-rows: 56px minmax(0, 1fr) 54px !important;
+    grid-template-rows: 52px minmax(0, 1fr) 54px !important;
   }
   .app-shell .topbar {
     width: 100%;
-    height: 56px;
-    min-height: 56px;
-    padding-inline: clamp(9px, 2vw, 14px);
+    height: 52px;
+    min-height: 52px;
+    padding-inline: 14px;
   }
   .app-shell .topbar-title {
     min-width: 0;
@@ -3473,6 +3470,7 @@ button:hover > .gf-icon { opacity: 1; }
     overflow: hidden;
   }
   .app-shell .topbar-title strong {
+    font-size: 0.92rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3480,37 +3478,40 @@ button:hover > .gf-icon { opacity: 1; }
   .app-shell .topbar-actions {
     flex: 0 0 auto;
   }
-  .app-shell .server-rail .rail-add,
-  .app-shell .server-rail .server-pill,
-  .app-shell .server-rail .rail-user {
-    width: 40px;
-    height: 40px;
-    flex-basis: 40px;
+  .app-shell .page-scroll {
+    padding: 16px 14px;
   }
-  .app-shell .server-rail .rail-list {
-    max-height: calc(100% - 170px);
+  .app-shell .directory-heading h1,
+  .app-shell .discover-heading h1,
+  .app-shell .social-heading h1,
+  .app-shell .page-scroll > h1 {
+    font-size: 1.375rem;
+    line-height: 1.2;
   }
-  .app-shell.view-home .page-scroll,
-  .app-shell.view-social .page-scroll,
-  .app-shell.view-dm .page-scroll {
-    padding-inline: 14px;
+  .app-shell .directory-heading p,
+  .app-shell .discover-heading p,
+  .app-shell .social-heading p,
+  .app-shell .page-subtitle {
+    font-size: 0.825rem;
   }
-}
-@media (max-width: 380px) {
-  .app-shell {
-    grid-template-columns: 52px minmax(0, 1fr) !important;
+  .app-shell .eyebrow {
+    font-size: 0.68rem;
   }
-  .app-shell > .server-rail {
-    width: 52px !important;
-    min-width: 52px !important;
-    max-width: 52px !important;
+  .app-shell .friends-toolbar {
+    gap: 6px;
+    min-height: 50px;
+    padding: 8px 10px;
   }
-  .app-shell .server-rail .rail-add,
-  .app-shell .server-rail .server-pill,
-  .app-shell .server-rail .rail-user {
-    width: 36px;
-    height: 36px;
-    flex-basis: 36px;
+  .app-shell .friends-tab-heading,
+  .app-shell .friends-tab {
+    min-height: 30px;
+    padding-inline: 8px;
+    font-size: 0.78rem;
+  }
+  .app-shell .friends-add-button {
+    min-height: 30px;
+    padding-inline: 10px;
+    font-size: 0.76rem;
   }
 }
 
