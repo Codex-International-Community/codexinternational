@@ -1455,7 +1455,14 @@ export function WorkspacePage({
             setProfileMenu((open) => !open)
           }}
           onSelectSocialTab={setSocialTab}
-          onOpenQuickSearch={() => setSearchOpen(true)}
+          onOpenQuickSearch={() => {
+            if (view === 'channel' || view === 'dm') {
+              setSearchOpen(true)
+            } else {
+              setModal('dm')
+              setModalValue('')
+            }
+          }}
           onSelectChannel={pickChannel}
           onOpenDm={openDm}
           onCreateChannelModal={() => {
@@ -1556,7 +1563,7 @@ export function WorkspacePage({
           </div>
         )}
 
-        {searchOpen && (
+        {searchOpen && (view === 'channel' || view === 'dm') && (
           <SearchStrip
             inputRef={searchInputRef}
             value={search}

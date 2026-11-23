@@ -3425,8 +3425,18 @@ button:hover > .gf-icon { opacity: 1; }
 }
 .app-shell .topbar {
   position: relative;
-  z-index: 5;
+  z-index: 50;
   flex-shrink: 0;
+  overflow: visible;
+}
+
+.app-shell .topbar-title {
+  overflow: visible;
+}
+
+.app-shell .search-strip {
+  top: 62px;
+  right: 20px;
 }
 
 @media (max-width: 767px) {
