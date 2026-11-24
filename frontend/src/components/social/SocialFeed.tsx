@@ -1,4 +1,6 @@
 import { useMemo, useState, type FormEvent, type RefObject } from 'react'
+import { extractHashtags } from '../common/TaggedText'
+import type { MentionCandidate } from '../common/TagAutocomplete'
 import { SocialComposer, type SocialPublishPayload } from './SocialComposer'
 import { SocialPostCard, type ReplySubmitPayload } from './SocialPostCard'
 import type { User } from '../../types/chat'
@@ -69,20 +71,61 @@ export function SocialFeed({
   const [replyForId, setReplyForId] = useState<string | null>(null)
   const [replyTarget, setReplyTarget] = useState<{ id: string; handle: string } | null>(null)
   const [replyDraft, setReplyDraft] = useState('')
+  const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null)
+
+  const hashtags = useMemo(() => extractHashtags(posts), [posts])
+
+  const mentionCandidates = useMemo<MentionCandidate[]>(() => {
+    const map = new Map<string, MentionCandidate>()
+    for (const post of posts) {
+      if (post.handle && post.handle !== currentUsername) {
+        map.set(post.handle.toLowerCase(), {
+          username: post.handle,
+          displayName: post.author,
+        })
+      }
+      for (const reply of post.replies) {
+        if (reply.handle && reply.handle !== currentUsername) {
+          map.set(reply.handle.toLowerCase(), {
+            username: reply.handle,
+            displayName: reply.author,
+          })
+        }
+      }
+    }
+    return Array.from(map.values())
+  }, [posts, currentUsername])
 
   const visiblePosts = useMemo(() => {
     if (focusedPostId) return posts.filter((post) => post.id === focusedPostId)
+    let list = posts
     if (socialTab === 'following') {
-      return posts.filter((post) => followedHandles.includes(post.handle))
+      list = posts.filter((post) => followedHandles.includes(post.handle))
+    } else if (socialTab === 'saved') {
+      list = posts.filter((post) => post.saved)
+    } else if (socialTab === 'latest') {
+      list = posts.toSorted((a, b) => b.createdAt - a.createdAt)
     }
-    if (socialTab === 'saved') {
-      return posts.filter((post) => post.saved)
+
+    if (!activeTagFilter) return list
+    const needle = activeTagFilter.toLowerCase()
+    if (needle.startsWith('#')) {
+      const re = new RegExp(`(^|\\s)${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![a-zA-Z0-9_])`, 'i')
+      return list.filter(
+        (post) => re.test(post.text) || post.replies.some((r) => re.test(r.text)),
+      )
     }
-    if (socialTab === 'latest') {
-      return posts.toSorted((a, b) => b.createdAt - a.createdAt)
-    }
-    return posts
-  }, [posts, socialTab, followedHandles, focusedPostId])
+    const handleNeedle = needle.slice(1)
+    const mentionRe = new RegExp(`(^|\\s)@${handleNeedle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![a-zA-Z0-9_])`, 'i')
+    return list.filter(
+      (post) =>
+        post.handle.toLowerCase() === handleNeedle ||
+        mentionRe.test(post.text) ||
+        post.replies.some(
+          (r) => r.handle.toLowerCase() === handleNeedle || mentionRe.test(r.text),
+        ),
+    )
+  }, [posts, socialTab, followedHandles, focusedPostId, activeTagFilter])
 
   const handleToggleReplyForm = (
     id: string,
@@ -138,6 +181,8 @@ export function SocialFeed({
           onChange={onDraftChange}
           onSubmit={onPublish}
           onNotify={onNotify}
+          mentionCandidates={mentionCandidates}
+          hashtags={hashtags}
           canPublish
         />}
 
@@ -156,6 +201,17 @@ export function SocialFeed({
           ))}
         </div>}
 
+        {activeTagFilter && (
+          <div className="social-tag-filter-bar">
+            <span>
+              Filter: <strong>{activeTagFilter}</strong>
+            </span>
+            <button type="button" onClick={() => setActiveTagFilter(null)}>
+              Hapus filter
+            </button>
+          </div>
+        )}
+
         <div className="social-post-list">
           {visiblePosts.map((post) => (
             <SocialPostCard
@@ -167,6 +223,9 @@ export function SocialFeed({
               isReplying={replyForId === post.id}
               replyDraft={replyDraft}
               replyTarget={replyForId === post.id ? replyTarget : null}
+              mentionCandidates={mentionCandidates}
+              hashtags={hashtags}
+              onTagClick={(tag) => setActiveTagFilter(tag)}
               onToggleFollow={onToggleFollow}
               onToggleAction={onToggleAction}
               onToggleReplyForm={handleToggleReplyForm}

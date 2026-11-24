@@ -5195,6 +5195,69 @@ dialog.modal--discord-server::backdrop {
   }
 }
 
+/* Shared Modal Backdrop & Card */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.modal-card {
+  background: var(--bg-panel, #111827);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+  color: inherit;
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.share-modal-title-group {
+  min-width: 0;
+  flex: 1;
+}
+
+.share-modal-title-group h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.share-modal-title-group p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-close-btn {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.45);
+  color: inherit;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.share-close-btn:hover {
+  background: rgba(148, 163, 184, 0.18);
+}
+
 /* Share Post Modal (2 expandable carousels + bottom permalink) */
 .share-modal {
   max-width: 560px;
@@ -5239,11 +5302,14 @@ dialog.modal--discord-server::backdrop {
 }
 
 .share-carousel-card {
-  flex: 0 0 118px;
+  flex: 0 0 116px;
+  width: 116px;
+  height: 96px;
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   padding: 10px 8px;
   border-radius: 10px;
@@ -5252,6 +5318,7 @@ dialog.modal--discord-server::backdrop {
   color: inherit;
   text-align: center;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .share-carousel-card.selected {
@@ -5355,6 +5422,97 @@ dialog.modal--discord-server::backdrop {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+/* @Mentions & #Hashtags */
+.text-tag {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  color: #60a5fa;
+  cursor: pointer;
+}
+
+button.text-tag:hover {
+  text-decoration: underline;
+}
+
+.text-tag--hashtag {
+  color: #818cf8;
+}
+
+.social-compose-body,
+.social-reply-composer-wrap {
+  position: relative;
+}
+
+.tag-autocomplete {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: var(--bg-panel, #111827);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  max-height: 210px;
+  overflow-y: auto;
+}
+
+.tag-autocomplete-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.tag-autocomplete-item:hover {
+  background: rgba(99, 102, 241, 0.18);
+}
+
+.tag-autocomplete-item span {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.social-tag-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.12);
+  font-size: 13px;
+}
+
+.social-tag-filter-bar button {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 /* Social more menu (clean mobile-first Threads action sheet/popover) */

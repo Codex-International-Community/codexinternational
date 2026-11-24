@@ -1,5 +1,6 @@
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
+import { TaggedText } from '../common/TaggedText'
 import type { Message } from '../../types/chat'
 
 interface MessageItemProps {
@@ -117,7 +118,11 @@ export function MessageItem({
               </div>
             )
           }
-          return <p>{message.text}</p>
+          return (
+            <p>
+              <TaggedText text={message.text} />
+            </p>
+          )
         })()}
 
         {message.attachment && (

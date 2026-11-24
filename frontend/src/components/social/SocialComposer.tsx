@@ -4,6 +4,7 @@ import type { StickerItem } from '../../api/stickers'
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
 import { StickerPicker } from '../common/StickerPicker'
+import { TagAutocomplete, type MentionCandidate } from '../common/TagAutocomplete'
 import type { User } from '../../types/chat'
 
 export interface SocialPublishPayload {
@@ -19,6 +20,8 @@ interface SocialComposerProps {
   onChange: (value: string) => void
   onSubmit: (e: FormEvent, payload: SocialPublishPayload, reset: () => void) => void
   onNotify?: (message: string) => void
+  mentionCandidates?: MentionCandidate[]
+  hashtags?: string[]
   canPublish?: boolean
 }
 
@@ -29,6 +32,8 @@ export function SocialComposer({
   onChange,
   onSubmit,
   onNotify,
+  mentionCandidates = [],
+  hashtags = [],
   canPublish = true,
 }: SocialComposerProps) {
   const textareaId = useId()
@@ -38,6 +43,7 @@ export function SocialComposer({
   const [uploadingMedia, setUploadingMedia] = useState(false)
   const [selectedSticker, setSelectedSticker] = useState<StickerItem | undefined>()
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [cursorPos, setCursorPos] = useState<number | null>(null)
 
   const handleFilesChange = async (files: FileList | null) => {
     if (!files || files.length === 0) return
@@ -84,10 +90,27 @@ export function SocialComposer({
           id={textareaId}
           ref={inputRef}
           value={draft}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="What’s new?"
+          onChange={(e) => {
+            setCursorPos(e.target.selectionStart)
+            onChange(e.target.value)
+          }}
+          onClick={(e) => setCursorPos(e.currentTarget.selectionStart)}
+          onKeyUp={(e) => setCursorPos(e.currentTarget.selectionStart)}
+          placeholder="What’s new? Use @mention or #hashtag"
           rows={3}
           maxLength={500}
+        />
+
+        <TagAutocomplete
+          value={draft}
+          cursorPos={cursorPos}
+          localUsers={mentionCandidates}
+          hashtags={hashtags}
+          onApply={(next) => {
+            onChange(next)
+            setCursorPos(next.length)
+            inputRef.current?.focus()
+          }}
         />
 
         {mediaUrl && (

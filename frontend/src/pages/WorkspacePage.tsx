@@ -2443,7 +2443,6 @@ export function WorkspacePage({
         post={sharePost}
         servers={data.servers}
         channelsByServer={data.channels}
-        friends={people}
         onClose={() => setSharePost(null)}
         onNotify={notify}
       />

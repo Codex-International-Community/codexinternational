@@ -4,6 +4,8 @@ import type { StickerItem } from '../../api/stickers'
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
 import { StickerPicker } from '../common/StickerPicker'
+import { TaggedText } from '../common/TaggedText'
+import { TagAutocomplete, type MentionCandidate } from '../common/TagAutocomplete'
 import type { User } from '../../types/chat'
 import type { SocialPost, SocialReply } from '../../types/social'
 
@@ -33,6 +35,9 @@ interface SocialPostCardProps {
   onShare: (id: string) => void
   onNotify?: (message: string) => void
   replyTarget?: { id: string; handle: string } | null
+  mentionCandidates?: MentionCandidate[]
+  hashtags?: string[]
+  onTagClick?: (tag: string) => void
   isDev?: boolean
   onDevDeletePost?: (postId: string) => void
   onDevDeleteReply?: (postId: string, replyId: string) => void
@@ -63,6 +68,9 @@ export function SocialPostCard({
   onShare,
   onNotify,
   replyTarget,
+  mentionCandidates = [],
+  hashtags = [],
+  onTagClick,
   isDev = false,
   onDevDeletePost,
   onDevDeleteReply,
@@ -78,6 +86,7 @@ export function SocialPostCard({
   const [uploadingReplyMedia, setUploadingReplyMedia] = useState(false)
   const [showReplies, setShowReplies] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [replyCursorPos, setReplyCursorPos] = useState<number | null>(null)
 
   const handleReplyFile = async (file?: File) => {
     if (!file) return
@@ -161,7 +170,11 @@ export function SocialPostCard({
             <span>@{reply.handle}</span>
             <time>{reply.time}</time>
           </div>
-          {reply.text && <p>{reply.text}</p>}
+          {reply.text && (
+            <p>
+              <TaggedText text={reply.text} onTagClick={onTagClick} />
+            </p>
+          )}
           {reply.media && (
             isVideoMedia(reply.media, reply.mediaAlt) ? (
               <video
@@ -373,7 +386,11 @@ export function SocialPostCard({
           </div>
         </div>
 
-        {post.text && <p className="social-post-copy">{post.text}</p>}
+        {post.text && (
+          <p className="social-post-copy">
+            <TaggedText text={post.text} onTagClick={onTagClick} />
+          </p>
+        )}
 
         {post.media && (
           isVideoMedia(post.media, post.mediaAlt) ? (
@@ -540,7 +557,12 @@ export function SocialPostCard({
                 id={replyInputId}
                 autoFocus
                 value={replyDraft}
-                onChange={(e) => onReplyDraftChange(e.target.value)}
+                onChange={(e) => {
+                  setReplyCursorPos(e.target.selectionStart)
+                  onReplyDraftChange(e.target.value)
+                }}
+                onClick={(e) => setReplyCursorPos(e.currentTarget.selectionStart)}
+                onKeyUp={(e) => setReplyCursorPos(e.currentTarget.selectionStart)}
                 placeholder={`Reply to @${replyTarget ? replyTarget.handle : post.handle}`}
               />
               <input
@@ -611,6 +633,17 @@ export function SocialPostCard({
                 onNotify={onNotify}
               />
             )}
+
+            <TagAutocomplete
+              value={replyDraft}
+              cursorPos={replyCursorPos}
+              localUsers={mentionCandidates}
+              hashtags={hashtags}
+              onApply={(next) => {
+                onReplyDraftChange(next)
+                setReplyCursorPos(next.length)
+              }}
+            />
           </div>
         )}
       </div>
