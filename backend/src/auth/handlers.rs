@@ -219,7 +219,7 @@ pub async fn update_profile(
          WHERE id = $2
          RETURNING id, uid, uid_login_enabled, (password_hash IS NOT NULL) AS has_password,
                    username, display_name, email, email_verified_at, bio,
-                   platform_role, can_bypass_compress, global_xp, global_level, created_at",
+                   platform_role, platform_badge, is_verified, can_bypass_compress, global_xp, global_level, created_at",
     )
     .bind(&display_name)
     .bind(auth.user_id)
@@ -230,6 +230,14 @@ pub async fn update_profile(
 }
 
 pub(crate) fn ensure_not_suspended(record: &UserAuthRecord) -> Result<(), AppError> {
+    if record.banned_at.is_some() {
+        let reason = record
+            .banned_reason
+            .as_deref()
+            .filter(|s| !s.is_empty())
+            .unwrap_or("account permanently banned");
+        return Err(AppError::Forbidden(format!("banned: {reason}")));
+    }
     if let Some(until) = record.suspended_until
         && until > Utc::now()
     {

@@ -40,6 +40,11 @@ interface ChatPanelProps {
   onDiscoverCommunities: () => void
   onBrowseChannels: () => void
   onBrowsePeople: () => void
+  isDev?: boolean
+  isOnDutyForServer?: boolean
+  onToggleServerOnDuty?: () => void
+  onDevDeleteMessage?: (message: Message) => void
+  onReportMessage?: (message: Message) => void
 }
 
 function localDayKey(value: string) {
@@ -96,6 +101,11 @@ export function ChatPanel({
   onDiscoverCommunities,
   onBrowseChannels,
   onBrowsePeople,
+  isDev = false,
+  isOnDutyForServer = false,
+  onToggleServerOnDuty,
+  onDevDeleteMessage,
+  onReportMessage,
 }: ChatPanelProps) {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
 
@@ -179,6 +189,20 @@ export function ChatPanel({
           </div>
         </div>
 
+        {!isDm && isDev && server && onToggleServerOnDuty && (
+          <div className={`dev-onduty-banner ${isOnDutyForServer ? 'active' : ''}`}>
+            <span>
+              <Icon name="shield" size={14} />{' '}
+              {isOnDutyForServer
+                ? `On-Duty aktif di ${server.name} (Dev Delete aktif)`
+                : `Dev Mode: aktifkan On-Duty untuk moderasi chat di ${server.name}`}
+            </span>
+            <button type="button" className="dev-chip active" onClick={onToggleServerOnDuty}>
+              {isOnDutyForServer ? 'End On-Duty' : 'Start On-Duty'}
+            </button>
+          </div>
+        )}
+
         {messages.map((message, index) => {
           const dayKey = message.createdAt ? localDayKey(message.createdAt) : ''
           const previousDayKey = index > 0 && messages[index - 1].createdAt
@@ -205,6 +229,9 @@ export function ChatPanel({
                 onTogglePin={(item) => { onTogglePin(item); setActiveMenuId(null) }}
                 onToggleMenu={(id) => setActiveMenuId((current) => current === id ? null : id)}
                 onReplyReferenceClick={(id) => onNotify(`Reply reference: ${id}`)}
+                canDevDelete={!isDm && isDev && isOnDutyForServer}
+                onDevDelete={onDevDeleteMessage}
+                onReportMessage={onReportMessage}
                 onSaveSticker={(stickerId) => {
                   void saveSticker(stickerId)
                     .then(() => onNotify('Sticker saved to your collection!'))

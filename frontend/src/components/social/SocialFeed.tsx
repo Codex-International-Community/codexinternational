@@ -30,6 +30,11 @@ interface SocialFeedProps {
   onSaveSticker: (stickerId: string) => void
   onShare: (id: string) => void
   onNotify?: (message: string) => void
+  isDev?: boolean
+  onDevDeletePost?: (postId: string) => void
+  onDevDeleteReply?: (postId: string, replyId: string) => void
+  onReportPost?: (postId: string) => void
+  onReportReply?: (replyId: string) => void
 }
 
 export function SocialFeed({
@@ -51,6 +56,11 @@ export function SocialFeed({
   onSaveSticker,
   onShare,
   onNotify,
+  isDev = false,
+  onDevDeletePost,
+  onDevDeleteReply,
+  onReportPost,
+  onReportReply,
 }: SocialFeedProps) {
   const [replyForId, setReplyForId] = useState<string | null>(null)
   const [replyTarget, setReplyTarget] = useState<{ id: string; handle: string } | null>(null)
@@ -159,6 +169,11 @@ export function SocialFeed({
               onSaveSticker={onSaveSticker}
               onShare={onShare}
               onNotify={onNotify}
+              isDev={isDev}
+              onDevDeletePost={onDevDeletePost}
+              onDevDeleteReply={onDevDeleteReply}
+              onReportPost={onReportPost}
+              onReportReply={onReportReply}
             />
           ))}
 

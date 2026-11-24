@@ -20,6 +20,8 @@ pub struct UserProfile {
     pub email_verified_at: Option<DateTime<Utc>>,
     pub bio: String,
     pub platform_role: String,
+    pub platform_badge: Option<String>,
+    pub is_verified: bool,
     pub can_bypass_compress: bool,
     pub global_xp: i64,
     pub global_level: i32,
@@ -39,9 +41,13 @@ pub struct UserAuthRecord {
     pub password_hash: Option<String>,
     pub bio: String,
     pub platform_role: String,
+    pub platform_badge: Option<String>,
+    pub is_verified: bool,
     pub can_bypass_compress: bool,
     pub suspended_until: Option<DateTime<Utc>>,
     pub suspended_reason: Option<String>,
+    pub banned_at: Option<DateTime<Utc>>,
+    pub banned_reason: Option<String>,
     pub global_xp: i64,
     pub global_level: i32,
     pub created_at: DateTime<Utc>,
@@ -60,6 +66,8 @@ impl From<UserAuthRecord> for UserProfile {
             email_verified_at: r.email_verified_at,
             bio: r.bio,
             platform_role: r.platform_role,
+            platform_badge: r.platform_badge,
+            is_verified: r.is_verified,
             can_bypass_compress: r.can_bypass_compress,
             global_xp: r.global_xp,
             global_level: r.global_level,
@@ -93,7 +101,7 @@ pub async fn create_user_with_device(
          VALUES ($1, $2, $3, $4, $5)
          RETURNING id, uid, uid_login_enabled, (password_hash IS NOT NULL) AS has_password,
                    username, display_name, email, email_verified_at, bio,
-                   platform_role, can_bypass_compress, global_xp, global_level, created_at",
+                   platform_role, platform_badge, is_verified, can_bypass_compress, global_xp, global_level, created_at",
     )
     .bind(p.user_id)
     .bind(p.username)
@@ -127,8 +135,8 @@ pub async fn find_user_by_identifier(
 ) -> Result<Option<UserAuthRecord>, AppError> {
     let rec = sqlx::query_as::<_, UserAuthRecord>(
         "SELECT id, uid, uid_login_enabled, username, display_name, email, email_verified_at,
-                password_hash, bio, platform_role, can_bypass_compress, suspended_until,
-                suspended_reason, global_xp, global_level, created_at
+                password_hash, bio, platform_role, platform_badge, is_verified, can_bypass_compress,
+                suspended_until, suspended_reason, banned_at, banned_reason, global_xp, global_level, created_at
          FROM users
          WHERE LOWER(email) = LOWER($1)
             OR LOWER(username) = LOWER($1)
@@ -183,8 +191,8 @@ pub async fn find_user_by_id(
 ) -> Result<Option<UserAuthRecord>, AppError> {
     let rec = sqlx::query_as::<_, UserAuthRecord>(
         "SELECT id, uid, uid_login_enabled, username, display_name, email, email_verified_at,
-                password_hash, bio, platform_role, can_bypass_compress, suspended_until,
-                suspended_reason, global_xp, global_level, created_at
+                password_hash, bio, platform_role, platform_badge, is_verified, can_bypass_compress,
+                suspended_until, suspended_reason, banned_at, banned_reason, global_xp, global_level, created_at
          FROM users
          WHERE id = $1",
     )

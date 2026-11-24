@@ -107,6 +107,8 @@ impl FromRequestParts<Arc<AppState>> for AuthPrincipal {
 struct SessionStatusRow {
     suspended_until: Option<chrono::DateTime<Utc>>,
     suspended_reason: Option<String>,
+    banned_at: Option<chrono::DateTime<Utc>>,
+    banned_reason: Option<String>,
     revoked_at: Option<chrono::DateTime<Utc>>,
     expires_at: chrono::DateTime<Utc>,
 }
@@ -118,6 +120,16 @@ pub async fn validate_user_session(
     device_id: Uuid,
 ) -> Result<(), AppError> {
     if state.valkey_initialized {
+        let ban_key = format!("ban:user:{user_id}");
+        if let Ok(Ok(Some(_))) = tokio::time::timeout(
+            std::time::Duration::from_millis(150),
+            state.valkey.get::<Option<String>, _>(&ban_key),
+        )
+        .await
+        {
+            return Err(AppError::Forbidden("account permanently banned".to_string()));
+        }
+
         let suspend_key = format!("suspend:user:{user_id}");
         if let Ok(Ok(Some(raw_until))) = tokio::time::timeout(
             std::time::Duration::from_millis(150),
@@ -154,7 +166,7 @@ pub async fn validate_user_session(
     }
 
     let query_res = sqlx::query_as::<_, SessionStatusRow>(
-        "SELECT u.suspended_until, u.suspended_reason, d.revoked_at, d.expires_at
+        "SELECT u.suspended_until, u.suspended_reason, u.banned_at, u.banned_reason, d.revoked_at, d.expires_at
          FROM users u
          JOIN user_devices d ON d.user_id = u.id AND d.id = $2
          WHERE u.id = $1
@@ -186,11 +198,41 @@ pub async fn validate_user_session(
                 ));
             }
 
+            if row.banned_at.is_some() {
+                if state.valkey_initialized {
+                    let ban_key = format!("ban:user:{user_id}");
+                    let _ = state
+                        .valkey
+                        .set::<(), _, _>(
+                            &ban_key,
+                            "1",
+                            Some(fred::types::Expiration::EX(3600)),
+                            None,
+                            false,
+                        )
+                        .await;
+                }
+                let msg = row
+                    .banned_reason
+                    .unwrap_or_else(|| "account permanently banned".to_string());
+                return Err(AppError::Forbidden(msg));
+            }
+
             if let Some(until) = row.suspended_until
                 && until > Utc::now()
             {
                 if state.valkey_initialized {
-                    let suspend_key = format!("suspend:user:{user_id}");
+                    let ban_key = format!("ban:user:{user_id}");
+        if let Ok(Ok(Some(_))) = tokio::time::timeout(
+            std::time::Duration::from_millis(150),
+            state.valkey.get::<Option<String>, _>(&ban_key),
+        )
+        .await
+        {
+            return Err(AppError::Forbidden("account permanently banned".to_string()));
+        }
+
+        let suspend_key = format!("suspend:user:{user_id}");
                     let ttl = (until - Utc::now()).num_seconds().max(1);
                     let _ = state
                         .valkey

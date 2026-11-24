@@ -6,7 +6,8 @@ use backend::{
     app_router,
     config::AppConfig,
     media::{
-        QualityTier, generate_r2_key, validate_video_duration_for_tier, verify_webhook_signature,
+        AVATAR_MAX_DIMENSION, ImageCompressOptions, QualityTier, compress_image_to_webp,
+        generate_r2_key, validate_video_duration_for_tier, verify_webhook_signature,
     },
     state::AppState,
 };
@@ -29,6 +30,8 @@ async fn media_routes_reject_anonymous_requests() {
             "/api/v1/media/00000000-0000-0000-0000-000000000001/complete".to_string(),
         ),
         ("POST", "/api/v1/media".to_string()),
+        ("POST", "/api/v1/media/social".to_string()),
+        ("POST", "/api/v1/media/avatar".to_string()),
     ] {
         let response = app
             .clone()
@@ -112,4 +115,36 @@ fn test_inv8_hmac_webhook_verification() {
         verify_webhook_signature(secret, Some(&ts_str), Some("sha256=deadbeef"), body, now)
             .is_err()
     );
+}
+
+#[test]
+fn test_compress_image_to_webp_for_avatar() {
+    // Minimal valid 2x2 RGBA PNG encoded via `image`? No dev-dep on `image` in Cargo.toml,
+    // so use a valid 1x1 PNG byte literal and verify WebP output + invalid input rejection.
+    let one_by_one_png: &[u8] = &[
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1
+        0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, // RGBA, CRC
+        0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, // IDAT
+        0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05, 0x00, 0x01,
+        0x0D, 0x0A, 0x2D, 0xB4, // IDAT CRC
+        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, // IEND
+        0xAE, 0x42, 0x60, 0x82,
+    ];
+
+    let opts = ImageCompressOptions {
+        max_width: AVATAR_MAX_DIMENSION,
+        max_height: AVATAR_MAX_DIMENSION,
+    };
+    let compressed = compress_image_to_webp(one_by_one_png, opts).expect("compress 1x1 png");
+    assert_eq!(compressed.width, 1);
+    assert_eq!(compressed.height, 1);
+    assert_eq!(compressed.mime_type, "image/webp");
+    assert_eq!(compressed.extension, "webp");
+    assert!(compressed.bytes.len() >= 12);
+    assert_eq!(&compressed.bytes[0..4], b"RIFF");
+    assert_eq!(&compressed.bytes[8..12], b"WEBP");
+
+    assert!(compress_image_to_webp(b"not-an-image", opts).is_err());
 }

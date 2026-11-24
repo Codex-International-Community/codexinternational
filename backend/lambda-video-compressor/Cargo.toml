@@ -8,6 +8,7 @@ debug = false
 opt-level = 2
 
 [profile.release]
+debug = false
 strip = true
 lto = true
 codegen-units = 1

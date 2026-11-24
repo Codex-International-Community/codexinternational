@@ -68,7 +68,8 @@ struct PostRow {
     author: String,
     handle: String,
     platform_role: String,
-    email_verified_at: Option<DateTime<Utc>>,
+    platform_badge: Option<String>,
+    is_verified: bool,
     content: String,
     media_url: Option<String>,
     media_alt: Option<String>,
@@ -92,6 +93,9 @@ struct ReplyRow {
     parent_reply_id: Option<Uuid>,
     author: String,
     handle: String,
+    platform_role: String,
+    platform_badge: Option<String>,
+    is_verified: bool,
     content: String,
     media_url: Option<String>,
     media_alt: Option<String>,
@@ -199,8 +203,8 @@ pub async fn create_post(
     .execute(&state.pg)
     .await?;
 
-    let user: (String, String, String, Option<DateTime<Utc>>) = sqlx::query_as(
-        "SELECT display_name, username, platform_role, email_verified_at FROM users WHERE id = $1",
+    let user: (String, String, String, Option<String>, bool) = sqlx::query_as(
+        "SELECT display_name, username, platform_role, platform_badge, is_verified FROM users WHERE id = $1",
     )
     .bind(user_id)
     .fetch_one(&state.pg)
@@ -211,7 +215,8 @@ pub async fn create_post(
         user_id,
         author: user.0,
         handle: user.1,
-        verified: user.2 == "dev" || user.2 == "moderator" || user.3.is_some(),
+        verified: user.2 == "dev" || user.4,
+        platform_badge: user.3,
         text: content,
         media: media_url,
         media_alt,
@@ -302,11 +307,12 @@ pub async fn create_reply(
         .await?;
     tx.commit().await?;
 
-    let user: (String, String) =
-        sqlx::query_as("SELECT display_name, username FROM users WHERE id = $1")
-            .bind(user_id)
-            .fetch_one(&state.pg)
-            .await?;
+    let user: (String, String, String, Option<String>, bool) = sqlx::query_as(
+        "SELECT display_name, username, platform_role, platform_badge, is_verified FROM users WHERE id = $1",
+    )
+    .bind(user_id)
+    .fetch_one(&state.pg)
+    .await?;
 
     Ok(SocialReplyResponse {
         id: reply_id,
@@ -314,6 +320,8 @@ pub async fn create_reply(
         parent_reply_id: req.parent_reply_id,
         author: user.0,
         handle: user.1,
+        verified: user.2 == "dev" || user.4,
+        platform_badge: user.3,
         text: content,
         media: media_url,
         media_alt,
@@ -323,11 +331,12 @@ pub async fn create_reply(
 }
 
 pub async fn delete_post(state: &AppState, user_id: Uuid, post_id: Uuid) -> Result<(), AppError> {
-    let owner: Option<Uuid> = sqlx::query_scalar("SELECT user_id FROM posts WHERE id = $1")
-        .bind(post_id)
-        .fetch_optional(&state.pg)
-        .await?;
-    let Some(owner_id) = owner else {
+    let row: Option<(Uuid, Option<String>)> =
+        sqlx::query_as("SELECT user_id, media_url FROM posts WHERE id = $1")
+            .bind(post_id)
+            .fetch_optional(&state.pg)
+            .await?;
+    let Some((owner_id, post_media_url)) = row else {
         return Err(AppError::NotFound("post not found".into()));
     };
     if owner_id != user_id {
@@ -335,20 +344,43 @@ pub async fn delete_post(state: &AppState, user_id: Uuid, post_id: Uuid) -> Resu
             "cannot delete another user's post".into(),
         ));
     }
+
+    let reply_media_urls: Vec<String> = sqlx::query_scalar(
+        "SELECT media_url FROM post_replies WHERE post_id = $1 AND media_url IS NOT NULL",
+    )
+    .bind(post_id)
+    .fetch_all(&state.pg)
+    .await
+    .unwrap_or_default();
+
     sqlx::query("DELETE FROM posts WHERE id = $1")
         .bind(post_id)
         .execute(&state.pg)
         .await?;
+
+    let mut candidate_urls = reply_media_urls;
+    if let Some(url) = post_media_url {
+        candidate_urls.push(url);
+    }
+    if !candidate_urls.is_empty() {
+        let pg = state.pg.clone();
+        let cfg = state.config.clone();
+        tokio::spawn(async move {
+            for url in candidate_urls {
+                crate::media::delete_orphan_media_by_url(&pg, &cfg, &url).await;
+            }
+        });
+    }
     Ok(())
 }
 
 pub async fn delete_reply(state: &AppState, user_id: Uuid, reply_id: Uuid) -> Result<(), AppError> {
-    let row: Option<(Uuid, Uuid)> =
-        sqlx::query_as("SELECT user_id, post_id FROM post_replies WHERE id = $1")
+    let row: Option<(Uuid, Uuid, Option<String>)> =
+        sqlx::query_as("SELECT user_id, post_id, media_url FROM post_replies WHERE id = $1")
             .bind(reply_id)
             .fetch_optional(&state.pg)
             .await?;
-    let Some((owner_id, post_id)) = row else {
+    let Some((owner_id, post_id, reply_media_url)) = row else {
         return Err(AppError::NotFound("reply not found".into()));
     };
     if owner_id != user_id {
@@ -368,7 +400,86 @@ pub async fn delete_reply(state: &AppState, user_id: Uuid, reply_id: Uuid) -> Re
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
+
+    if let Some(url) = reply_media_url {
+        let pg = state.pg.clone();
+        let cfg = state.config.clone();
+        tokio::spawn(async move {
+            crate::media::delete_orphan_media_by_url(&pg, &cfg, &url).await;
+        });
+    }
     Ok(())
+}
+
+pub async fn dev_delete_post(state: &AppState, post_id: Uuid) -> Result<Uuid, AppError> {
+    let row: Option<(Uuid, Option<String>)> =
+        sqlx::query_as("SELECT user_id, media_url FROM posts WHERE id = $1")
+            .bind(post_id)
+            .fetch_optional(&state.pg)
+            .await?;
+    let Some((owner_id, post_media_url)) = row else {
+        return Err(AppError::NotFound("post not found".into()));
+    };
+
+    let reply_media_urls: Vec<String> = sqlx::query_scalar(
+        "SELECT media_url FROM post_replies WHERE post_id = $1 AND media_url IS NOT NULL",
+    )
+    .bind(post_id)
+    .fetch_all(&state.pg)
+    .await
+    .unwrap_or_default();
+
+    sqlx::query("DELETE FROM posts WHERE id = $1")
+        .bind(post_id)
+        .execute(&state.pg)
+        .await?;
+
+    let mut candidate_urls = reply_media_urls;
+    if let Some(url) = post_media_url {
+        candidate_urls.push(url);
+    }
+    if !candidate_urls.is_empty() {
+        let pg = state.pg.clone();
+        let cfg = state.config.clone();
+        tokio::spawn(async move {
+            for url in candidate_urls {
+                crate::media::delete_orphan_media_by_url(&pg, &cfg, &url).await;
+            }
+        });
+    }
+    Ok(owner_id)
+}
+
+pub async fn dev_delete_reply(state: &AppState, reply_id: Uuid) -> Result<Uuid, AppError> {
+    let row: Option<(Uuid, Uuid, Option<String>)> =
+        sqlx::query_as("SELECT user_id, post_id, media_url FROM post_replies WHERE id = $1")
+            .bind(reply_id)
+            .fetch_optional(&state.pg)
+            .await?;
+    let Some((owner_id, post_id, reply_media_url)) = row else {
+        return Err(AppError::NotFound("reply not found".into()));
+    };
+    let mut tx = state.pg.begin().await?;
+    sqlx::query("DELETE FROM post_replies WHERE id = $1")
+        .bind(reply_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "UPDATE posts SET replies_count = (SELECT COUNT(*)::INT FROM post_replies WHERE post_id = $1) WHERE id = $1",
+    )
+    .bind(post_id)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+
+    if let Some(url) = reply_media_url {
+        let pg = state.pg.clone();
+        let cfg = state.config.clone();
+        tokio::spawn(async move {
+            crate::media::delete_orphan_media_by_url(&pg, &cfg, &url).await;
+        });
+    }
+    Ok(owner_id)
 }
 
 pub async fn list_posts(
@@ -385,7 +496,8 @@ pub async fn list_posts(
             u.display_name AS author,
             u.username AS handle,
             u.platform_role,
-            u.email_verified_at,
+            u.platform_badge,
+            u.is_verified,
             p.content,
             p.media_url,
             p.media_alt,
@@ -423,6 +535,9 @@ pub async fn list_posts(
             r.parent_reply_id,
             u.display_name AS author,
             u.username AS handle,
+            u.platform_role,
+            u.platform_badge,
+            u.is_verified,
             r.content,
             r.media_url,
             r.media_alt,
@@ -452,6 +567,8 @@ pub async fn list_posts(
                 parent_reply_id: rr.parent_reply_id,
                 author: rr.author,
                 handle: rr.handle,
+                verified: rr.platform_role == "dev" || rr.is_verified,
+                platform_badge: rr.platform_badge,
                 text: rr.content,
                 media: rr.media_url,
                 media_alt: rr.media_alt,
@@ -529,9 +646,8 @@ pub async fn list_posts(
             user_id: row.user_id,
             author: row.author,
             handle: row.handle,
-            verified: row.platform_role == "dev"
-                || row.platform_role == "moderator"
-                || row.email_verified_at.is_some(),
+            verified: row.platform_role == "dev" || row.is_verified,
+            platform_badge: row.platform_badge,
             text: row.content,
             media: row.media_url,
             media_alt: row.media_alt,

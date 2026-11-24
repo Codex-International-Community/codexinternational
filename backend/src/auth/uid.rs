@@ -123,7 +123,7 @@ pub async fn set_or_change_password(
          WHERE id = $2
          RETURNING id, uid, uid_login_enabled, (password_hash IS NOT NULL) AS has_password,
                    username, display_name, email, email_verified_at, bio,
-                   platform_role, can_bypass_compress, global_xp, global_level, created_at",
+                   platform_role, platform_badge, is_verified, can_bypass_compress, global_xp, global_level, created_at",
     )
     .bind(&new_hash)
     .bind(auth.user_id)
@@ -202,7 +202,7 @@ pub async fn toggle_uid_login(
          WHERE id = $2
          RETURNING id, uid, uid_login_enabled, (password_hash IS NOT NULL) AS has_password,
                    username, display_name, email, email_verified_at, bio,
-                   platform_role, can_bypass_compress, global_xp, global_level, created_at",
+                   platform_role, platform_badge, is_verified, can_bypass_compress, global_xp, global_level, created_at",
     )
     .bind(req.enabled)
     .bind(auth.user_id)
@@ -352,7 +352,7 @@ pub async fn assign_reserved_uid(
          WHERE id = $3
          RETURNING id, uid, uid_login_enabled, (password_hash IS NOT NULL) AS has_password,
                    username, display_name, email, email_verified_at, bio,
-                   platform_role, can_bypass_compress, global_xp, global_level, created_at",
+                   platform_role, platform_badge, is_verified, can_bypass_compress, global_xp, global_level, created_at",
     )
     .bind(&new_uid)
     .bind(next_platform_role.as_deref())
