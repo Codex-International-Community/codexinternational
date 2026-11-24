@@ -8,6 +8,7 @@ interface MembersPanelProps {
   currentDmUser?: User
   people: User[]
   mobileOpen?: boolean
+  onClose?: () => void
   onInvite: () => void
   onOpenProfile: (userId: string) => void
 }
@@ -18,6 +19,7 @@ export function MembersPanel({
   currentDmUser,
   people,
   mobileOpen = false,
+  onClose,
   onInvite,
   onOpenProfile,
 }: MembersPanelProps) {
@@ -49,11 +51,18 @@ export function MembersPanel({
           <strong>{isDm ? 'Contact' : 'Members'}</strong>
           <span>{visiblePeople.length}</span>
         </div>
-        {!isDm && (
-          <button type="button" onClick={onInvite} title="Invite">
-            <Icon name="plus" size={15} />
-          </button>
-        )}
+        <div className="members-heading-actions">
+          {!isDm && (
+            <button type="button" onClick={onInvite} title="Invite">
+              <Icon name="plus" size={15} />
+            </button>
+          )}
+          {mobileOpen && onClose && (
+            <button type="button" className="members-mobile-close" onClick={onClose} aria-label="Close members">
+              <Icon name="close" size={15} />
+            </button>
+          )}
+        </div>
       </div>
 
       {isDm && currentDmUser ? (

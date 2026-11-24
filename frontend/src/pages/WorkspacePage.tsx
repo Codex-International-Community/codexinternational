@@ -1503,7 +1503,7 @@ export function WorkspacePage({
         />
       )}
 
-      {!isMobile && view !== 'discover' && view !== 'channels' && view !== 'people' && (
+      {!isMobile && view !== 'discover' && (
         <ChannelSidebar
           currentUser={currentUser}
           view={view}
@@ -2187,6 +2187,7 @@ export function WorkspacePage({
               currentDmUser={currentDm}
               people={view === 'dm' ? people : currentServerPeople}
               mobileOpen={isMobile && membersOpen}
+              onClose={() => setMembersOpen(false)}
               onInvite={() => void handleOpenInvite()}
               onOpenProfile={openProfile}
             />

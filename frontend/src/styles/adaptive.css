@@ -2937,42 +2937,7 @@ button:hover > .gf-icon { opacity: 1; }
 @media (max-width: 767px) {
   .mobile-drawer-link { display: flex; }
 }
-@media (min-width: 768px) {
-  .app-shell.view-channels,
-  .app-shell.view-people {
-    grid-template-columns: 68px minmax(0, 1fr) !important;
-  }
-}
-
-/* Keep the compact server navigation visible on directory pages without
-   mounting the full channel drawer over their existing content. */
-@media (max-width: 767px) {
-  .app-shell.view-channels > .server-rail,
-  .app-shell.view-people > .server-rail {
-    display: flex !important;
-    position: fixed !important;
-    inset: 56px auto 68px 0 !important;
-    width: 52px !important;
-    min-width: 52px !important;
-    max-width: 52px !important;
-    height: auto !important;
-    transform: none !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
-    z-index: 42 !important;
-  }
-
-  .app-shell.view-channels > .workspace,
-  .app-shell.view-people > .workspace {
-    width: calc(100% - 52px);
-    margin-left: 52px;
-  }
-
-  .app-shell.view-channels .mobile-tabs,
-  .app-shell.view-people .mobile-tabs {
-    width: calc(100vw - 52px);
-  }
-}
+/* Directory views keep the standard mobile & desktop navigation layout. */
 
 /* Discover is a focused directory page: no server rail or channel drawer. */
 .app-shell.view-discover > .server-rail,
@@ -5225,6 +5190,83 @@ dialog.modal--discord-server::backdrop {
   display: inline-block;
 }
 
+/* Shared Primary & Secondary Action Buttons */
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-primary {
+  border: 1px solid var(--accent-solid);
+  background: var(--accent-solid);
+  color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-solid-hover);
+  border-color: var(--accent-solid-hover);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  border: 1px solid var(--line);
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--muted);
+  background: var(--line);
+}
+
+/* Mobile Members Drawer & Header Actions */
+.members-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 767px) {
+  .workspace-body > .members-panel.mobile-members-open {
+    position: fixed !important;
+    top: 56px !important;
+    right: 0 !important;
+    bottom: 62px !important;
+    width: min(280px, 84vw) !important;
+    z-index: 80 !important;
+    background: var(--side) !important;
+    border-left: 1px solid var(--line) !important;
+    box-shadow: -16px 0 40px rgba(0, 0, 0, 0.55) !important;
+    padding: 0 0 12px !important;
+    margin: 0 !important;
+    overflow-y: auto !important;
+  }
+
+  .members-panel.mobile-members-open .members-heading {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--side);
+    border-bottom: 1px solid var(--line);
+    padding: 12px 14px;
+  }
+}
+
 /* Shared Modal Backdrop & Card */
 .modal-backdrop {
   position: fixed;
@@ -5667,10 +5709,9 @@ button.text-tag:hover {
 
 .profile-popover-identity {
   display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  padding: 0 12px;
-  margin-top: -24px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px 4px;
 }
 
 .profile-popover-names {
@@ -5706,24 +5747,34 @@ button.text-tag:hover {
   gap: 2px;
 }
 
+.app-shell .server-rail .profile-popover button,
 .profile-popover-group button {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 9px;
+  justify-content: flex-start;
+  gap: 10px;
   width: 100%;
-  min-height: 34px;
-  padding: 6px 9px;
+  height: auto;
+  min-height: 36px;
+  padding: 7px 10px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 7px;
   background: transparent;
   color: var(--text);
   font-size: 13px;
+  font-weight: 500;
   text-align: left;
   cursor: pointer;
 }
 
+.app-shell .server-rail .profile-popover button:hover,
 .profile-popover-group button:hover {
   background: var(--surface);
+}
+
+.app-shell .server-rail .profile-popover button svg {
+  flex: 0 0 auto;
 }
 
 .profile-popover-group button > span:nth-child(2) {

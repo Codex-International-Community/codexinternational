@@ -1941,24 +1941,9 @@ dialog.modal {
 }
 
 /* Channels and People directories */
-.app-shell.view-channels,
-.app-shell.view-people {
-  grid-template-columns: 66px minmax(0, 1fr);
-}
-
-.view-channels .channel-sidebar,
-.view-people .channel-sidebar {
-  display: none;
-}
-
 .view-channels .workspace-body,
 .view-people .workspace-body {
   grid-template-columns: minmax(0, 1fr);
-}
-
-.view-channels .members-panel,
-.view-people .members-panel {
-  display: none;
 }
 
 .directory-page {
