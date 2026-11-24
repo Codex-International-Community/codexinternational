@@ -24,9 +24,22 @@ pub async fn list_posts(
         user.user_id,
         query.tab.as_deref(),
         query.limit.unwrap_or(50),
+        None,
     )
     .await?;
     Ok(Json(posts))
+}
+
+pub async fn get_post(
+    State(state): State<Arc<AppState>>,
+    user: AuthUser,
+    Path(post_id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let mut posts = repo::list_posts(&state, user.user_id, None, 1, Some(post_id)).await?;
+    let post = posts
+        .pop()
+        .ok_or_else(|| AppError::NotFound("post not found".into()))?;
+    Ok(Json(post))
 }
 
 pub async fn list_bookmarks(
@@ -39,6 +52,7 @@ pub async fn list_bookmarks(
         user.user_id,
         Some("saved"),
         query.limit.unwrap_or(50),
+        None,
     )
     .await?;
     Ok(Json(posts))

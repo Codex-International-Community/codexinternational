@@ -265,12 +265,15 @@ export function ServerOptionsDialog(props: ServerOptionsDialogProps) {
     [categories, channels],
   )
   const uncategorizedChannels = channels.filter((channel) => !channel.category_id)
+  const inviteUrl = inviteCode
+    ? `${window.location.origin}/invite/${encodeURIComponent(inviteCode)}`
+    : ''
 
   const handleCopyInvite = async () => {
     try {
-      if (!inviteCode || !navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
-      await navigator.clipboard.writeText(inviteCode)
-      setLocalMessage('Invite code copied')
+      if (!inviteUrl || !navigator.clipboard?.writeText) throw new Error('Clipboard unavailable')
+      await navigator.clipboard.writeText(inviteUrl)
+      setLocalMessage('Invite link copied')
     } catch {
       setLocalMessage('Could not copy invite code. Check browser clipboard permissions.')
     }
@@ -706,14 +709,14 @@ export function ServerOptionsDialog(props: ServerOptionsDialogProps) {
                 <div className="server-settings-section-heading">
                   <span className="server-settings-eyebrow">GROW YOUR COMMUNITY</span>
                   <h3>Invites</h3>
-                  <p>Share this invite code with people you want to bring into the server.</p>
+                  <p>Share this invite link with people you want to bring into the server.</p>
                 </div>
                 <div className="server-settings-invite-card">
-                  <span className="server-settings-eyebrow">SERVER INVITE CODE</span>
+                  <span className="server-settings-eyebrow">SERVER INVITE LINK</span>
                   <div className="server-settings-invite-code">
-                    <code>{inviteCode || (loading ? 'Loading…' : 'Unavailable')}</code>
-                    <button type="button" onClick={() => void handleCopyInvite()} disabled={!inviteCode}>
-                      <Icon name="copy" size={16} /> Copy code
+                    <code>{inviteUrl || (loading ? 'Loading…' : 'Unavailable')}</code>
+                    <button type="button" onClick={() => void handleCopyInvite()} disabled={!inviteUrl}>
+                      <Icon name="copy" size={16} /> Copy link
                     </button>
                   </div>
                   <p>Anyone with this code can join, unless they are banned from this server.</p>

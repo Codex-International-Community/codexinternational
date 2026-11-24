@@ -6,7 +6,7 @@ import '../styles/adaptive.css'
 import type { AuthSession } from '../api/client'
 import { ApiError } from '../api/client'
 import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, listPinnedMessages, mapChatMessage, pinMessage, postMessage, toggleMessageReaction, unpinMessage, uploadChatMedia, type ChatMessageWire } from '../api/chat'
-import { createSocialPost, createSocialReply, deleteSocialPost, deleteSocialReply, listSocialActivity, listSocialPosts, toggleSocialAction, type SocialActivityItem } from '../api/social'
+import { createSocialPost, createSocialReply, deleteSocialPost, deleteSocialReply, getSocialPost, listSocialActivity, listSocialPosts, toggleSocialAction, type SocialActivityItem } from '../api/social'
 import { saveSticker } from '../api/stickers'
 import { inspectZipFile } from '../utils/zipGuard'
 import { createChannel as createChannelApi, createCommunity, createCommunityCategory, createCommunityEvent, createOrGetDm, deleteCommunity, getCommunityInvite, getCommunityMemberSettings, joinCommunity, leaveCommunity, listChannels, listCommunities, listCommunityCategories, listCommunityMembers, updateCommunity, updateCommunityMemberSettings, updateCommunityNickname, type CommunityCategory, type CommunityMemberSettings } from '../api/communities'
@@ -63,6 +63,8 @@ interface WorkspaceRoute {
   channelId: string
   dmId: string
   path?: string
+  inviteCode?: string
+  postId?: string
 }
 
 const defaultWorkspaceRoute: WorkspaceRoute = {
@@ -88,6 +90,14 @@ function parseWorkspaceRoute(
     })
 
   if (segments.length === 0) return { ...fallback, view: 'home' }
+
+  if (segments.length === 2 && segments[0] === 'invite' && segments[1]) {
+    return { ...fallback, view: 'home', inviteCode: segments[1] }
+  }
+
+  if (segments.length === 2 && segments[0] === 'posts' && segments[1]) {
+    return { ...fallback, view: 'social', postId: segments[1] }
+  }
 
   if (segments[0] === 'channels' && segments[1] === '@me') {
     if (segments.length === 2) return { ...fallback, view: 'home' }
@@ -130,10 +140,10 @@ function parseWorkspaceRoute(
     : { ...fallback, view: 'not-found', path: pathname }
 }
 
-function buildWorkspacePath({ view, serverId, channelId, dmId, path }: WorkspaceRoute): string {
+function buildWorkspacePath({ view, serverId, channelId, dmId, path, inviteCode, postId }: WorkspaceRoute): string {
   switch (view) {
     case 'home':
-      return '/channels/@me'
+      return inviteCode ? `/invite/${encodeURIComponent(inviteCode)}` : '/channels/@me'
     case 'dm':
       return `/channels/@me/${encodeURIComponent(dmId)}`
     case 'channel':
@@ -141,7 +151,7 @@ function buildWorkspacePath({ view, serverId, channelId, dmId, path }: Workspace
     case 'discover':
       return '/discover'
     case 'social':
-      return '/threads'
+      return postId ? `/posts/${encodeURIComponent(postId)}` : '/threads'
     case 'settings':
       return '/settings'
     case 'notifications':
@@ -202,6 +212,10 @@ export function WorkspacePage({
     parseWorkspaceRoute(window.location.pathname),
   )
   const [view, setView] = useState<View>(initialRoute.view)
+  const [shareRoute, setShareRoute] = useState(() => ({
+    inviteCode: initialRoute.inviteCode,
+    postId: initialRoute.postId,
+  }))
   const [pageTransition, setPageTransition] = useState<'slide-forward' | 'slide-backward' | null>(null)
   const previousViewRef = useRef<View>(initialRoute.view)
 
@@ -234,8 +248,10 @@ export function WorkspacePage({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [modal, setModal] = useState<ActionModalType | 'call' | null>(null)
-  const [modalValue, setModalValue] = useState('')
+  const [modal, setModal] = useState<ActionModalType | 'call' | null>(() =>
+    initialRoute.inviteCode ? 'server' : null,
+  )
+  const [modalValue, setModalValue] = useState(initialRoute.inviteCode ?? '')
   const [selectedChannelCategoryId, setSelectedChannelCategoryId] = useState('')
   const [serverCreateError, setServerCreateError] = useState('')
   const [serverCreating, setServerCreating] = useState(false)
@@ -467,14 +483,23 @@ export function WorkspacePage({
   useEffect(() => {
     if (view !== 'social') return
     let cancelled = false
+    const sharedPostRequest = shareRoute.postId
+      ? getSocialPost(shareRoute.postId, session.user.username).catch(() => null)
+      : Promise.resolve(null)
     void Promise.all([
       listSocialPosts(socialTab, session.user.username),
       listSocialActivity(),
+      sharedPostRequest,
     ])
-      .then(([posts, activities]) => {
+      .then(([posts, activities, sharedPost]) => {
         if (!cancelled) {
-          setSocialPosts(posts)
+          setSocialPosts(sharedPost
+            ? [sharedPost, ...posts.filter((post) => post.id !== sharedPost.id)]
+            : posts)
           setSocialActivities(activities)
+          if (shareRoute.postId && !sharedPost) {
+            notify('This shared post is unavailable or has been removed.')
+          }
         }
       })
       .catch((error: unknown) => {
@@ -485,7 +510,7 @@ export function WorkspacePage({
     return () => {
       cancelled = true
     }
-  }, [view, socialTab, session.user.id, session.user.username, notify])
+  }, [view, socialTab, session.user.id, session.user.username, shareRoute.postId, notify])
   useEffect(() => {
     if (view !== 'dm' || !people.some((person) => person.id === dmId)) return
     if (data.conversations.some((conversation) => conversation.userId === dmId)) return
@@ -511,7 +536,15 @@ export function WorkspacePage({
   }, [view, dmId, people, data.conversations, notify])
 
   useEffect(() => {
-    const nextPath = buildWorkspacePath({ view, serverId, channelId, dmId, path: notFoundPath })
+    const nextPath = buildWorkspacePath({
+      view,
+      serverId,
+      channelId,
+      dmId,
+      path: notFoundPath,
+      inviteCode: shareRoute.inviteCode,
+      postId: shareRoute.postId,
+    })
     if (window.location.pathname !== nextPath) {
       if (routeSyncReadyRef.current) {
         window.history.pushState({ view }, '', nextPath)
@@ -520,7 +553,7 @@ export function WorkspacePage({
       }
     }
     routeSyncReadyRef.current = true
-  }, [view, serverId, channelId, dmId, notFoundPath])
+  }, [view, serverId, channelId, dmId, notFoundPath, shareRoute.inviteCode, shareRoute.postId])
 
   useEffect(() => {
     const handlePopState = () => {
@@ -535,6 +568,14 @@ export function WorkspacePage({
       setChannelId(route.channelId)
       setDmId(route.dmId)
       setNotFoundPath(route.path ?? '')
+      setShareRoute({ inviteCode: route.inviteCode, postId: route.postId })
+      if (route.inviteCode) {
+        setModal('server')
+        setModalValue(route.inviteCode)
+      } else if (modal === 'server') {
+        setModal(null)
+        setModalValue('')
+      }
       setMobileTab(mobileTabForView(route.view))
       
       setSearchOpen(false)
@@ -544,7 +585,7 @@ export function WorkspacePage({
 
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
-  }, [view, serverId, channelId, dmId])
+  }, [view, serverId, channelId, dmId, modal])
 
 
   useEffect(() => {
@@ -1151,7 +1192,7 @@ export function WorkspacePage({
     if (!server) return
     try {
       const result = await getCommunityInvite(server.id)
-      setModalValue(result.invite_code)
+      setModalValue(`${window.location.origin}/invite/${encodeURIComponent(result.invite_code)}`)
       setModal('invite')
     } catch (error) {
       notify(error instanceof Error ? error.message : 'Could not create an invite.')
@@ -1201,6 +1242,7 @@ export function WorkspacePage({
       setMobileTab('chat')
       setModal(null)
       setModalValue('')
+      setShareRoute((current) => ({ ...current, inviteCode: undefined }))
       notify(joined.already_member ? `Opened ${community.name}` : `Joined ${community.name}`)
     } catch (error) {
       notify(error instanceof Error ? error.message : 'Could not join community.')
@@ -1376,6 +1418,7 @@ export function WorkspacePage({
   const discoverReturnRouteRef = useRef<WorkspaceRoute | null>(null)
 
   const navigateView = (nextView: View) => {
+    setShareRoute({ inviteCode: undefined, postId: undefined })
     if (nextView === 'discover') {
       discoverReturnRouteRef.current = { view, serverId, channelId, dmId, path: notFoundPath }
     }
@@ -1752,12 +1795,17 @@ export function WorkspacePage({
                     })
                 }}
                 onShare={(postId) => {
-                  const found = socialPosts.find((p) => p.id === postId)
-                  if (found) {
-                    void navigator.clipboard?.writeText(found.text || found.media || '')
-                    notify('Post text copied')
+                  const link = `${window.location.origin}/posts/${encodeURIComponent(postId)}`
+                  if (!navigator.clipboard?.writeText) {
+                    notify('Clipboard access is unavailable in this browser.')
+                    return
                   }
+                  void navigator.clipboard.writeText(link)
+                    .then(() => notify('Post link copied'))
+                    .catch(() => notify('Could not copy post link. Check browser clipboard permissions.'))
                 }}
+                focusedPostId={shareRoute.postId}
+                onClearFocusedPost={() => setShareRoute((current) => ({ ...current, postId: undefined }))}
                 onNotify={notify}
               />
             ) : view === 'bots' ? (
@@ -2196,6 +2244,7 @@ export function WorkspacePage({
           onChangeCategoryId={setSelectedChannelCategoryId}
           serverError={modal === 'server' ? serverCreateError : ''}
           creatingServer={modal === 'server' && serverCreating}
+          initialServerStep={shareRoute.inviteCode ? 'join' : 'choose'}
           onChangeValue={(value) => {
             setModalValue(value)
             if (modal === 'server') setServerCreateError('')
@@ -2203,9 +2252,13 @@ export function WorkspacePage({
           onCreateServer={() => void handleCreateCommunity()}
           onJoinServer={() => void handleJoinCommunity()}
           onCopyInvite={() => {
+            if (!navigator.clipboard?.writeText) {
+              notify('Clipboard access is unavailable in this browser.')
+              return
+            }
             void navigator.clipboard.writeText(modalValue)
-              .then(() => notify('Invite code copied'))
-              .catch(() => notify('Could not copy invite code.'))
+              .then(() => notify('Invite link copied'))
+              .catch(() => notify('Could not copy invite link.'))
           }}
           onSubmit={(e) => {
             e.preventDefault()
@@ -2268,6 +2321,9 @@ export function WorkspacePage({
             setModal(null)
             setModalValue('')
             setSelectedChannelCategoryId('')
+            if (shareRoute.inviteCode) {
+              setShareRoute((current) => ({ ...current, inviteCode: undefined }))
+            }
           }}
         />
       )}
