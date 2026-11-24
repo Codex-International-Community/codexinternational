@@ -273,7 +273,9 @@ pub async fn update_avatar(
     let updated = find_user_by_id(&state.pg, auth.user_id)
         .await?
         .ok_or_else(|| AppError::Unauthorized("user account no longer exists".to_string()))?;
-    Ok(Json(MeResponse { user: updated.into() }))
+    Ok(Json(MeResponse {
+        user: updated.into(),
+    }))
 }
 
 pub(crate) fn ensure_not_suspended(record: &UserAuthRecord) -> Result<(), AppError> {

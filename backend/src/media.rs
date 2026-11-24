@@ -650,7 +650,9 @@ pub async fn presign(
     })?;
 
     if req.purpose == "avatar" && kind != "image" {
-        return Err(AppError::BadRequest("profile photos must be image files".to_string()));
+        return Err(AppError::BadRequest(
+            "profile photos must be image files".to_string(),
+        ));
     }
 
     if kind == "file" && !req.client_checked {
