@@ -1,0 +1,167 @@
+---
+- name: Setup CodexInternational Project on Server
+  hosts: codex_servers
+  become: true
+
+  vars:
+    app_user: rallc
+    project_dir: "/home/{{ app_user }}/projects/codexinternational"
+    repo_url: "https://github.com/Codex-International-Community/codexinternational.git"
+    repo_branch: "main"
+    node_major_version: "22"
+
+  tasks:
+    - name: Install build and runtime dependencies
+      ansible.builtin.apt:
+        name:
+          - git
+          - curl
+          - ca-certificates
+          - gnupg
+          - build-essential
+          - pkg-config
+          - libssl-dev
+          - docker.io
+          - docker-compose-v2
+        state: present
+        update_cache: true
+
+    - name: Ensure Docker service is enabled and running
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Add app_user to docker group
+      ansible.builtin.user:
+        name: "{{ app_user }}"
+        groups: docker
+        append: true
+
+    - name: Install Caddy apt repository key and repo
+      ansible.builtin.shell: |
+        set -euo pipefail
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+        curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+      args:
+        executable: /bin/bash
+        creates: /etc/apt/sources.list.d/caddy-stable.list
+
+    - name: Install Caddy
+      ansible.builtin.apt:
+        name: caddy
+        state: present
+        update_cache: true
+
+    - name: Install Node.js {{ node_major_version }}.x via NodeSource
+      ansible.builtin.shell: |
+        set -euo pipefail
+        curl -fsSL https://deb.nodesource.com/setup_{{ node_major_version }}.x | bash -
+      args:
+        executable: /bin/bash
+        creates: /etc/apt/sources.list.d/nodesource.list
+
+    - name: Install nodejs package
+      ansible.builtin.apt:
+        name: nodejs
+        state: present
+        update_cache: true
+
+    - name: Install Rust toolchain for app_user
+      become_user: "{{ app_user }}"
+      ansible.builtin.shell: |
+        set -euo pipefail
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+      args:
+        executable: /bin/bash
+        creates: "/home/{{ app_user }}/.cargo/bin/cargo"
+
+    - name: Ensure project parent directory exists
+      ansible.builtin.file:
+        path: "{{ project_dir | dirname }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: "0755"
+
+    - name: Clone or update repository
+      become_user: "{{ app_user }}"
+      ansible.builtin.git:
+        repo: "{{ repo_url }}"
+        dest: "{{ project_dir }}"
+        version: "{{ repo_branch }}"
+        update: true
+
+    - name: Start PostgreSQL and Valkey via Docker Compose
+      become_user: "{{ app_user }}"
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "{{ project_dir }}"
+      changed_when: true
+
+    - name: Install frontend dependencies and build SPA
+      become_user: "{{ app_user }}"
+      ansible.builtin.shell: |
+        set -euo pipefail
+        npm ci
+        npm run build
+      args:
+        executable: /bin/bash
+        chdir: "{{ project_dir }}/frontend"
+      changed_when: true
+
+    - name: Build Rust backend release binary
+      become_user: "{{ app_user }}"
+      ansible.builtin.shell: |
+        set -euo pipefail
+        export PATH="$HOME/.cargo/bin:$PATH"
+        cargo build --release
+      args:
+        executable: /bin/bash
+        chdir: "{{ project_dir }}/backend"
+      changed_when: true
+
+    - name: Install Caddyfile
+      ansible.builtin.copy:
+        src: "{{ project_dir }}/deploy/Caddyfile"
+        dest: /etc/caddy/Caddyfile
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload Caddy
+
+    - name: Install codexter-backend systemd service
+      ansible.builtin.copy:
+        src: "{{ project_dir }}/deploy/codexter-backend.service"
+        dest: /etc/systemd/system/codexter-backend.service
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart codexter-backend
+
+    - name: Enable and start Caddy
+      ansible.builtin.systemd:
+        name: caddy
+        enabled: true
+        state: started
+
+    - name: Enable and start codexter-backend
+      ansible.builtin.systemd:
+        name: codexter-backend
+        daemon_reload: true
+        enabled: true
+        state: started
+
+  handlers:
+    - name: Reload Caddy
+      ansible.builtin.systemd:
+        name: caddy
+        state: reloaded
+
+    - name: Restart codexter-backend
+      ansible.builtin.systemd:
+        name: codexter-backend
+        daemon_reload: true
+        state: restarted

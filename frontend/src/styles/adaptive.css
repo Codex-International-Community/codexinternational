@@ -4,22 +4,26 @@
 /* Support 5 adaptive tabs on mobile cleanly */
 @media (max-width: 767px) {
   .workspace {
-    grid-template-rows: 56px minmax(0, 1fr) calc(62px + env(safe-area-inset-bottom, 0px));
+    grid-template-rows: 52px minmax(0, 1fr) calc(58px + env(safe-area-inset-bottom, 0px));
   }
 
   .mobile-tabs {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    height: calc(62px + env(safe-area-inset-bottom, 0px));
-    padding: 4px 4px max(6px, env(safe-area-inset-bottom, 0px));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+    height: calc(58px + env(safe-area-inset-bottom, 0px));
+    padding: 4px 6px max(6px, env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--line);
     background: var(--side);
+    overflow: hidden;
   }
 
   .mobile-tabs button {
-    min-height: 48px;
+    min-width: 0;
+    min-height: 46px;
     border-radius: 10px;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     gap: 3px;
   }
 
@@ -3440,24 +3444,35 @@ button:hover > .gf-icon { opacity: 1; }
 }
 
 @media (max-width: 767px) {
-  .app-shell {
+  .app-shell,
+  .app-shell.viewport-mobile {
     display: grid !important;
     grid-template-columns: minmax(0, 1fr) !important;
     grid-template-rows: minmax(0, 1fr) !important;
     width: 100%;
     height: 100dvh;
     min-height: 0;
+    overflow: hidden;
   }
   .app-shell > .server-rail,
-  .app-shell > .channel-sidebar {
+  .app-shell > .channel-sidebar,
+  .app-shell.viewport-mobile > .server-rail,
+  .app-shell.viewport-mobile > .channel-sidebar {
     display: none !important;
   }
-  .app-shell > .workspace {
+  .app-shell > .workspace,
+  .app-shell.view-home > .workspace,
+  .app-shell.viewport-mobile > .workspace {
     grid-column: 1 !important;
     min-width: 0;
     width: 100% !important;
     height: 100dvh !important;
-    grid-template-rows: 52px minmax(0, 1fr) 54px !important;
+    overflow-x: hidden;
+    grid-template-rows: 52px minmax(0, 1fr) calc(58px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .app-shell.view-discover > .workspace,
+  .app-shell.viewport-mobile.view-discover > .workspace {
+    grid-template-rows: 52px minmax(0, 1fr) !important;
   }
   .app-shell .topbar {
     width: 100%;
@@ -3898,7 +3913,7 @@ button:hover > .gf-icon { opacity: 1; }
 
 @media (max-width: 767px) {
   .app-shell.view-home .workspace {
-    grid-template-rows: 56px minmax(0, 1fr) 54px;
+    grid-template-rows: 52px minmax(0, 1fr) calc(58px + env(safe-area-inset-bottom, 0px));
   }
 
   .friends-toolbar {

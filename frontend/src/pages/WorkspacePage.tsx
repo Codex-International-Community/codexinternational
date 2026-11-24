@@ -1382,39 +1382,39 @@ export function WorkspacePage({
 
   return (
     <div
-      className={`app-shell theme-${data.theme} ${isMobile ? 'viewport-mobile' : 'viewport-desktop'} ${
-        'sidebar-persistent'
-      } ${pageTransition ? `page-transition-${pageTransition}` : ''} view-${view} ${view === 'discover' ? 'has-no-channel-sidebar' : ''}`}
+      className={`app-shell theme-${data.theme} ${isMobile ? 'viewport-mobile' : 'viewport-desktop sidebar-persistent'} ${pageTransition ? `page-transition-${pageTransition}` : ''} view-${view} ${view === 'discover' ? 'has-no-channel-sidebar' : ''}`}
     >
-      <ServerRail
-        servers={data.servers}
-        currentUser={currentUser}
-        activeServerId={serverId}
-        activeView={view}
-        isMobile={isMobile}
-        profileMenuOpen={profileMenu}
-        onSelectHome={() => {
-          setView('home')
-          setMobileTab('home')
-        }}
-        onSelectServer={pickServer}
-        onCreateServer={() => {
-          setServerCreateError('')
-          setModal('server')
-          setModalValue('')
-        }}
-        onNavigateDiscover={() => navigateView('discover')}
-        onNavigateSocial={() => navigateView('social')}
-        onToggleProfileMenu={() => {
-          setServerMenuOpen(false)
-          setProfileMenu((open) => !open)
-        }}
-        onOpenProfile={() => openProfile(session.user.id)}
-        onNavigateSettings={() => navigateView('settings')}
-        onLogout={() => void onLogout()}
-      />
+      {!isMobile && (
+        <ServerRail
+          servers={data.servers}
+          currentUser={currentUser}
+          activeServerId={serverId}
+          activeView={view}
+          isMobile={isMobile}
+          profileMenuOpen={profileMenu}
+          onSelectHome={() => {
+            setView('home')
+            setMobileTab('home')
+          }}
+          onSelectServer={pickServer}
+          onCreateServer={() => {
+            setServerCreateError('')
+            setModal('server')
+            setModalValue('')
+          }}
+          onNavigateDiscover={() => navigateView('discover')}
+          onNavigateSocial={() => navigateView('social')}
+          onToggleProfileMenu={() => {
+            setServerMenuOpen(false)
+            setProfileMenu((open) => !open)
+          }}
+          onOpenProfile={() => openProfile(session.user.id)}
+          onNavigateSettings={() => navigateView('settings')}
+          onLogout={() => void onLogout()}
+        />
+      )}
 
-      {view !== 'discover' && view !== 'channels' && view !== 'people' && (
+      {!isMobile && view !== 'discover' && view !== 'channels' && view !== 'people' && (
         <ChannelSidebar
           currentUser={currentUser}
           view={view}
