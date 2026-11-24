@@ -182,7 +182,7 @@ export function MemberProfile({
                   aria-disabled={avatarBusy}
                   title="Upload a new profile photo. GIF is supported."
                 >
-                  <Icon name="camera" size={15} />
+                  <Icon name="image" size={15} />
                   {avatarBusy ? 'Uploading…' : 'Change photo'}
                 </label>
                 {user.avatarMediaId && (
