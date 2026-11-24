@@ -6,7 +6,7 @@ import '../styles/adaptive.css'
 import type { AuthSession } from '../api/client'
 import { ApiError } from '../api/client'
 import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, listPinnedMessages, mapChatMessage, pinMessage, postMessage, toggleMessageReaction, unpinMessage, uploadChatMedia, type ChatMessageWire } from '../api/chat'
-import { createSocialPost, createSocialReply, listSocialPosts, toggleSocialAction } from '../api/social'
+import { createSocialPost, createSocialReply, listSocialActivity, listSocialPosts, toggleSocialAction, type SocialActivityItem } from '../api/social'
 import { inspectZipFile } from '../utils/zipGuard'
 import { createChannel as createChannelApi, createCommunity, createCommunityCategory, createCommunityEvent, createOrGetDm, deleteCommunity, getCommunityInvite, getCommunityMemberSettings, joinCommunity, leaveCommunity, listChannels, listCommunities, listCommunityCategories, listCommunityMembers, updateCommunity, updateCommunityMemberSettings, updateCommunityNickname, type CommunityCategory, type CommunityMemberSettings } from '../api/communities'
 import type { ViewportInfo } from '../hooks/useViewport'
@@ -249,6 +249,7 @@ export function WorkspacePage({
   const [currentServerNickname, setCurrentServerNickname] = useState('')
   const [notificationRead, setNotificationRead] = useState(false)
   const [socialPosts, setSocialPosts] = useState<SocialPost[]>([])
+  const [socialActivities, setSocialActivities] = useState<SocialActivityItem[]>([])
   const [socialDraft, setSocialDraft] = useState('')
   const [socialTab, setSocialTab] = useState<SocialTab>('for-you')
   const [followedHandles, setFollowedHandles] = useState<string[]>(loadFollowedHandles)
@@ -465,9 +466,15 @@ export function WorkspacePage({
   useEffect(() => {
     if (view !== 'social') return
     let cancelled = false
-    void listSocialPosts(socialTab, session.user.username)
-      .then((posts) => {
-        if (!cancelled) setSocialPosts(posts)
+    void Promise.all([
+      listSocialPosts(socialTab, session.user.username),
+      listSocialActivity(),
+    ])
+      .then(([posts, activities]) => {
+        if (!cancelled) {
+          setSocialPosts(posts)
+          setSocialActivities(activities)
+        }
       })
       .catch((error: unknown) => {
         if (!cancelled) {
@@ -1595,6 +1602,7 @@ export function WorkspacePage({
                 people={people}
                 onOpenDm={openDm}
                 onBrowsePeople={() => navigateView('people')}
+                onNotify={notify}
               />
             ) : view === 'social' ? (
               <SocialFeed
@@ -1967,6 +1975,7 @@ export function WorkspacePage({
           {!isMobile && view === 'social' && (
             <SocialAside
               followedHandles={followedHandles}
+              activities={socialActivities}
               onFocusComposer={() => socialInputRef.current?.focus()}
               onToggleFollow={(handle) =>
                 setFollowedHandles((prev) =>

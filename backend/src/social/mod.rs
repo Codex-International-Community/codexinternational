@@ -23,4 +23,5 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/posts/{id}/repost", post(handlers::toggle_repost))
         .route("/posts/{id}/bookmark", post(handlers::toggle_bookmark))
         .route("/bookmarks", get(handlers::list_bookmarks))
+        .route("/activity", get(handlers::list_activity))
 }

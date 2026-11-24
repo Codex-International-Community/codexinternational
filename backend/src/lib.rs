@@ -23,6 +23,7 @@ pub mod chat;
 pub mod communities;
 pub mod config;
 pub mod error;
+pub mod friends;
 pub mod gamification;
 pub mod health;
 pub mod media;
@@ -66,6 +67,7 @@ pub fn app_router(state: Arc<AppState>) -> Router {
         .nest("/api/v1/bots", auth::bots_router())
         .nest("/api/v1/communities", communities::router())
         .nest("/api/v1/dms", communities::dms_router())
+        .nest("/api/v1/friends", friends::router())
         .nest("/api/v1/social", social::router())
         .nest("/api/v1", chat::router())
         .route("/api/v1/media/presign", post(media::presign))

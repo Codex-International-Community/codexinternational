@@ -4466,3 +4466,139 @@ dialog.modal--discord-server::backdrop {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.02);
 }
+
+/* Social activity feed in right aside */
+.social-activity-list {
+  display: grid;
+  gap: 8px;
+}
+
+.social-activity-item {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.social-activity-item:hover {
+  background: var(--surface2);
+}
+
+.social-activity-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  min-width: 0;
+}
+
+.social-activity-meta strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.social-activity-meta span,
+.social-activity-meta time {
+  color: var(--quiet);
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.social-activity-item small {
+  color: var(--accent);
+  font-size: 0.74rem;
+}
+
+.social-activity-item p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Add Friend panel in Friends tab */
+.add-friend-panel {
+  padding: 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.add-friend-header h2 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.add-friend-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.add-friend-form {
+  display: flex;
+  gap: 10px;
+}
+
+.add-friend-form input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.add-friend-form button {
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent-solid);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add-friend-form button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.add-friend-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.friend-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.friend-row-action--muted {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.friend-row-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--muted);
+  font-size: 0.78rem;
+}

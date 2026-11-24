@@ -147,3 +147,36 @@ export async function toggleSocialAction(
     method: 'POST',
   })
 }
+
+export interface SocialActivityDto {
+  id: string
+  post_id: string
+  kind: 'reply' | 'like' | 'repost' | string
+  actor_name: string
+  actor_handle: string
+  preview: string
+  created_at: string
+}
+
+export interface SocialActivityItem {
+  id: string
+  postId: string
+  kind: 'reply' | 'like' | 'repost' | string
+  actorName: string
+  actorHandle: string
+  preview: string
+  time: string
+}
+
+export async function listSocialActivity(): Promise<SocialActivityItem[]> {
+  const dtos = await apiRequest<SocialActivityDto[]>('/api/v1/social/activity')
+  return dtos.map((dto) => ({
+    id: dto.id,
+    postId: dto.post_id,
+    kind: dto.kind,
+    actorName: dto.actor_name,
+    actorHandle: dto.actor_handle,
+    preview: dto.preview,
+    time: formatRelativeTime(dto.created_at),
+  }))
+}
