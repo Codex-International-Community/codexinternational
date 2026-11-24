@@ -276,7 +276,7 @@ fn validate_profile_display_name(raw: &str) -> Result<String, AppError> {
     let trimmed = raw.trim();
     let len = trimmed.chars().count();
     // Allow empty to clear custom display name (fall back to username on client).
-    if len > 0 && (len < 4 || len > 20) {
+    if len > 0 && !(4..=20).contains(&len) {
         return Err(AppError::BadRequest(
             "display_name must be 4-20 characters, or empty to clear".to_string(),
         ));
