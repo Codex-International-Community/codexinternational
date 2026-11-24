@@ -336,6 +336,12 @@ pub async fn create_or_get_dm(
     let dm_allowed = sqlx::query_scalar::<_, bool>(
         "SELECT EXISTS(
             SELECT 1
+            FROM friendships f
+            WHERE f.status = 'ACCEPTED'
+              AND ((f.requester_id = $1 AND f.addressee_id = $2)
+                OR (f.requester_id = $2 AND f.addressee_id = $1))
+        ) OR EXISTS(
+            SELECT 1
             FROM community_members cm_self
             JOIN community_members cm_target ON cm_target.community_id = cm_self.community_id
             LEFT JOIN community_member_settings cms

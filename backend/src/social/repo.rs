@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use super::protocol::{
     CreatePostRequest, CreateReplyRequest, SocialActionKind, SocialActionStreamRecord,
-    SocialPostResponse, SocialReplyResponse, ToggleActionResponse,
+    SocialActivityItem, SocialPostResponse, SocialReplyResponse, ToggleActionResponse,
 };
 use crate::{error::AppError, state::AppState};
 
@@ -557,4 +557,89 @@ pub async fn persist_action_batch(
 
     tx.commit().await?;
     Ok(())
+}
+
+#[derive(Debug, FromRow)]
+struct ActivityRow {
+    id: String,
+    post_id: Uuid,
+    kind: String,
+    actor_name: String,
+    actor_handle: String,
+    preview: String,
+    created_at: DateTime<Utc>,
+}
+
+pub async fn list_activity(
+    state: &AppState,
+    user_id: Uuid,
+    limit: i64,
+) -> Result<Vec<SocialActivityItem>, AppError> {
+    let limit = limit.clamp(1, 50);
+    let rows = sqlx::query_as::<_, ActivityRow>(
+        "SELECT id, post_id, kind, actor_name, actor_handle, preview, created_at
+         FROM (
+             SELECT
+                 'reply:' || r.id::text AS id,
+                 r.post_id,
+                 'reply'::text AS kind,
+                 u.display_name AS actor_name,
+                 u.username AS actor_handle,
+                 r.content AS preview,
+                 r.created_at
+             FROM post_replies r
+             JOIN posts p ON p.id = r.post_id
+             JOIN users u ON u.id = r.user_id
+             WHERE p.user_id = $1 AND r.user_id <> $1
+
+             UNION ALL
+
+             SELECT
+                 'like:' || pl.user_id::text || ':' || pl.post_id::text AS id,
+                 pl.post_id,
+                 'like'::text AS kind,
+                 u.display_name AS actor_name,
+                 u.username AS actor_handle,
+                 p.content AS preview,
+                 pl.created_at
+             FROM post_likes pl
+             JOIN posts p ON p.id = pl.post_id
+             JOIN users u ON u.id = pl.user_id
+             WHERE p.user_id = $1 AND pl.user_id <> $1
+
+             UNION ALL
+
+             SELECT
+                 'repost:' || pr.user_id::text || ':' || pr.post_id::text AS id,
+                 pr.post_id,
+                 'repost'::text AS kind,
+                 u.display_name AS actor_name,
+                 u.username AS actor_handle,
+                 p.content AS preview,
+                 pr.created_at
+             FROM post_reposts pr
+             JOIN posts p ON p.id = pr.post_id
+             JOIN users u ON u.id = pr.user_id
+             WHERE p.user_id = $1 AND pr.user_id <> $1
+         ) AS activity
+         ORDER BY created_at DESC
+         LIMIT $2",
+    )
+    .bind(user_id)
+    .bind(limit)
+    .fetch_all(&state.pg)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|r| SocialActivityItem {
+            id: r.id,
+            post_id: r.post_id,
+            kind: r.kind,
+            actor_name: r.actor_name,
+            actor_handle: r.actor_handle,
+            preview: r.preview,
+            created_at: r.created_at,
+        })
+        .collect())
 }

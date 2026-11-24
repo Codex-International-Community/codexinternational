@@ -83,3 +83,14 @@ pub struct ToggleActionResponse {
     pub likes: i64,
     pub reposts: i64,
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct SocialActivityItem {
+    pub id: String,
+    pub post_id: Uuid,
+    pub kind: String, // "reply" | "like" | "repost"
+    pub actor_name: String,
+    pub actor_handle: String,
+    pub preview: String,
+    pub created_at: DateTime<Utc>,
+}

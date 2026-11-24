@@ -44,6 +44,14 @@ pub async fn list_bookmarks(
     Ok(Json(posts))
 }
 
+pub async fn list_activity(
+    State(state): State<Arc<AppState>>,
+    user: AuthUser,
+) -> Result<impl IntoResponse, AppError> {
+    let items = repo::list_activity(&state, user.user_id, 25).await?;
+    Ok(Json(items))
+}
+
 pub async fn create_post(
     State(state): State<Arc<AppState>>,
     user: AuthUser,
