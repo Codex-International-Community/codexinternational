@@ -8,7 +8,7 @@
     project_dir: "/home/{{ app_user }}/projects/codexinternational"
     repo_url: "https://github.com/Codex-International-Community/codexinternational.git"
     repo_branch: "main"
-    node_major_version: "22"
+    node_major_version: "24"
 
   tasks:
     - name: Install build and runtime dependencies
@@ -21,6 +21,7 @@
           - build-essential
           - pkg-config
           - libssl-dev
+          - python3
           - docker.io
           - docker-compose-v2
         state: present
@@ -76,6 +77,25 @@
         executable: /bin/bash
         creates: "/home/{{ app_user }}/.cargo/bin/cargo"
 
+    - name: Ensure app_user home directory is traversable by Caddy
+      ansible.builtin.file:
+        path: "/home/{{ app_user }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: "0711"
+
+    - name: Ensure secrets and backups directories exist
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: "/home/{{ app_user }}/secrets", mode: "0700" }
+        - { path: "/home/{{ app_user }}/backups/codexinternational", mode: "0750" }
+
     - name: Ensure project parent directory exists
       ansible.builtin.file:
         path: "{{ project_dir | dirname }}"
@@ -92,10 +112,21 @@
         version: "{{ repo_branch }}"
         update: true
 
+    - name: Check that .env exists before starting services
+      ansible.builtin.stat:
+        path: "{{ project_dir }}/.env"
+      register: project_env_file
+
+    - name: Fail if .env is missing
+      ansible.builtin.assert:
+        that:
+          - project_env_file.stat.exists
+        fail_msg: "Missing {{ project_dir }}/.env. Copy/create .env on the target server before running this playbook."
+
     - name: Start PostgreSQL and Valkey via Docker Compose
       become_user: "{{ app_user }}"
       ansible.builtin.command:
-        cmd: docker compose up -d
+        cmd: docker compose up -d --wait
         chdir: "{{ project_dir }}"
       changed_when: true
 
@@ -153,6 +184,20 @@
         daemon_reload: true
         enabled: true
         state: started
+
+    - name: Ensure seed-dev script is executable
+      ansible.builtin.file:
+        path: "{{ project_dir }}/deploy/ansible/seed-dev.sh"
+        mode: "0750"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+
+    - name: Seed dev role if target user already exists
+      become_user: "{{ app_user }}"
+      ansible.builtin.command:
+        cmd: "{{ project_dir }}/deploy/ansible/seed-dev.sh"
+      register: seed_dev_result
+      changed_when: "'has platform_role=\\'dev\\'' in seed_dev_result.stdout"
 
     - name: Ensure backup script is executable
       ansible.builtin.file:
