@@ -1197,12 +1197,16 @@ dialog.modal {
   height: 34px;
   padding: 0 14px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   background: var(--accent-solid);
   color: #fff;
   font-size: 0.8125rem;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
+}
+
+.social-compose-footer button .gf-icon {
+  filter: brightness(0) invert(1);
 }
 
 .social-compose-footer button:disabled {
@@ -1302,15 +1306,13 @@ dialog.modal {
 }
 
 .social-verified {
-  display: grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--accent-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
   color: var(--accent);
-  font-size: 0.75rem;
-  font-weight: 900;
 }
 
 .social-more {
