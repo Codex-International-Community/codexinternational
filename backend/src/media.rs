@@ -621,6 +621,16 @@ async fn prepare_direct_upload(
             width: None,
             height: None,
         },
+        // Keep animated GIFs byte-for-byte; converting them through the static
+        // WebP compressor would discard their animation frames.
+        MediaTransform::CompressWebp(_) if mime_type == "image/gif" => PreparedUpload {
+            payload: body,
+            kind,
+            mime_type,
+            extension,
+            width: None,
+            height: None,
+        },
         MediaTransform::CompressWebp(opts) => {
             let compressed =
                 tokio::task::spawn_blocking(move || compress_image_to_webp(&body, opts))

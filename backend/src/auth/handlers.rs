@@ -218,7 +218,7 @@ pub async fn update_profile(
          SET display_name = $1, updated_at = NOW()
          WHERE id = $2
          RETURNING id, uid, uid_login_enabled, (password_hash IS NOT NULL) AS has_password,
-                   username, display_name, email, email_verified_at, bio,
+                   username, display_name, avatar_media_id, email, email_verified_at, bio,
                    platform_role, platform_badge, is_verified, can_bypass_compress, global_xp, global_level, created_at",
     )
     .bind(&display_name)
