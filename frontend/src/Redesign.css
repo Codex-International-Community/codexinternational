@@ -1814,6 +1814,10 @@ dialog.modal {
   .members-panel.mobile-members-open {
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--side);
+    min-height: 0;
   }
   .mobile-tabs {
     display: grid;
