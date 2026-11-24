@@ -1,10 +1,13 @@
 import {
   useId,
   useRef,
+  useState,
   type FormEvent,
   type RefObject,
 } from 'react'
+import type { StickerItem } from '../../api/stickers'
 import { Icon } from '../common/Icon'
+import { StickerPicker } from '../common/StickerPicker'
 import type { Attachment, Message } from '../../types/chat'
 
 interface ComposerProps {
@@ -21,6 +24,8 @@ interface ComposerProps {
   onAttachmentSelect: (file?: File) => void
   onRemoveAttachment: () => void
   onAddEmoji: (emoji: string) => void
+  onSendSticker?: (sticker: StickerItem) => void
+  onNotify?: (message: string) => void
 }
 
 export function Composer({
@@ -37,9 +42,12 @@ export function Composer({
   onAttachmentSelect,
   onRemoveAttachment,
   onAddEmoji,
+  onSendSticker,
+  onNotify,
 }: ComposerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const inputId = useId()
+  const [stickerOpen, setStickerOpen] = useState(false)
 
   const handleFileChange = (file?: File) => {
     onAttachmentSelect(file)
@@ -113,6 +121,14 @@ export function Composer({
             </button>
             <button
               type="button"
+              aria-label="Sticker or GIF"
+              title="Sticker / GIF"
+              onClick={() => setStickerOpen((o) => !o)}
+            >
+              <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>GIF</span>
+            </button>
+            <button
+              type="button"
               aria-label="Add emoji"
               title="Add emoji"
               onClick={() => onAddEmoji('✨')}
@@ -131,6 +147,17 @@ export function Composer({
           </div>
         </div>
       </form>
+
+      {stickerOpen && (
+        <StickerPicker
+          onSelect={(sticker) => {
+            onSendSticker?.(sticker)
+            setStickerOpen(false)
+          }}
+          onClose={() => setStickerOpen(false)}
+          onNotify={onNotify}
+        />
+      )}
 
       <input
         ref={fileInputRef}

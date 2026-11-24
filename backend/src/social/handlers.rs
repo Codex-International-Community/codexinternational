@@ -71,6 +71,24 @@ pub async fn create_reply(
     Ok((StatusCode::CREATED, Json(reply)))
 }
 
+pub async fn delete_post(
+    State(state): State<Arc<AppState>>,
+    user: AuthUser,
+    Path(post_id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    repo::delete_post(&state, user.user_id, post_id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn delete_reply(
+    State(state): State<Arc<AppState>>,
+    user: AuthUser,
+    Path(reply_id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    repo::delete_reply(&state, user.user_id, reply_id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 pub async fn toggle_like(
     State(state): State<Arc<AppState>>,
     user: AuthUser,

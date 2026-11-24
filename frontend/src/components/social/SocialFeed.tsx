@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent, type RefObject } from 'react'
-import { SocialComposer } from './SocialComposer'
-import { SocialPostCard } from './SocialPostCard'
+import { SocialComposer, type SocialPublishPayload } from './SocialComposer'
+import { SocialPostCard, type ReplySubmitPayload } from './SocialPostCard'
 import type { User } from '../../types/chat'
 import type { SocialPost, SocialTab } from '../../types/social'
 
@@ -13,22 +13,28 @@ const tabs: { id: SocialTab; label: string }[] = [
 
 interface SocialFeedProps {
   currentUser: User
+  currentUsername: string
   posts: SocialPost[]
   socialTab: SocialTab
   followedHandles: string[]
   composerRef: RefObject<HTMLTextAreaElement | null>
   draft: string
   onDraftChange: (value: string) => void
-  onPublish: (e: FormEvent) => void
+  onPublish: (e: FormEvent, payload: SocialPublishPayload, reset: () => void) => void
   onTabChange: (tab: SocialTab) => void
   onToggleFollow: (handle: string) => void
   onToggleAction: (id: string, action: 'liked' | 'reposted' | 'saved') => void
-  onSubmitReply: (e: FormEvent, id: string, text: string) => void
+  onSubmitReply: (e: FormEvent, id: string, payload: ReplySubmitPayload, reset: () => void) => void
+  onDeletePost: (postId: string) => void
+  onDeleteReply: (postId: string, replyId: string) => void
+  onSaveSticker: (stickerId: string) => void
   onShare: (id: string) => void
+  onNotify?: (message: string) => void
 }
 
 export function SocialFeed({
   currentUser,
+  currentUsername,
   posts,
   socialTab,
   followedHandles,
@@ -40,9 +46,14 @@ export function SocialFeed({
   onToggleFollow,
   onToggleAction,
   onSubmitReply,
+  onDeletePost,
+  onDeleteReply,
+  onSaveSticker,
   onShare,
+  onNotify,
 }: SocialFeedProps) {
   const [replyForId, setReplyForId] = useState<string | null>(null)
+  const [replyTarget, setReplyTarget] = useState<{ id: string; handle: string } | null>(null)
   const [replyDraft, setReplyDraft] = useState('')
 
   const visiblePosts = useMemo(() => {
@@ -58,17 +69,35 @@ export function SocialFeed({
     return posts
   }, [posts, socialTab, followedHandles])
 
-  const handleToggleReplyForm = (id: string) => {
-    setReplyForId((current) => (current === id ? null : id))
+  const handleToggleReplyForm = (
+    id: string,
+    target: { id: string; handle: string } | null = null,
+  ) => {
+    if (replyForId === id && (target?.id ?? null) === (replyTarget?.id ?? null)) {
+      setReplyForId(null)
+      setReplyTarget(null)
+      setReplyDraft('')
+      return
+    }
+    setReplyForId(id)
+    setReplyTarget(target)
     setReplyDraft('')
   }
 
-  const handleSubmitReply = (e: FormEvent, id: string) => {
+  const handleSubmitReply = (
+    e: FormEvent,
+    id: string,
+    payload: ReplySubmitPayload,
+    resetMedia: () => void,
+  ) => {
     e.preventDefault()
-    if (!replyDraft.trim()) return
-    onSubmitReply(e, id, replyDraft.trim())
-    setReplyDraft('')
-    setReplyForId(null)
+    if (!payload.text && !payload.mediaUrl && !payload.sticker) return
+    onSubmitReply(e, id, payload, () => {
+      resetMedia()
+      setReplyDraft('')
+      setReplyForId(null)
+      setReplyTarget(null)
+    })
   }
 
   return (
@@ -90,6 +119,7 @@ export function SocialFeed({
           draft={draft}
           onChange={onDraftChange}
           onSubmit={onPublish}
+          onNotify={onNotify}
           canPublish
         />
 
@@ -113,16 +143,22 @@ export function SocialFeed({
             <SocialPostCard
               key={post.id}
               currentUser={currentUser}
+              currentUsername={currentUsername}
               post={post}
               isFollowed={followedHandles.includes(post.handle)}
               isReplying={replyForId === post.id}
               replyDraft={replyDraft}
+              replyTarget={replyForId === post.id ? replyTarget : null}
               onToggleFollow={onToggleFollow}
               onToggleAction={onToggleAction}
               onToggleReplyForm={handleToggleReplyForm}
               onReplyDraftChange={setReplyDraft}
               onSubmitReply={handleSubmitReply}
+              onDeletePost={onDeletePost}
+              onDeleteReply={onDeleteReply}
+              onSaveSticker={onSaveSticker}
               onShare={onShare}
+              onNotify={onNotify}
             />
           ))}
 

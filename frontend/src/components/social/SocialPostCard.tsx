@@ -1,25 +1,66 @@
-import { useId, type FormEvent } from 'react'
+import { useId, useMemo, useRef, useState, type FormEvent } from 'react'
+import { uploadSocialMedia } from '../../api/social'
+import type { StickerItem } from '../../api/stickers'
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
+import { StickerPicker } from '../common/StickerPicker'
 import type { User } from '../../types/chat'
-import type { SocialPost } from '../../types/social'
+import type { SocialPost, SocialReply } from '../../types/social'
+
+export interface ReplySubmitPayload {
+  text: string
+  parentReplyId?: string | null
+  mediaUrl?: string
+  mediaAlt?: string
+  sticker?: StickerItem
+}
 
 interface SocialPostCardProps {
   currentUser: User
+  currentUsername: string
   post: SocialPost
   isFollowed: boolean
   isReplying: boolean
   replyDraft: string
   onToggleFollow: (handle: string) => void
   onToggleAction: (id: string, action: 'liked' | 'reposted' | 'saved') => void
-  onToggleReplyForm: (id: string) => void
+  onToggleReplyForm: (id: string, parentReply?: { id: string; handle: string } | null) => void
   onReplyDraftChange: (value: string) => void
-  onSubmitReply: (e: FormEvent, id: string) => void
+  onSubmitReply: (e: FormEvent, postId: string, payload: ReplySubmitPayload, reset: () => void) => void
+  onDeletePost: (postId: string) => void
+  onDeleteReply: (postId: string, replyId: string) => void
+  onSaveSticker: (stickerId: string) => void
   onShare: (id: string) => void
+  onNotify?: (message: string) => void
+  replyTarget?: { id: string; handle: string } | null
+}
+
+interface ReplyNode {
+  reply: SocialReply
+  children: ReplyNode[]
+}
+
+function buildReplyTree(replies: SocialReply[]): ReplyNode[] {
+  const byId = new Map<string, ReplyNode>()
+  for (const reply of replies) {
+    byId.set(reply.id, { reply, children: [] })
+  }
+  const roots: ReplyNode[] = []
+  for (const reply of replies) {
+    const node = byId.get(reply.id)
+    if (!node) continue
+    if (reply.parentReplyId && byId.has(reply.parentReplyId)) {
+      byId.get(reply.parentReplyId)!.children.push(node)
+    } else {
+      roots.push(node)
+    }
+  }
+  return roots
 }
 
 export function SocialPostCard({
   currentUser,
+  currentUsername,
   post,
   isFollowed,
   isReplying,
@@ -29,9 +70,133 @@ export function SocialPostCard({
   onToggleReplyForm,
   onReplyDraftChange,
   onSubmitReply,
+  onDeletePost,
+  onDeleteReply,
+  onSaveSticker,
   onShare,
+  onNotify,
+  replyTarget,
 }: SocialPostCardProps) {
   const replyInputId = useId()
+  const replyFileRef = useRef<HTMLInputElement>(null)
+  const [replyMediaUrl, setReplyMediaUrl] = useState<string | undefined>()
+  const [replyMediaName, setReplyMediaName] = useState<string | undefined>()
+  const [replySticker, setReplySticker] = useState<StickerItem | undefined>()
+  const [replyPickerOpen, setReplyPickerOpen] = useState(false)
+  const [uploadingReplyMedia, setUploadingReplyMedia] = useState(false)
+  const [collapsedIds, setCollapsedIds] = useState<Record<string, boolean>>({})
+
+  const replyTree = useMemo(() => buildReplyTree(post.replies), [post.replies])
+
+  const handleReplyFile = async (file?: File) => {
+    if (!file) return
+    setUploadingReplyMedia(true)
+    try {
+      const res = await uploadSocialMedia(file)
+      setReplyMediaUrl(res.url)
+      setReplyMediaName(res.name)
+    } catch (error) {
+      onNotify?.(error instanceof Error ? error.message : 'Media upload failed.')
+    } finally {
+      setUploadingReplyMedia(false)
+      if (replyFileRef.current) replyFileRef.current.value = ''
+    }
+  }
+
+  const resetReplyMedia = () => {
+    setReplyMediaUrl(undefined)
+    setReplyMediaName(undefined)
+    setReplySticker(undefined)
+    setReplyPickerOpen(false)
+  }
+
+  const renderReplyNode = (node: ReplyNode, depth: number) => {
+    const { reply, children } = node
+    const visualDepth = Math.min(depth, 2)
+    const isCollapsed = Boolean(collapsedIds[reply.id])
+    const isOwnReply = reply.handle === currentUsername
+
+    return (
+      <div
+        className={`social-reply-node social-reply-node--d${visualDepth}`}
+        key={reply.id}
+      >
+        <div className="social-reply">
+          <div className="social-reply-header">
+            <strong>{reply.author}</strong>
+            <span>@{reply.handle}</span>
+            <time>{reply.time}</time>
+          </div>
+          {reply.text && <p>{reply.text}</p>}
+          {reply.media && (
+            <img
+              className="social-reply-media"
+              src={reply.media}
+              alt={reply.mediaAlt ?? ''}
+              loading="lazy"
+            />
+          )}
+          {reply.sticker && (
+            <div className="social-sticker-wrap">
+              <img
+                className="social-sticker-img"
+                src={reply.sticker.mediaUrl}
+                alt={reply.sticker.label || reply.sticker.kind}
+                loading="lazy"
+              />
+              <button
+                type="button"
+                className="social-save-sticker-btn"
+                onClick={() => onSaveSticker(reply.sticker!.id)}
+                title="Save sticker to your collection"
+              >
+                + Save {reply.sticker.kind === 'gif' ? 'GIF' : 'Sticker'}
+              </button>
+            </div>
+          )}
+          <div className="social-reply-actions">
+            <button
+              type="button"
+              onClick={() =>
+                onToggleReplyForm(post.id, { id: reply.id, handle: reply.handle })
+              }
+            >
+              Reply
+            </button>
+            {children.length > 0 && (
+              <button
+                type="button"
+                onClick={() =>
+                  setCollapsedIds((prev) => ({
+                    ...prev,
+                    [reply.id]: !prev[reply.id],
+                  }))
+                }
+              >
+                {isCollapsed ? `Show ${children.length} replies` : 'Collapse'}
+              </button>
+            )}
+            {isOwnReply && (
+              <button
+                type="button"
+                className="social-reply-delete"
+                onClick={() => onDeleteReply(post.id, reply.id)}
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        </div>
+        {!isCollapsed && children.length > 0 && (
+          <div className="social-reply-children">
+            {children.map((child) => renderReplyNode(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  const canSubmitReply = Boolean(replyDraft.trim() || replyMediaUrl || replySticker)
 
   return (
     <article className="social-post" id={`post-${post.id}`}>
@@ -69,18 +234,31 @@ export function SocialPostCard({
             <i aria-hidden="true">·</i>
             <time>{post.time}</time>
           </div>
-          <button
-            type="button"
-            aria-pressed={isFollowed}
-            className={`social-follow-inline ${isFollowed ? 'following' : ''}`}
-            title={isFollowed ? 'Unfollow' : 'Follow'}
-            onClick={() => onToggleFollow(post.handle)}
-          >
-            {isFollowed ? 'Following' : '+ Follow'}
-          </button>
+          <div className="social-post-meta-actions">
+            {post.handle === currentUsername ? (
+              <button
+                type="button"
+                className="social-delete-post-btn"
+                onClick={() => onDeletePost(post.id)}
+                title="Delete post"
+              >
+                Delete
+              </button>
+            ) : (
+              <button
+                type="button"
+                aria-pressed={isFollowed}
+                className={`social-follow-inline ${isFollowed ? 'following' : ''}`}
+                title={isFollowed ? 'Unfollow' : 'Follow'}
+                onClick={() => onToggleFollow(post.handle)}
+              >
+                {isFollowed ? 'Following' : '+ Follow'}
+              </button>
+            )}
+          </div>
         </div>
 
-        <p className="social-post-copy">{post.text}</p>
+        {post.text && <p className="social-post-copy">{post.text}</p>}
 
         {post.media && (
           <img
@@ -91,13 +269,32 @@ export function SocialPostCard({
           />
         )}
 
+        {post.sticker && (
+          <div className="social-sticker-wrap">
+            <img
+              className="social-sticker-img"
+              src={post.sticker.mediaUrl}
+              alt={post.sticker.label || post.sticker.kind}
+              loading="lazy"
+            />
+            <button
+              type="button"
+              className="social-save-sticker-btn"
+              onClick={() => onSaveSticker(post.sticker!.id)}
+              title="Save sticker to your collection"
+            >
+              + Save {post.sticker.kind === 'gif' ? 'GIF' : 'Sticker'}
+            </button>
+          </div>
+        )}
+
         <div className="social-post-actions">
           <button
             type="button"
             aria-label={`Reply (${post.replies.length})`}
             aria-expanded={isReplying}
             className={isReplying ? 'active' : ''}
-            onClick={() => onToggleReplyForm(post.id)}
+            onClick={() => onToggleReplyForm(post.id, null)}
             title="Reply"
           >
             <Icon name="message" size={17} />
@@ -179,36 +376,111 @@ export function SocialPostCard({
         </div>
 
         {isReplying && (
-          <form className="social-reply-form" onSubmit={(e) => onSubmitReply(e, post.id)}>
-            <Avatar user={currentUser} size="small" />
-            <label htmlFor={replyInputId} className="visually-hidden">
-              Reply to @{post.handle}
-            </label>
-            <input
-              id={replyInputId}
-              autoFocus
-              value={replyDraft}
-              onChange={(e) => onReplyDraftChange(e.target.value)}
-              placeholder={`Reply to @${post.handle}`}
-            />
-            <button type="submit" disabled={!replyDraft.trim()}>
-              Reply
-            </button>
-          </form>
+          <div className="social-reply-composer-wrap">
+            <form
+              className="social-reply-form"
+              onSubmit={(e) =>
+                onSubmitReply(
+                  e,
+                  post.id,
+                  {
+                    text: replyDraft.trim(),
+                    parentReplyId: replyTarget?.id ?? null,
+                    mediaUrl: replyMediaUrl,
+                    mediaAlt: replyMediaName,
+                    sticker: replySticker,
+                  },
+                  resetReplyMedia,
+                )
+              }
+            >
+              <Avatar user={currentUser} size="small" />
+              <label htmlFor={replyInputId} className="visually-hidden">
+                Reply to @{replyTarget ? replyTarget.handle : post.handle}
+              </label>
+              <input
+                id={replyInputId}
+                autoFocus
+                value={replyDraft}
+                onChange={(e) => onReplyDraftChange(e.target.value)}
+                placeholder={`Reply to @${replyTarget ? replyTarget.handle : post.handle}`}
+              />
+              <input
+                ref={replyFileRef}
+                type="file"
+                hidden
+                accept="image/*,video/*"
+                onChange={(e) => void handleReplyFile(e.target.files?.[0])}
+              />
+              <button
+                type="button"
+                className="social-reply-tool-btn"
+                disabled={uploadingReplyMedia}
+                onClick={() => replyFileRef.current?.click()}
+                title="Attach media"
+              >
+                <Icon name="paperclip" size={14} />
+              </button>
+              <button
+                type="button"
+                className="social-reply-tool-btn"
+                onClick={() => setReplyPickerOpen((o) => !o)}
+                title="Sticker / GIF"
+              >
+                GIF
+              </button>
+              <button type="submit" disabled={!canSubmitReply || uploadingReplyMedia}>
+                Reply
+              </button>
+            </form>
+
+            {replyMediaUrl && (
+              <div className="social-compose-preview">
+                <img src={replyMediaUrl} alt={replyMediaName ?? 'Reply attachment'} />
+                <button
+                  type="button"
+                  className="social-preview-remove"
+                  onClick={() => {
+                    setReplyMediaUrl(undefined)
+                    setReplyMediaName(undefined)
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {replySticker && (
+              <div className="social-compose-preview social-compose-preview--sticker">
+                <img src={replySticker.media_url} alt={replySticker.label || replySticker.kind} />
+                <button
+                  type="button"
+                  className="social-preview-remove"
+                  onClick={() => setReplySticker(undefined)}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {replyPickerOpen && (
+              <StickerPicker
+                onSelect={(sticker) => {
+                  setReplySticker(sticker)
+                  setReplyPickerOpen(false)
+                }}
+                onClose={() => setReplyPickerOpen(false)}
+                onNotify={onNotify}
+              />
+            )}
+          </div>
         )}
 
-        {post.replies.length > 0 && (
+        {replyTree.length > 0 && (
           <div className="social-replies">
             <span className="social-reply-stem" />
-            <div>
-              {post.replies.slice(-2).map((reply) => (
-                <div className="social-reply" key={reply.id}>
-                  <strong>{reply.author}</strong>
-                  <span>@{reply.handle}</span>
-                  <time>{reply.time}</time>
-                  <p>{reply.text}</p>
-                </div>
-              ))}
+            <div className="social-reply-tree">
+              {replyTree.map((node) => renderReplyNode(node, 0))}
             </div>
           </div>
         )}

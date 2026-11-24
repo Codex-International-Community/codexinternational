@@ -12,6 +12,7 @@ interface SocialAsideProps {
 export function SocialAside({ activities = [], onFocusComposer }: SocialAsideProps) {
   const describeKind = (kind: string) => {
     if (kind === 'reply') return 'replied to your post'
+    if (kind === 'reply_to_reply') return 'replied to your comment'
     if (kind === 'like') return 'liked your post'
     if (kind === 'repost') return 'reposted your post'
     return 'interacted with your post'
