@@ -357,3 +357,53 @@ pub(crate) fn normalize_platform(raw: Option<&str>) -> Result<&'static str, AppE
         ))),
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateAvatarRequest {
+    pub avatar_media_id: Option<Uuid>,
+}
+
+/// Updates the authenticated user's avatar (`PATCH /api/v1/auth/me/avatar`).
+pub async fn update_avatar(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    Json(req): Json<UpdateAvatarRequest>,
+) -> Result<Json<MeResponse>, AppError> {
+    let record = find_user_by_id(&state.pg, auth.user_id)
+        .await?
+        .ok_or_else(|| AppError::Unauthorized("user account no longer exists".to_string()))?;
+    ensure_not_suspended(&record)?;
+
+    if let Some(media_id) = req.avatar_media_id {
+        let valid = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(
+                SELECT 1 FROM media_assets
+                WHERE id = $1 AND uploader_id = $2
+                  AND purpose = 'avatar' AND kind = 'image' AND status = 'READY'
+            )",
+        )
+        .bind(media_id)
+        .bind(auth.user_id)
+        .fetch_one(&state.pg)
+        .await?;
+        if !valid {
+            return Err(AppError::Forbidden(
+                "avatar must be a ready image uploaded by your account".to_string(),
+            ));
+        }
+    }
+
+    sqlx::query("UPDATE users SET avatar_media_id = $1, updated_at = NOW() WHERE id = $2")
+        .bind(req.avatar_media_id)
+        .bind(auth.user_id)
+        .execute(&state.pg)
+        .await?;
+
+    let updated = find_user_by_id(&state.pg, auth.user_id)
+        .await?
+        .ok_or_else(|| AppError::Unauthorized("user account no longer exists".to_string()))?;
+
+    Ok(Json(MeResponse {
+        user: updated.into(),
+    }))
+}
