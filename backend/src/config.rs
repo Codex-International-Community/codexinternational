@@ -140,6 +140,7 @@ pub struct AppConfig {
     pub smtp_from: String,
     pub smtp_reply_to: String,
     pub lambda_webhook_secret: SecretString,
+    pub governance_root_key: SecretString,
     pub r2_account_id: String,
     pub r2_access_key_id: SecretString,
     pub r2_secret_access_key: SecretString,
@@ -257,6 +258,7 @@ impl AppConfig {
                     ""
                 },
             )),
+            governance_root_key: SecretString::new(get_or("GOVERNANCE_ROOT_KEY", "")),
             r2_account_id: get_or("R2_ACCOUNT_ID", ""),
             r2_access_key_id: SecretString::new(get_or("R2_ACCESS_KEY_ID", "")),
             r2_secret_access_key: SecretString::new(get_or("R2_SECRET_ACCESS_KEY", "")),

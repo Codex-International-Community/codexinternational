@@ -165,7 +165,7 @@ export function ChannelSidebar({
       )}
       {server && view === 'channel' && serverMenuOpen && (
         <div className="server-menu" role="menu" aria-label={`${server.name} server menu`}>
-          <button className="server-menu-item server-menu-item--disabled" type="button" role="menuitem" disabled title="Server Boost is not available in Codex yet">
+          <button className="server-menu-item server-menu-item--disabled" type="button" role="menuitem" disabled title="Server Boost is not available in Codexter yet">
             <Icon name="sparkles" size={16} /> Server Boost <small>Unavailable</small>
           </button>
           <button className="server-menu-item server-menu-item--invite" type="button" role="menuitem" onClick={() => { onInvitePeople(); onToggleServerMenu() }}>
@@ -184,7 +184,7 @@ export function ChannelSidebar({
           <button className="server-menu-item" type="button" role="menuitem" onClick={() => { onCreateEvent(); onToggleServerMenu() }}>
             <Icon name="calendar" size={16} /> Create Event
           </button>
-          <button className="server-menu-item server-menu-item--disabled" type="button" role="menuitem" disabled title="The app directory is not available in Codex yet">
+          <button className="server-menu-item server-menu-item--disabled" type="button" role="menuitem" disabled title="The app directory is not available in Codexter yet">
             <Icon name="compass" size={16} /> App Directory <small>Unavailable</small>
           </button>
           <div className="server-menu-divider" />

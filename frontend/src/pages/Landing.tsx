@@ -519,7 +519,7 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
           <section className="landing-card">
             <div className="landing-card-head">
               <h2>Sign in or create account</h2>
-              <p>Authenticate directly against the Codex Rust backend.</p>
+              <p>Authenticate directly against the Codexter Rust backend.</p>
             </div>
 
             <div className="landing-mode-tabs" role="tablist" aria-label="Authentication methods">

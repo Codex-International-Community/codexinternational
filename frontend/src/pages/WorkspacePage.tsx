@@ -45,9 +45,9 @@ import { HomeView } from '../components/views/HomeView'
 import { NotificationsView } from '../components/views/NotificationsView'
 import { PinnedView } from '../components/views/PinnedView'
 import { BotsView } from '../components/views/BotsView'
-import { DevPanelView } from '../components/views/DevPanelView'
 import { NotFoundView } from '../components/views/NotFoundView'
 import { DevReasonModal } from '../components/modals/DevReasonModal'
+import { DevGovernanceModal } from '../components/modals/DevGovernanceModal'
 import { SettingsModal, type SettingsTab } from '../components/modals/SettingsModal'
 import { SharePostModal } from '../components/modals/SharePostModal'
 import {
@@ -290,6 +290,7 @@ export function WorkspacePage({
   const [screenSharing, setScreenSharing] = useState(false)
   const [profileMenu, setProfileMenu] = useState(false)
   const [settingsModalTab, setSettingsModalTab] = useState<SettingsTab | null>(null)
+  const [devModalOpen, setDevModalOpen] = useState(false)
   const [userStatus, setUserStatus] = useState<User['status']>(() => {
     try {
       const saved = localStorage.getItem('codex_user_status_v1')
@@ -1498,7 +1499,7 @@ export function WorkspacePage({
           onToggleTheme={() => setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))}
           onNavigateSettings={() => openSettingsModal('account')}
           isDev={isDev}
-          onNavigateDev={() => navigateView('dev')}
+          onNavigateDev={() => setDevModalOpen(true)}
           onLogout={() => void onLogout()}
         />
       )}
@@ -1847,12 +1848,12 @@ export function WorkspacePage({
             ) : view === 'bots' ? (
               <BotsView currentUser={session.user} isMobile={isMobile} onNotify={notify} />
             ) : view === 'dev' && isDev ? (
-              <DevPanelView
-                currentUser={session.user}
-                servers={data.servers}
-                activeOnDuty={activeOnDuty}
-                onRefreshOnDuty={refreshOnDuty}
-                onToast={notify}
+              <HomeView
+                conversations={data.conversations}
+                people={people}
+                onOpenDm={openDm}
+                onBrowsePeople={() => navigateView('people')}
+                onNotify={notify}
               />
             ) : view === 'channels' ? (
               <ChannelDirectory
@@ -2507,6 +2508,21 @@ export function WorkspacePage({
         onOpenThreads={() => navigateView('social')}
         onLogout={() => void onLogout()}
       />
+
+      {isDev && (
+        <DevGovernanceModal
+          open={view === 'dev' || devModalOpen}
+          currentUser={session.user}
+          servers={data.servers}
+          activeOnDuty={activeOnDuty}
+          onClose={() => {
+            setDevModalOpen(false)
+            if (view === 'dev') navigateView('social')
+          }}
+          onRefreshOnDuty={refreshOnDuty}
+          onToast={notify}
+        />
+      )}
 
       <Toast message={toast} onClose={() => setToast('')} />
     </div>

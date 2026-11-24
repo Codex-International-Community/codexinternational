@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use chrono::{DateTime, Duration, Utc};
 use fred::interfaces::{KeysInterface, PubsubInterface};
 use serde::{Deserialize, Serialize};
@@ -324,6 +324,65 @@ const ALLOWED_BADGES: &[&str] = &[
     "Moderator",
 ];
 
+const ROOT_KEY_WEIGHT: i32 = 999;
+
+fn constant_time_eq(a: &[u8], b: &[u8]) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut diff = 0u8;
+    for (&x, &y) in a.iter().zip(b.iter()) {
+        diff |= x ^ y;
+    }
+    diff == 0
+}
+
+fn has_valid_root_key_str(state: &AppState, candidate: &str) -> bool {
+    let configured = state.config.governance_root_key.expose().trim();
+    if configured.is_empty() {
+        return false;
+    }
+    constant_time_eq(configured.as_bytes(), candidate.trim().as_bytes())
+}
+
+fn has_valid_root_key(state: &AppState, headers: &HeaderMap) -> bool {
+    headers
+        .get("x-governance-root-key")
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|raw| has_valid_root_key_str(state, raw))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct VerifyRootKeyRequest {
+    pub root_key: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct VerifyRootKeyResponse {
+    pub valid: bool,
+    pub weight: i32,
+}
+
+/// `POST /api/v1/dev/root-key/verify` — Verifies the env-configured `GOVERNANCE_ROOT_KEY`
+/// for temporary super-governance elevation above Founder.
+pub async fn verify_root_key(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    Json(req): Json<VerifyRootKeyRequest>,
+) -> Result<Json<VerifyRootKeyResponse>, AppError> {
+    ensure_dev(&auth)?;
+    let valid = has_valid_root_key_str(&state, &req.root_key);
+    if !valid {
+        return Err(AppError::Forbidden(
+            "invalid or unconfigured governance root key".to_string(),
+        ));
+    }
+    Ok(Json(VerifyRootKeyResponse {
+        valid: true,
+        weight: ROOT_KEY_WEIGHT,
+    }))
+}
+
 async fn get_actor_weight(
     pg: &PgPool,
     actor_id: Uuid,
@@ -486,6 +545,7 @@ pub struct UpdateUserGovernanceRequest {
     pub platform_role: String,
     pub platform_badge: Option<String>,
     pub reason: Option<String>,
+    pub root_key: Option<String>,
 }
 
 /// `PATCH /api/v1/dev/users/{id}/governance` — Updates a user's `platform_role` and `platform_badge`
@@ -493,11 +553,17 @@ pub struct UpdateUserGovernanceRequest {
 pub async fn update_user_governance(
     State(state): State<Arc<AppState>>,
     auth: AuthUser,
+    headers: HeaderMap,
     Path(target_id): Path<Uuid>,
     Json(req): Json<UpdateUserGovernanceRequest>,
 ) -> Result<Json<DevUserSummary>, AppError> {
     ensure_dev(&auth)?;
-    if target_id == auth.user_id {
+    let root_override = has_valid_root_key(&state, &headers)
+        || req
+            .root_key
+            .as_deref()
+            .is_some_and(|k| has_valid_root_key_str(&state, k));
+    if target_id == auth.user_id && !root_override {
         return Err(AppError::BadRequest(
             "cannot modify your own platform role or badge".to_string(),
         ));
@@ -526,7 +592,12 @@ pub async fn update_user_governance(
         ));
     }
 
-    let (_, _, actor_weight) = get_actor_weight(&state.pg, auth.user_id).await?;
+    let (_, _, db_actor_weight) = get_actor_weight(&state.pg, auth.user_id).await?;
+    let actor_weight = if root_override {
+        ROOT_KEY_WEIGHT
+    } else {
+        db_actor_weight
+    };
     let target_curr: Option<(String, Option<String>)> =
         sqlx::query_as("SELECT platform_role, platform_badge FROM users WHERE id = $1")
             .bind(target_id)

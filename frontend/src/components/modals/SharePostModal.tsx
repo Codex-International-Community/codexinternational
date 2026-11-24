@@ -128,8 +128,8 @@ export function SharePostModal({
       if (okCount > 0) {
         onNotify(
           failCount > 0
-            ? `Terkirim ke ${okCount} tujuan (${failCount} gagal).`
-            : `Post dibagikan ke ${okCount} tujuan.`,
+            ? `Sent to ${okCount} destination(s) (${failCount} failed).`
+            : `Post shared to ${okCount} destination(s).`,
         )
         setSelectedChannelIds([])
         setSelectedFriendIds([])
@@ -137,7 +137,7 @@ export function SharePostModal({
         setNote('')
         onClose()
       } else {
-        onNotify('Gagal membagikan post.')
+        onNotify('Failed to share post.')
       }
     } finally {
       setSending(false)
@@ -147,9 +147,9 @@ export function SharePostModal({
   const handleCopyPermalink = async () => {
     try {
       await navigator.clipboard.writeText(permalink)
-      onNotify('Link permanen disalin!')
+      onNotify('Permanent link copied!')
     } catch {
-      onNotify('Gagal menyalin link.')
+      onNotify('Failed to copy link.')
     }
   }
 
@@ -178,7 +178,7 @@ export function SharePostModal({
                     onClick={() => setBrowsingServerId(null)}
                   >
                     <Icon name="arrowLeft" size={14} />
-                    <span>Kembali</span>
+                    <span>Back</span>
                   </button>
                   <span className="share-section-label">
                     {browsingServer.name}
@@ -187,7 +187,7 @@ export function SharePostModal({
                 </>
               ) : (
                 <span className="share-section-label">
-                  Communities {selectedChannelIds.length > 0 ? `(${selectedChannelIds.length} channel)` : ''}
+                  Communities {selectedChannelIds.length > 0 ? `(${selectedChannelIds.length} selected)` : ''}
                 </span>
               )}
             </div>
@@ -204,7 +204,7 @@ export function SharePostModal({
 
           {!browsingServer ? (
             servers.length === 0 ? (
-              <p className="dev-muted">Belum bergabung di community mana pun.</p>
+              <p className="dev-muted">You have not joined any communities yet.</p>
             ) : communityExpanded ? (
               <div className="share-expanded-list">
                 {servers.map((srv) => {
@@ -220,7 +220,7 @@ export function SharePostModal({
                       <span className="share-row-icon">{srv.abbr || makeInitials(srv.name)}</span>
                       <span className="share-check-title">{srv.name}</span>
                       <span className="share-row-meta">
-                        {countInServer > 0 ? `${countInServer} dipilih` : `${textChannels.length} channel`}
+                        {countInServer > 0 ? `${countInServer} selected` : `${textChannels.length} channels`}
                       </span>
                       <Icon name="arrow" size={14} />
                     </button>
@@ -241,14 +241,14 @@ export function SharePostModal({
                     >
                       <span className="share-card-icon">{srv.abbr || makeInitials(srv.name)}</span>
                       <strong>{srv.name}</strong>
-                      <small>{countInServer > 0 ? `${countInServer} dipilih` : `${textChannels.length} channel`}</small>
+                      <small>{countInServer > 0 ? `${countInServer} selected` : `${textChannels.length} channels`}</small>
                     </button>
                   )
                 })}
               </div>
             )
           ) : browsingChannels.length === 0 ? (
-            <p className="dev-muted">Tidak ada text channel di community ini.</p>
+            <p className="dev-muted">No text channels in this community.</p>
           ) : communityExpanded ? (
             <div className="share-expanded-list">
               {browsingChannels.map((ch) => {
@@ -305,9 +305,9 @@ export function SharePostModal({
             )}
           </div>
           {loadingFriends ? (
-            <p className="dev-muted">Memuat daftar teman...</p>
+            <p className="dev-muted">Loading friends...</p>
           ) : friends.length === 0 ? (
-            <p className="dev-muted">Belum berteman dengan siapa pun. Salin link permanen di bawah untuk membagikan.</p>
+            <p className="dev-muted">No friends yet. Copy the permanent link below to share.</p>
           ) : friendsExpanded ? (
             <div className="share-expanded-list">
               {friends.map((friend) => {
@@ -353,7 +353,7 @@ export function SharePostModal({
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Tambah pesan opsional..."
+              placeholder="Add an optional message..."
               maxLength={300}
             />
             <button
@@ -370,12 +370,12 @@ export function SharePostModal({
         <div className="share-divider" />
 
         <div className="share-permalink-section">
-          <span className="share-permalink-label">Link Permanen</span>
+          <span className="share-permalink-label">Permanent Link</span>
           <div className="share-permalink-row">
             <input type="text" value={permalink} readOnly onFocus={(e) => e.currentTarget.select()} />
             <button type="button" className="btn-secondary" onClick={() => void handleCopyPermalink()}>
               <Icon name="link" size={14} />
-              <span>Salin Link</span>
+              <span>Copy Link</span>
             </button>
           </div>
         </div>

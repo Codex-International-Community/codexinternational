@@ -113,7 +113,7 @@ export function ChatPanel({
     return (
       <section className="workspace-empty" aria-labelledby="workspace-empty-title">
         <span className="workspace-empty-mark"><Icon name="compass" size={25} /></span>
-        <span className="eyebrow">WELCOME TO CODEX</span>
+        <span className="eyebrow">WELCOME TO CODEXTER</span>
         <h1 id="workspace-empty-title">Find your community.</h1>
         <p>Join a community to bring channels, conversations and people into one place.</p>
         <button type="button" className="primary-action" onClick={onDiscoverCommunities}>

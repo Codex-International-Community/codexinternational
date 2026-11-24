@@ -99,6 +99,10 @@ pub fn app_router(state: Arc<AppState>) -> Router {
             get(auth::dev_governance::list_active_on_duty),
         )
         .route(
+            "/api/v1/dev/root-key/verify",
+            post(auth::dev_governance::verify_root_key),
+        )
+        .route(
             "/api/v1/dev/users",
             get(auth::dev_governance::search_dev_users),
         )

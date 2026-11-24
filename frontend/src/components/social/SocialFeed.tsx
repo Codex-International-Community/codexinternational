@@ -207,7 +207,7 @@ export function SocialFeed({
               Filter: <strong>{activeTagFilter}</strong>
             </span>
             <button type="button" onClick={() => setActiveTagFilter(null)}>
-              Hapus filter
+              Clear filter
             </button>
           </div>
         )}

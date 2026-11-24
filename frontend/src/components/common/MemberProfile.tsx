@@ -158,7 +158,7 @@ export function MemberProfile({
               )}
               {accountCreated && (
                 <div>
-                  <span>Joined Codex</span>
+                  <span>Joined Codexter</span>
                   <strong>{accountCreated}</strong>
                 </div>
               )}

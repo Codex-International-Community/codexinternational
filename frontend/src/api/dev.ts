@@ -109,13 +109,26 @@ export function setDevUserVerified(
   })
 }
 
+export function verifyGovernanceRootKey(
+  root_key: string,
+): Promise<{ valid: boolean; weight: number }> {
+  return apiRequest<{ valid: boolean; weight: number }>('/api/v1/dev/root-key/verify', {
+    method: 'POST',
+    body: { root_key },
+  })
+}
+
 export function updateDevUserGovernance(
   userId: string,
   payload: { platform_role: PlatformRole; platform_badge: string | null; reason?: string },
+  rootKey?: string,
 ): Promise<DevUserSummary> {
   return apiRequest<DevUserSummary>(`/api/v1/dev/users/${userId}/governance`, {
     method: 'PATCH',
-    body: payload,
+    body: {
+      ...payload,
+      ...(rootKey?.trim() ? { root_key: rootKey.trim() } : {}),
+    },
   })
 }
 

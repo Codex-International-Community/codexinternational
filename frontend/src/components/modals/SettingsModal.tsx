@@ -13,7 +13,7 @@ import { Avatar } from '../common/Avatar'
 import { Icon } from '../common/Icon'
 import { USER_STATUS_OPTIONS } from '../common/ProfilePopover'
 
-export type SettingsTab = 'account' | 'profile' | 'appearance' | 'voice' | 'social' | 'workspace'
+export type SettingsTab = 'account' | 'profile' | 'appearance' | 'language' | 'voice' | 'social' | 'workspace'
 
 interface SettingsModalProps {
   open: boolean
@@ -62,6 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
     group: 'APP SETTINGS',
     items: [
       { id: 'appearance', label: 'Appearance', icon: 'sun', keywords: 'appearance theme dark light color' },
+      { id: 'language' as SettingsTab, label: 'Language', icon: 'compass', keywords: 'language english bahasa locale' },
       { id: 'voice', label: 'Voice & Audio', icon: 'mic', keywords: 'voice audio mic mute deafen headphones' },
       { id: 'social', label: 'Threads & Social', icon: 'thread', keywords: 'threads social mention hashtag saved following' },
     ],
@@ -649,6 +650,24 @@ export function SettingsModal({
               </div>
             )}
 
+            {activeTab === 'language' && (
+              <div className="settings-block">
+                <h3>Display Language</h3>
+                <div className="settings-panel">
+                  <div className="settings-row">
+                    <div className="settings-row-copy">
+                      <strong>Workspace Language</strong>
+                      <small>Codexter currently runs in English. Additional language packs are coming soon.</small>
+                    </div>
+                    <select aria-label="Workspace language" value="en" disabled className="settings-select">
+                      <option value="en">English (Default)</option>
+                      <option value="id" disabled>Bahasa Indonesia (Coming soon)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'voice' && (
               <div className="settings-block">
                 <h3>Voice &amp; Audio Controls</h3>
@@ -728,7 +747,7 @@ export function SettingsModal({
                   <div className="settings-row">
                     <div className="settings-row-copy">
                       <strong>Communities &amp; Channels</strong>
-                      <small>{socialStats.serversCount} joined communities with real-time text channels and post sharing.</small>
+                      <small>{socialStats.serversCount} joined communities with real-time text channels and post sharing in Codexter.</small>
                     </div>
                   </div>
                   <div className="settings-row">
