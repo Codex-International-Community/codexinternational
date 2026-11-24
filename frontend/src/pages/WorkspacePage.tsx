@@ -364,6 +364,7 @@ export function WorkspacePage({
             id: member.id,
             name: member.display_name,
             username: member.username,
+            avatarMediaId: member.avatar_media_id ?? undefined,
             initials: member.display_name
               .split(/\s+/)
               .map((part) => part[0] ?? '')
@@ -957,6 +958,7 @@ export function WorkspacePage({
       tone: 'self',
       status: 'online' as const,
       username: session.user.username,
+      avatarMediaId: session.user.avatar_media_id ?? undefined,
       bio: session.user.bio,
       globalXp: session.user.global_xp,
       globalLevel: session.user.global_level,
@@ -970,6 +972,7 @@ export function WorkspacePage({
       session.user.id,
       session.user.display_name,
       session.user.username,
+      session.user.avatar_media_id,
       session.user.bio,
       session.user.global_xp,
       session.user.global_level,

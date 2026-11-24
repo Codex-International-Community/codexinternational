@@ -6,6 +6,7 @@ use axum::{
     body::Bytes,
     extract::{Path, State},
     http::{HeaderMap, StatusCode, header::CONTENT_TYPE},
+    response::Redirect,
 };
 use chrono::Utc;
 use hmac::{Hmac, Mac};
@@ -648,6 +649,10 @@ pub async fn presign(
         )
     })?;
 
+    if req.purpose == "avatar" && kind != "image" {
+        return Err(AppError::BadRequest("profile photos must be image files".to_string()));
+    }
+
     if kind == "file" && !req.client_checked {
         silent_suspend_user(&state, auth.user_id).await;
         return Err(AppError::BadRequest("upload failed".to_string()));
@@ -719,6 +724,31 @@ pub async fn presign(
         max_video_duration_secs: (kind == "video")
             .then(|| requested_tier.max_video_duration_secs()),
     }))
+}
+
+pub async fn avatar(
+    State(state): State<Arc<AppState>>,
+    Path(media_id): Path<Uuid>,
+) -> Result<Redirect, AppError> {
+    let r2_key = sqlx::query_scalar::<_, String>(
+        "SELECT r2_key FROM media_assets
+         WHERE id = $1 AND purpose = 'avatar' AND kind = 'image' AND status = 'READY'",
+    )
+    .bind(media_id)
+    .fetch_optional(&state.pg)
+    .await?
+    .ok_or_else(|| AppError::NotFound("avatar not found".to_string()))?;
+
+    let url = if !state.config.r2_public_base_url.trim().is_empty() {
+        format!(
+            "{}/{}",
+            state.config.r2_public_base_url.trim_end_matches('/'),
+            r2_key.trim_start_matches('/')
+        )
+    } else {
+        presigned_r2_url(&state.config, "GET", &r2_key, 3_600)?
+    };
+    Ok(Redirect::temporary(&url))
 }
 
 pub async fn complete(

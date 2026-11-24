@@ -16,6 +16,7 @@ pub struct UserProfile {
     pub has_password: bool,
     pub username: String,
     pub display_name: String,
+    pub avatar_media_id: Option<Uuid>,
     pub email: String,
     pub email_verified_at: Option<DateTime<Utc>>,
     pub bio: String,
@@ -34,6 +35,7 @@ pub struct UserAuthRecord {
     pub uid_login_enabled: bool,
     pub username: String,
     pub display_name: String,
+    pub avatar_media_id: Option<Uuid>,
     pub email: String,
     pub email_verified_at: Option<DateTime<Utc>>,
     pub password_hash: Option<String>,
@@ -56,6 +58,7 @@ impl From<UserAuthRecord> for UserProfile {
             has_password: r.password_hash.is_some(),
             username: r.username,
             display_name: r.display_name,
+            avatar_media_id: r.avatar_media_id,
             email: r.email,
             email_verified_at: r.email_verified_at,
             bio: r.bio,
@@ -92,7 +95,7 @@ pub async fn create_user_with_device(
         "INSERT INTO users (id, username, display_name, email, password_hash)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING id, uid, uid_login_enabled, (password_hash IS NOT NULL) AS has_password,
-                   username, display_name, email, email_verified_at, bio,
+                   username, display_name, avatar_media_id, email, email_verified_at, bio,
                    platform_role, can_bypass_compress, global_xp, global_level, created_at",
     )
     .bind(p.user_id)
@@ -126,7 +129,7 @@ pub async fn find_user_by_identifier(
     identifier: &str,
 ) -> Result<Option<UserAuthRecord>, AppError> {
     let rec = sqlx::query_as::<_, UserAuthRecord>(
-        "SELECT id, uid, uid_login_enabled, username, display_name, email, email_verified_at,
+        "SELECT id, uid, uid_login_enabled, username, display_name, avatar_media_id, email, email_verified_at,
                 password_hash, bio, platform_role, can_bypass_compress, suspended_until,
                 suspended_reason, global_xp, global_level, created_at
          FROM users
@@ -182,7 +185,7 @@ pub async fn find_user_by_id(
     user_id: Uuid,
 ) -> Result<Option<UserAuthRecord>, AppError> {
     let rec = sqlx::query_as::<_, UserAuthRecord>(
-        "SELECT id, uid, uid_login_enabled, username, display_name, email, email_verified_at,
+        "SELECT id, uid, uid_login_enabled, username, display_name, avatar_media_id, email, email_verified_at,
                 password_hash, bio, platform_role, can_bypass_compress, suspended_until,
                 suspended_reason, global_xp, global_level, created_at
          FROM users

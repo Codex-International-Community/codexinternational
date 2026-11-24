@@ -1,8 +1,8 @@
 import { useEffect, useId, useState } from 'react'
 import { Icon } from '../common/Icon'
 import type { AuthUserProfile } from '../../api/client'
-import { ApiError } from '../../api/client'
-import { setOrChangePassword, toggleUidLogin, updateProfile } from '../../api/auth'
+import { ApiError, publicApiUrl } from '../../api/client'
+import { setOrChangePassword, toggleUidLogin, updateProfile, updateProfileAvatar, uploadProfileAvatar } from '../../api/auth'
 import type { Theme } from '../../types/common'
 
 interface SettingsViewProps {
@@ -36,12 +36,45 @@ export function SettingsView({
   const [profileBusy, setProfileBusy] = useState(false)
   const [profileError, setProfileError] = useState('')
   const [profileInfo, setProfileInfo] = useState('')
+  const [avatarBusy, setAvatarBusy] = useState(false)
+  const [avatarError, setAvatarError] = useState('')
+  const [avatarInfo, setAvatarInfo] = useState('')
 
   useEffect(() => {
     const next = authUser?.display_name?.trim() ?? ''
     const username = authUser?.username?.trim() ?? ''
     setProfileDraft(next && next !== username ? next : (next === username ? '' : next))
   }, [authUser?.display_name, authUser?.username])
+
+  const handleAvatarUpload = async (file?: File) => {
+    if (!file || avatarBusy) return
+    setAvatarError('')
+    setAvatarInfo('')
+    setAvatarBusy(true)
+    try {
+      await uploadProfileAvatar(file)
+      setAvatarInfo('Profile photo updated.')
+    } catch (err) {
+      setAvatarError(err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Failed to upload profile photo.')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
+
+  const handleRemoveAvatar = async () => {
+    if (!authUser?.avatar_media_id || avatarBusy) return
+    setAvatarError('')
+    setAvatarInfo('')
+    setAvatarBusy(true)
+    try {
+      await updateProfileAvatar(null)
+      setAvatarInfo('Profile photo removed.')
+    } catch (err) {
+      setAvatarError(err instanceof ApiError ? err.message : 'Failed to remove profile photo.')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
 
   const handleCopyUid = async () => {
     if (!authUser?.uid) return
@@ -204,6 +237,43 @@ export function SettingsView({
 
       <section className="settings-card">
         <h2>Profile</h2>
+        {authUser && (
+          <div className="setting-row" style={{ marginBottom: 16, alignItems: 'center' }}>
+            <span className="avatar self large" aria-label="Current profile photo">
+              {authUser.avatar_media_id ? (
+                <img className="avatar-photo" src={publicApiUrl(`/api/v1/media/avatar/${encodeURIComponent(authUser.avatar_media_id)}`)} alt="" />
+              ) : (authUser.display_name || authUser.username).slice(0, 2).toUpperCase()}
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <strong>Profile photo</strong>
+              <small>AVIF, JPG, PNG, WEBP or GIF · up to 5 MB</small>
+              {avatarError && <small style={{ color: 'var(--danger, #ef4444)' }}>{avatarError}</small>}
+              {avatarInfo && <small style={{ color: 'var(--success, #22c55e)' }}>{avatarInfo}</small>}
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <label htmlFor="profile-avatar-upload" className="setting-action" aria-disabled={avatarBusy}>
+                {avatarBusy ? 'Uploading…' : 'Upload photo'}
+              </label>
+              {authUser.avatar_media_id && (
+                <button type="button" className="setting-action" onClick={() => void handleRemoveAvatar()} disabled={avatarBusy}>
+                  Remove
+                </button>
+              )}
+              <input
+                id="profile-avatar-upload"
+                type="file"
+                accept="image/avif,image/jpeg,image/png,image/webp,image/gif"
+                disabled={avatarBusy}
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  event.target.value = ''
+                  void handleAvatarUpload(file)
+                }}
+                style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}
+              />
+            </div>
+          </div>
+        )}
         <form
           onSubmit={async (e) => {
             e.preventDefault()

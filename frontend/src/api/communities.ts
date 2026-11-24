@@ -74,6 +74,7 @@ export interface CommunityMemberSummary {
   id: string
   username: string
   display_name: string
+  avatar_media_id: string | null
   bio: string
   global_xp: number
   global_level: number

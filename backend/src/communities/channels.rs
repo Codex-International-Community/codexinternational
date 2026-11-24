@@ -56,6 +56,7 @@ pub struct CommunityMemberSummary {
     pub id: Uuid,
     pub username: String,
     pub display_name: String,
+    pub avatar_media_id: Option<Uuid>,
     pub bio: String,
     pub global_xp: i64,
     pub global_level: i32,
@@ -291,7 +292,7 @@ pub async fn list_members(
     let members = sqlx::query_as::<_, CommunityMemberSummary>(
         "SELECT u.id, u.username,
                 COALESCE(m.nickname, u.display_name) AS display_name,
-                u.bio, u.global_xp, u.global_level, u.created_at, m.joined_at,
+                u.avatar_media_id, u.bio, u.global_xp, u.global_level, u.created_at, m.joined_at,
                 COALESCE(r.name, '@everyone') AS role_name, r.color AS role_color, m.role_id,
                 COALESCE(c.owner_id = m.user_id, FALSE) AS is_owner,
                 (u.last_seen_at > NOW() - INTERVAL '90 seconds') AS online

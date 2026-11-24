@@ -73,6 +73,7 @@ pub fn app_router(state: Arc<AppState>) -> Router {
         .nest("/api/v1/stickers", stickers::router())
         .nest("/api/v1", chat::router())
         .route("/api/v1/media/presign", post(media::presign))
+        .route("/api/v1/media/avatar/{media_id}", get(media::avatar))
         .route("/api/v1/media/{id}/complete", post(media::complete))
         .route(
             "/api/v1/media",

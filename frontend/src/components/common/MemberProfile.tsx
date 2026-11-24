@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Icon } from './Icon'
 import type { User } from '../../types/chat'
+import { publicApiUrl } from '../../api/client'
 
 interface MemberProfileProps {
   user: User
@@ -68,7 +69,9 @@ export function MemberProfile({
 
         <div className="member-profile-identity">
           <div className={`member-profile-avatar avatar ${user.tone}`} aria-hidden="true">
-            {user.initials}
+            {user.avatarMediaId ? (
+              <img className="avatar-photo" src={publicApiUrl(`/api/v1/media/avatar/${encodeURIComponent(user.avatarMediaId)}`)} alt="" draggable={false} />
+            ) : user.initials}
             <i className={`status ${user.status}`} />
           </div>
           <div className="member-profile-identity-copy">
