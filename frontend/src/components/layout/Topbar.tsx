@@ -41,7 +41,6 @@ export function Topbar({
   onNavigateHome,
   onNavigateSocial,
   onNavigateDiscover,
-  onFocusSocialComposer,
   onVoiceCallModal,
   onVideoCallModal,
   onOpenPinned,
@@ -203,17 +202,7 @@ export function Topbar({
       </div>
 
       <div className="topbar-actions">
-        {view === 'discover' ? null : view === 'social' ? (
-          <button
-            type="button"
-            className="topbar-compose"
-            aria-label="Write a post"
-            title="Write a post"
-            onClick={onFocusSocialComposer}
-          >
-            <Icon name="edit" size={15} /> {!isMobile && <span>Write a post</span>}
-          </button>
-        ) : view === 'channel' || view === 'dm' ? (
+        {view === 'discover' || view === 'social' ? null : view === 'channel' || view === 'dm' ? (
           <>
             {!isMobile && (
               <>

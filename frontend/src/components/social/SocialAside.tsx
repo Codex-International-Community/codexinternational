@@ -1,5 +1,4 @@
 import type { SocialActivityItem } from '../../api/social'
-import { Icon } from '../common/Icon'
 
 interface SocialAsideProps {
   followedHandles?: string[]
@@ -9,7 +8,7 @@ interface SocialAsideProps {
   onSelectTopic?: (topic: string) => void
 }
 
-export function SocialAside({ activities = [], onFocusComposer }: SocialAsideProps) {
+export function SocialAside({ activities = [] }: SocialAsideProps) {
   const describeKind = (kind: string) => {
     if (kind === 'reply') return 'replied to your post'
     if (kind === 'reply_to_reply') return 'replied to your comment'
@@ -20,14 +19,6 @@ export function SocialAside({ activities = [], onFocusComposer }: SocialAsidePro
 
   return (
     <aside className="social-right-panel">
-      <section className="social-aside-section social-now">
-        <span className="social-aside-kicker">YOUR THREADS</span>
-        <h2>Join the conversation.</h2>
-        <p>Write a thread or join a conversation in your feed.</p>
-        <button onClick={onFocusComposer}>
-          Write a thread <Icon name="arrowUp" size={14} />
-        </button>
-      </section>
       <section className="social-aside-section">
         <div className="social-aside-heading">
           <strong>Your activity</strong>

@@ -213,6 +213,14 @@ export function SocialPostCard({
       </div>
 
       <div className="social-post-main">
+        {post.repostedBy && post.repostedBy.length > 0 && (
+          <div className="social-reposted-by">
+            <span aria-hidden="true">↻</span>
+            <span>
+              Reposted by {post.repostedBy.join(', ')}
+            </span>
+          </div>
+        )}
         <div className="social-post-meta">
           <div>
             <strong>{post.author}</strong>
@@ -375,6 +383,15 @@ export function SocialPostCard({
           </button>
         </div>
 
+        {replyTree.length > 0 && (
+          <div className="social-replies">
+            <span className="social-reply-stem" />
+            <div className="social-reply-tree">
+              {replyTree.map((node) => renderReplyNode(node, 0))}
+            </div>
+          </div>
+        )}
+
         {isReplying && (
           <div className="social-reply-composer-wrap">
             <form
@@ -473,15 +490,6 @@ export function SocialPostCard({
                 onNotify={onNotify}
               />
             )}
-          </div>
-        )}
-
-        {replyTree.length > 0 && (
-          <div className="social-replies">
-            <span className="social-reply-stem" />
-            <div className="social-reply-tree">
-              {replyTree.map((node) => renderReplyNode(node, 0))}
-            </div>
           </div>
         )}
       </div>

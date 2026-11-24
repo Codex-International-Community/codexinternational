@@ -1399,7 +1399,10 @@ export function WorkspacePage({
           activeServerId={serverId}
           activeView={view}
           isMobile={isMobile}
-          profileMenuOpen={profileMenu}
+          profileMenuOpen={
+            profileMenu &&
+            (view === 'discover' || view === 'channels' || view === 'people')
+          }
           onSelectHome={() => {
             setView('home')
             setMobileTab('home')

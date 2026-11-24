@@ -33,6 +33,7 @@ export interface SocialPostDto {
   sticker?: SocialStickerDto | null
   likes: number
   reposts: number
+  reposted_by?: string[]
   replies: SocialReplyDto[]
   liked: boolean
   reposted: boolean
@@ -125,6 +126,7 @@ export function mapPostDto(dto: SocialPostDto, currentUsername?: string): Social
     verified: dto.verified,
     likes: dto.likes,
     reposts: dto.reposts,
+    repostedBy: dto.reposted_by ?? [],
     replies: dto.replies.map(mapReplyDto),
     liked: dto.liked,
     reposted: dto.reposted,

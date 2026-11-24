@@ -36,6 +36,7 @@ export interface SocialPost {
   verified?: boolean
   likes: number
   reposts: number
+  repostedBy?: string[]
   replies: SocialReply[]
   liked: boolean
   reposted: boolean
