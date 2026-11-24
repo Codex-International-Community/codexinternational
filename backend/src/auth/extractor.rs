@@ -127,7 +127,9 @@ pub async fn validate_user_session(
         )
         .await
         {
-            return Err(AppError::Forbidden("account permanently banned".to_string()));
+            return Err(AppError::Forbidden(
+                "account permanently banned".to_string(),
+            ));
         }
 
         let suspend_key = format!("suspend:user:{user_id}");
@@ -223,16 +225,18 @@ pub async fn validate_user_session(
             {
                 if state.valkey_initialized {
                     let ban_key = format!("ban:user:{user_id}");
-        if let Ok(Ok(Some(_))) = tokio::time::timeout(
-            std::time::Duration::from_millis(150),
-            state.valkey.get::<Option<String>, _>(&ban_key),
-        )
-        .await
-        {
-            return Err(AppError::Forbidden("account permanently banned".to_string()));
-        }
+                    if let Ok(Ok(Some(_))) = tokio::time::timeout(
+                        std::time::Duration::from_millis(150),
+                        state.valkey.get::<Option<String>, _>(&ban_key),
+                    )
+                    .await
+                    {
+                        return Err(AppError::Forbidden(
+                            "account permanently banned".to_string(),
+                        ));
+                    }
 
-        let suspend_key = format!("suspend:user:{user_id}");
+                    let suspend_key = format!("suspend:user:{user_id}");
                     let ttl = (until - Utc::now()).num_seconds().max(1);
                     let _ = state
                         .valkey

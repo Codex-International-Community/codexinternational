@@ -316,15 +316,23 @@ fn require_reason(raw: &str) -> Result<String, AppError> {
     Ok(trimmed.to_string())
 }
 
-const ALLOWED_BADGES: &[&str] = &["Founder", "Vice Founder", "Senior Admin", "Admin", "Moderator"];
+const ALLOWED_BADGES: &[&str] = &[
+    "Founder",
+    "Vice Founder",
+    "Senior Admin",
+    "Admin",
+    "Moderator",
+];
 
-async fn get_actor_weight(pg: &PgPool, actor_id: Uuid) -> Result<(String, Option<String>, i32), AppError> {
-    let row: (String, Option<String>) = sqlx::query_as(
-        "SELECT platform_role, platform_badge FROM users WHERE id = $1",
-    )
-    .bind(actor_id)
-    .fetch_one(pg)
-    .await?;
+async fn get_actor_weight(
+    pg: &PgPool,
+    actor_id: Uuid,
+) -> Result<(String, Option<String>, i32), AppError> {
+    let row: (String, Option<String>) =
+        sqlx::query_as("SELECT platform_role, platform_badge FROM users WHERE id = $1")
+            .bind(actor_id)
+            .fetch_one(pg)
+            .await?;
     let w = platform_weight(&row.0, row.1.as_deref());
     Ok((row.0, row.1, w))
 }
@@ -519,12 +527,11 @@ pub async fn update_user_governance(
     }
 
     let (_, _, actor_weight) = get_actor_weight(&state.pg, auth.user_id).await?;
-    let target_curr: Option<(String, Option<String>)> = sqlx::query_as(
-        "SELECT platform_role, platform_badge FROM users WHERE id = $1",
-    )
-    .bind(target_id)
-    .fetch_optional(&state.pg)
-    .await?;
+    let target_curr: Option<(String, Option<String>)> =
+        sqlx::query_as("SELECT platform_role, platform_badge FROM users WHERE id = $1")
+            .bind(target_id)
+            .fetch_optional(&state.pg)
+            .await?;
     let Some((target_role, target_badge)) = target_curr else {
         return Err(AppError::NotFound("user not found".to_string()));
     };
@@ -760,7 +767,13 @@ pub async fn ban_user(
         let ban_key = format!("ban:user:{target_id}");
         let _ = state
             .valkey
-            .set::<(), _, _>(&ban_key, "1", Some(fred::types::Expiration::EX(3600)), None, false)
+            .set::<(), _, _>(
+                &ban_key,
+                "1",
+                Some(fred::types::Expiration::EX(3600)),
+                None,
+                false,
+            )
             .await;
     }
 
@@ -960,11 +973,10 @@ pub async fn create_content_report(
 
     let (target_user_id, community_id): (Option<Uuid>, Option<Uuid>) = match target_type {
         "social_post" => {
-            let uid: Option<Uuid> =
-                sqlx::query_scalar("SELECT user_id FROM posts WHERE id = $1")
-                    .bind(req.target_id)
-                    .fetch_optional(&state.pg)
-                    .await?;
+            let uid: Option<Uuid> = sqlx::query_scalar("SELECT user_id FROM posts WHERE id = $1")
+                .bind(req.target_id)
+                .fetch_optional(&state.pg)
+                .await?;
             let Some(uid) = uid else {
                 return Err(AppError::NotFound("post not found".to_string()));
             };
