@@ -89,6 +89,7 @@ pub struct SocialPostResponse {
     pub sticker: Option<SocialStickerRef>,
     pub likes: i64,
     pub reposts: i64,
+    pub reposted_by: Vec<String>,
     pub replies: Vec<SocialReplyResponse>,
     pub liked: bool,
     pub reposted: bool,

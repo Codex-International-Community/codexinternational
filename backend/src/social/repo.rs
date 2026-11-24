@@ -218,6 +218,7 @@ pub async fn create_post(
         sticker,
         likes: 0,
         reposts: 0,
+        reposted_by: Vec::new(),
         replies: Vec::new(),
         liked: false,
         reposted: false,
@@ -464,6 +465,25 @@ pub async fn list_posts(
             });
     }
 
+    let reposter_rows: Vec<(Uuid, String)> = sqlx::query_as(
+        "SELECT pr.post_id, u.display_name
+         FROM post_reposts pr
+         JOIN users u ON u.id = pr.user_id
+         WHERE pr.post_id = ANY($1)
+         ORDER BY pr.created_at DESC",
+    )
+    .bind(&post_ids)
+    .fetch_all(&state.pg)
+    .await?;
+
+    let mut reposters_by_post: HashMap<Uuid, Vec<String>> = HashMap::new();
+    for (pid, name) in reposter_rows {
+        let entry = reposters_by_post.entry(pid).or_default();
+        if entry.len() < 3 && !entry.contains(&name) {
+            entry.push(name);
+        }
+    }
+
     // Overlay any live Redis state (including unflushed actions inside the 500ms window).
     let mut keys: Vec<String> = Vec::with_capacity(post_ids.len() * 5);
     for pid in &post_ids {
@@ -523,6 +543,7 @@ pub async fn list_posts(
             ),
             likes,
             reposts,
+            reposted_by: reposters_by_post.remove(&row.id).unwrap_or_default(),
             replies: replies_by_post.remove(&row.id).unwrap_or_default(),
             liked,
             reposted,

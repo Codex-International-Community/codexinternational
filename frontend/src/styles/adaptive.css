@@ -4889,4 +4889,31 @@ dialog.modal--discord-server::backdrop {
 .social-reply-composer-wrap {
   display: grid;
   gap: 8px;
+  margin-top: 10px;
+  min-width: 0;
+}
+
+.app-shell.view-social .social-reply-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.app-shell.view-social .social-reply-form input {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.social-reposted-by {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  color: var(--quiet);
+  font-size: 0.76rem;
+  font-weight: 600;
 }
