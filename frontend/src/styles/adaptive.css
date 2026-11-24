@@ -4297,11 +4297,17 @@ dialog.modal--discord-server::backdrop {
 }
 .app-shell.view-social .social-compose-footer button {
   min-height: 34px;
-  padding-inline: 16px;
-  border-radius: 999px;
-  background: var(--text);
-  color: var(--workspace);
+  height: 34px;
+  padding-inline: 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--accent-solid);
+  color: #fff;
   font-size: 13px;
+  font-weight: 700;
+}
+.app-shell.view-social .social-compose-footer button .gf-icon {
+  filter: brightness(0) invert(1);
 }
 .app-shell.view-social .social-compose-footer button:disabled { opacity: .42; }
 .app-shell.view-social .social-feed-tabs { border-bottom: 1px solid var(--line); }

@@ -53,7 +53,16 @@ export function SocialPostCard({
             <strong>{post.author}</strong>
             {post.verified && (
               <span className="social-verified" title="Community verified" aria-label="Verified">
-                ✓
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="12" r="10" fill="currentColor" />
+                  <path
+                    d="M8.5 12.3l2.3 2.3 4.8-5"
+                    stroke="#fff"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </span>
             )}
             <span>@{post.handle}</span>
