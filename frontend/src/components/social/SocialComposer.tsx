@@ -39,13 +39,20 @@ export function SocialComposer({
   const [selectedSticker, setSelectedSticker] = useState<StickerItem | undefined>()
   const [pickerOpen, setPickerOpen] = useState(false)
 
-  const handleFileChange = async (file?: File) => {
-    if (!file) return
+  const handleFilesChange = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
     setUploadingMedia(true)
     try {
-      const res = await uploadSocialMedia(file)
-      setMediaUrl(res.url)
-      setMediaName(res.name)
+      const list = Array.from(files)
+      const uploaded = await Promise.all(list.map((f) => uploadSocialMedia(f)))
+      if (uploaded.length === 1) {
+        setMediaUrl(uploaded[0].url)
+        setMediaName(uploaded[0].name)
+      } else if (uploaded.length > 1) {
+        setMediaUrl(uploaded[0].url)
+        setMediaName(uploaded[0].name)
+        onNotify?.(`${uploaded.length} media uploaded. First media attached to this post.`)
+      }
     } catch (error) {
       onNotify?.(error instanceof Error ? error.message : 'Media upload failed.')
     } finally {
@@ -130,9 +137,10 @@ export function SocialComposer({
             <input
               ref={fileInputRef}
               type="file"
+              multiple
               hidden
               accept="image/*,video/*"
-              onChange={(e) => void handleFileChange(e.target.files?.[0])}
+              onChange={(e) => void handleFilesChange(e.target.files)}
             />
             <button
               type="button"

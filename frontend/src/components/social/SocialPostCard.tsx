@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useId, useRef, useState, type FormEvent } from 'react'
 import { uploadSocialMedia } from '../../api/social'
 import type { StickerItem } from '../../api/stickers'
 import { Icon } from '../common/Icon'
@@ -40,32 +40,9 @@ interface SocialPostCardProps {
   onReportReply?: (replyId: string) => void
 }
 
-interface ReplyNode {
-  reply: SocialReply
-  children: ReplyNode[]
-}
-
 function isVideoMedia(url?: string, alt?: string): boolean {
   const pattern = /\.(mp4|webm|mov|m4v|ogg)(?:$|[?#])/i
   return Boolean((url && pattern.test(url)) || (alt && pattern.test(alt)))
-}
-
-function buildReplyTree(replies: SocialReply[]): ReplyNode[] {
-  const byId = new Map<string, ReplyNode>()
-  for (const reply of replies) {
-    byId.set(reply.id, { reply, children: [] })
-  }
-  const roots: ReplyNode[] = []
-  for (const reply of replies) {
-    const node = byId.get(reply.id)
-    if (!node) continue
-    if (reply.parentReplyId && byId.has(reply.parentReplyId)) {
-      byId.get(reply.parentReplyId)!.children.push(node)
-    } else {
-      roots.push(node)
-    }
-  }
-  return roots
 }
 
 export function SocialPostCard({
@@ -99,9 +76,8 @@ export function SocialPostCard({
   const [replySticker, setReplySticker] = useState<StickerItem | undefined>()
   const [replyPickerOpen, setReplyPickerOpen] = useState(false)
   const [uploadingReplyMedia, setUploadingReplyMedia] = useState(false)
-  const [collapsedIds, setCollapsedIds] = useState<Record<string, boolean>>({})
-
-  const replyTree = useMemo(() => buildReplyTree(post.replies), [post.replies])
+  const [showReplies, setShowReplies] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
 
   const handleReplyFile = async (file?: File) => {
     if (!file) return
@@ -125,17 +101,10 @@ export function SocialPostCard({
     setReplyPickerOpen(false)
   }
 
-  const renderReplyNode = (node: ReplyNode, depth: number) => {
-    const { reply, children } = node
-    const visualDepth = Math.min(depth, 2)
-    const isCollapsed = Boolean(collapsedIds[reply.id])
+  const renderFlatReply = (reply: SocialReply) => {
     const isOwnReply = reply.handle === currentUsername
-
     return (
-      <div
-        className={`social-reply-node social-reply-node--d${visualDepth}`}
-        key={reply.id}
-      >
+      <div className="social-reply-node" key={reply.id}>
         <div className="social-reply">
           <div className="social-reply-header">
             <strong>{reply.author}</strong>
@@ -206,19 +175,6 @@ export function SocialPostCard({
             >
               Reply
             </button>
-            {children.length > 0 && (
-              <button
-                type="button"
-                onClick={() =>
-                  setCollapsedIds((prev) => ({
-                    ...prev,
-                    [reply.id]: !prev[reply.id],
-                  }))
-                }
-              >
-                {isCollapsed ? `Show ${children.length} replies` : 'Collapse'}
-              </button>
-            )}
             {isOwnReply && (
               <button
                 type="button"
@@ -249,11 +205,6 @@ export function SocialPostCard({
             )}
           </div>
         </div>
-        {!isCollapsed && children.length > 0 && (
-          <div className="social-reply-children">
-            {children.map((child) => renderReplyNode(child, depth + 1))}
-          </div>
-        )}
       </div>
     )
   }
@@ -308,45 +259,91 @@ export function SocialPostCard({
             <time>{post.time}</time>
           </div>
           <div className="social-post-meta-actions">
-            {post.handle === currentUsername ? (
-              <button
-                type="button"
-                className="social-delete-post-btn"
-                onClick={() => onDeletePost(post.id)}
-                title="Delete post"
-              >
-                Delete
-              </button>
-            ) : (
-              <button
-                type="button"
-                aria-pressed={isFollowed}
-                className={`social-follow-inline ${isFollowed ? 'following' : ''}`}
-                title={isFollowed ? 'Unfollow' : 'Follow'}
-                onClick={() => onToggleFollow(post.handle)}
-              >
-                {isFollowed ? 'Following' : '+ Follow'}
-              </button>
-            )}
-            {post.handle !== currentUsername && isDev && onDevDeletePost && (
-              <button
-                type="button"
-                className="social-delete-post-btn"
-                onClick={() => onDevDeletePost(post.id)}
-                title="Dev Delete Post"
-              >
-                Dev Delete
-              </button>
-            )}
-            {post.handle !== currentUsername && onReportPost && (
-              <button
-                type="button"
-                className="social-follow-inline"
-                onClick={() => onReportPost(post.id)}
-                title="Report post"
-              >
-                Report
-              </button>
+            <button
+              type="button"
+              className="social-more-btn"
+              aria-label="More options"
+              aria-expanded={moreOpen}
+              onClick={() => setMoreOpen((v) => !v)}
+            >
+              <Icon name="more" size={16} />
+            </button>
+            {moreOpen && (
+              <div className="social-more-menu" role="menu">
+                {post.handle !== currentUsername && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      onToggleFollow(post.handle)
+                      setMoreOpen(false)
+                    }}
+                  >
+                    {isFollowed ? `Unfollow @${post.handle}` : `Follow @${post.handle}`}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    onToggleAction(post.id, 'saved')
+                    setMoreOpen(false)
+                  }}
+                >
+                  {post.saved ? 'Remove bookmark' : 'Save post'}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    const url = `${window.location.origin}/threads?post=${encodeURIComponent(post.id)}`
+                    void navigator.clipboard?.writeText(url)
+                    onNotify?.('Link permanen disalin!')
+                    setMoreOpen(false)
+                  }}
+                >
+                  Copy link
+                </button>
+                {post.handle === currentUsername && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="danger-text"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      onDeletePost(post.id)
+                    }}
+                  >
+                    Delete post
+                  </button>
+                )}
+                {post.handle !== currentUsername && isDev && onDevDeletePost && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="danger-text"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      onDevDeletePost(post.id)
+                    }}
+                  >
+                    Dev Delete
+                  </button>
+                )}
+                {post.handle !== currentUsername && onReportPost && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="danger-text"
+                    onClick={() => {
+                      setMoreOpen(false)
+                      onReportPost(post.id)
+                    }}
+                  >
+                    Report
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -398,7 +395,10 @@ export function SocialPostCard({
             aria-label={`Reply (${post.replies.length})`}
             aria-expanded={isReplying}
             className={isReplying ? 'active' : ''}
-            onClick={() => onToggleReplyForm(post.id, null)}
+            onClick={() => {
+              setShowReplies((v) => !v)
+              onToggleReplyForm(post.id, null)
+            }}
             title="Reply"
           >
             <Icon name="message" size={17} />
@@ -479,11 +479,11 @@ export function SocialPostCard({
           </button>
         </div>
 
-        {replyTree.length > 0 && (
+        {showReplies && post.replies.length > 0 && (
           <div className="social-replies">
             <span className="social-reply-stem" />
             <div className="social-reply-tree">
-              {replyTree.map((node) => renderReplyNode(node, 0))}
+              {post.replies.map((r) => renderFlatReply(r))}
             </div>
           </div>
         )}

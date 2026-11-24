@@ -49,6 +49,7 @@ import { BotsView } from '../components/views/BotsView'
 import { DevPanelView } from '../components/views/DevPanelView'
 import { NotFoundView } from '../components/views/NotFoundView'
 import { DevReasonModal } from '../components/modals/DevReasonModal'
+import { SharePostModal } from '../components/modals/SharePostModal'
 import {
   createContentReport,
   devDeleteChatMessage,
@@ -219,6 +220,7 @@ export function WorkspacePage({
   const [view, setView] = useState<View>(initialRoute.view)
   const isDev = session.user.platform_role === 'dev'
   const [activeOnDuty, setActiveOnDuty] = useState<ActiveOnDutySession[]>([])
+  const [sharePost, setSharePost] = useState<SocialPost | null>(null)
   const [inlineModAction, setInlineModAction] = useState<
     | { kind: 'dev_delete_post'; postId: string }
     | { kind: 'dev_delete_reply'; postId: string; replyId: string }
@@ -1798,10 +1800,7 @@ export function WorkspacePage({
                 }}
                 onShare={(postId) => {
                   const found = socialPosts.find((p) => p.id === postId)
-                  if (found) {
-                    void navigator.clipboard?.writeText(found.text || found.media || '')
-                    notify('Post text copied')
-                  }
+                  if (found) setSharePost(found)
                 }}
                 onNotify={notify}
                 isDev={isDev}
@@ -2436,6 +2435,15 @@ export function WorkspacePage({
             notify('Report submitted.')
           }
         }}
+      />
+
+      <SharePostModal
+        post={sharePost}
+        servers={data.servers}
+        channelsByServer={data.channels}
+        friends={people}
+        onClose={() => setSharePost(null)}
+        onNotify={notify}
       />
 
       <Toast message={toast} onClose={() => setToast('')} />

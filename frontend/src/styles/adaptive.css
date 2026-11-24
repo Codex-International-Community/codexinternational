@@ -4617,6 +4617,7 @@ dialog.modal--discord-server::backdrop {
 
 .sticker-picker-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -4632,7 +4633,7 @@ dialog.modal--discord-server::backdrop {
 .sticker-picker-tabs button,
 .sticker-upload-btn,
 .sticker-close-btn {
-  height: 28px;
+  height: 30px;
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -4641,6 +4642,8 @@ dialog.modal--discord-server::backdrop {
   font: inherit;
   font-size: 0.76rem;
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
 }
 
@@ -4653,9 +4656,9 @@ dialog.modal--discord-server::backdrop {
 
 .sticker-picker-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
   gap: 8px;
-  max-height: 210px;
+  max-height: min(340px, 45vh);
   overflow-y: auto;
 }
 
@@ -5150,4 +5153,245 @@ dialog.modal--discord-server::backdrop {
   background: rgba(245, 158, 11, 0.18);
   color: #fcd34d;
   cursor: pointer;
+}
+
+/* Mobile UI polish for Social composer, post header, and sticker picker */
+@media (max-width: 720px) {
+  .sticker-picker {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .sticker-picker-grid {
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 6px;
+    max-height: 38vh;
+  }
+
+  .social-post-meta {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .social-post-meta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
+
+/* Share Post Modal (2 expandable carousels + bottom permalink) */
+.share-modal {
+  max-width: 560px;
+  width: 94vw;
+  max-height: 86vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.share-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.share-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.share-expand-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.share-carousel {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scroll-snap-type: x proximity;
+}
+
+.share-carousel-card {
+  flex: 0 0 118px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.35);
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.share-carousel-card.selected {
+  border-color: rgba(99, 102, 241, 0.75);
+  background: rgba(99, 102, 241, 0.18);
+}
+
+.share-carousel-card strong,
+.share-carousel-card small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-carousel-card strong {
+  font-size: 12.5px;
+}
+
+.share-carousel-card small {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.share-card-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(99, 102, 241, 0.2);
+  font-weight: 700;
+}
+
+.share-expanded-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 170px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.share-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.share-check-row.selected {
+  border-color: rgba(99, 102, 241, 0.7);
+  background: rgba(99, 102, 241, 0.14);
+}
+
+.share-check-title {
+  font-weight: 600;
+  flex: 1;
+}
+
+.share-send-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.share-send-bar input,
+.share-permalink-row input {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(15, 23, 42, 0.45);
+  color: inherit;
+  font-size: 12.5px;
+}
+
+.share-divider {
+  height: 1px;
+  background: rgba(148, 163, 184, 0.2);
+  margin: 2px 0;
+}
+
+.share-permalink-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.share-permalink-label {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.78;
+}
+
+.share-permalink-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Social more menu (clean mobile-first Threads action sheet/popover) */
+.social-post-meta-actions {
+  position: relative;
+}
+
+.social-more-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.social-more-btn:hover {
+  background: rgba(148, 163, 184, 0.14);
+  color: inherit;
+}
+
+.social-more-menu {
+  position: absolute;
+  top: 36px;
+  right: 0;
+  z-index: 40;
+  min-width: 175px;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: var(--side, #11161f);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.social-more-menu button {
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.social-more-menu button:hover {
+  background: rgba(148, 163, 184, 0.14);
 }
