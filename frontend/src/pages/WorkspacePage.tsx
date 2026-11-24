@@ -42,13 +42,13 @@ import { ChannelDirectory } from '../components/directories/ChannelDirectory'
 import { PeopleDirectory } from '../components/directories/PeopleDirectory'
 import { DiscoverView } from '../components/views/DiscoverView'
 import { HomeView } from '../components/views/HomeView'
-import { SettingsView } from '../components/views/SettingsView'
 import { NotificationsView } from '../components/views/NotificationsView'
 import { PinnedView } from '../components/views/PinnedView'
 import { BotsView } from '../components/views/BotsView'
 import { DevPanelView } from '../components/views/DevPanelView'
 import { NotFoundView } from '../components/views/NotFoundView'
 import { DevReasonModal } from '../components/modals/DevReasonModal'
+import { SettingsModal, type SettingsTab } from '../components/modals/SettingsModal'
 import { SharePostModal } from '../components/modals/SharePostModal'
 import {
   createContentReport,
@@ -289,6 +289,16 @@ export function WorkspacePage({
   const [cameraOn, setCameraOn] = useState(false)
   const [screenSharing, setScreenSharing] = useState(false)
   const [profileMenu, setProfileMenu] = useState(false)
+  const [settingsModalTab, setSettingsModalTab] = useState<SettingsTab | null>(null)
+  const [userStatus, setUserStatus] = useState<User['status']>(() => {
+    try {
+      const saved = localStorage.getItem('codex_user_status_v1')
+      if (saved === 'online' || saved === 'idle' || saved === 'dnd' || saved === 'invisible') return saved
+    } catch {
+      // ignore storage errors
+    }
+    return 'online'
+  })
   const [serverMenuOpen, setServerMenuOpen] = useState(false)
   const [currentServerNickname, setCurrentServerNickname] = useState('')
   const [notificationRead, setNotificationRead] = useState(false)
@@ -959,7 +969,7 @@ export function WorkspacePage({
       name: currentServerNickname || data.displayName || session.user.display_name || session.user.username,
       initials,
       tone: 'self',
-      status: 'online' as const,
+      status: userStatus,
       avatarMediaId: session.user.avatar_media_id ?? undefined,
       username: session.user.username,
       bio: session.user.bio,
@@ -987,8 +997,23 @@ export function WorkspacePage({
       currentServerProfile?.role,
       currentServerProfile?.roleColor,
       currentServerProfile?.isOwner,
+      userStatus,
     ],
   )
+
+  const handleStatusChange = (nextStatus: User['status']) => {
+    setUserStatus(nextStatus)
+    try {
+      localStorage.setItem('codex_user_status_v1', nextStatus)
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  const openSettingsModal = (tab: SettingsTab = 'account') => {
+    setProfileMenu(false)
+    setSettingsModalTab(tab)
+  }
 
   const openProfile = (userId: string) => {
     const targetId = userId === 'self' ? session.user.id : userId
@@ -1445,6 +1470,7 @@ export function WorkspacePage({
           currentUser={currentUser}
           activeServerId={serverId}
           activeView={view}
+          theme={data.theme}
           isMobile={isMobile}
           profileMenuOpen={
             profileMenu &&
@@ -1467,7 +1493,10 @@ export function WorkspacePage({
             setProfileMenu((open) => !open)
           }}
           onOpenProfile={() => openProfile(session.user.id)}
-          onNavigateSettings={() => navigateView('settings')}
+          onEditProfile={() => openSettingsModal('profile')}
+          onStatusChange={handleStatusChange}
+          onToggleTheme={() => setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))}
+          onNavigateSettings={() => openSettingsModal('account')}
           isDev={isDev}
           onNavigateDev={() => navigateView('dev')}
           onLogout={() => void onLogout()}
@@ -1558,10 +1587,12 @@ export function WorkspacePage({
             setMobileTab('home')
           }}
           onNavigateThreads={() => navigateView('social')}
-          onNavigateSettings={() => navigateView('settings')}
+          onNavigateSettings={() => openSettingsModal('account')}
           onNavigateDiscover={() => navigateView('discover')}
           onToggleTheme={() => setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))}
           onOpenProfile={() => openProfile(session.user.id)}
+          onEditProfile={() => openSettingsModal('profile')}
+          onStatusChange={handleStatusChange}
           onLogout={() => void onLogout()}
         />
       )}
@@ -1608,7 +1639,7 @@ export function WorkspacePage({
             navigateView('notifications')
           }}
           onOpenInbox={() => navigateView('dm')}
-          onOpenSettings={() => navigateView('settings')}
+          onOpenSettings={() => openSettingsModal('account')}
           onCopyLink={() => void copyCurrentLink()}
         />
 
@@ -1844,40 +1875,12 @@ export function WorkspacePage({
                 onInvite={() => void handleOpenInvite()}
               />
             ) : view === 'settings' ? (
-              <SettingsView
-                authUser={session.user}
-                theme={data.theme}
-                onDisplayNameChange={(name) => {
-                  setData((prev) => ({ ...prev, displayName: name }))
-                  const nextInitials =
-                    name
-                      .split(/\s+/)
-                      .filter(Boolean)
-                      .map((w) => w[0])
-                      .join('')
-                      .slice(0, 2)
-                      .toUpperCase() || 'ME'
-                  setSocialPosts((prev) =>
-                    prev.map((p) => {
-                      const isMine = p.handle === session.user.username
-                      const repliesChanged = p.replies.some((r) => r.handle === session.user.username)
-                      if (!isMine && !repliesChanged) return p
-                      return {
-                        ...p,
-                        ...(isMine ? { author: name, initials: nextInitials } : {}),
-                        replies: repliesChanged
-                          ? p.replies.map((r) =>
-                              r.handle === session.user.username ? { ...r, author: name } : r,
-                            )
-                          : p.replies,
-                      }
-                    }),
-                  )
-                }}
-                onToggleTheme={() =>
-                  setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))
-                }
-                onLogout={() => void onLogout()}
+              <HomeView
+                conversations={data.conversations}
+                people={people}
+                onOpenDm={openDm}
+                onBrowsePeople={() => navigateView('people')}
+                onNotify={notify}
               />
             ) : view === 'discover' ? (
               <DiscoverView
@@ -2361,6 +2364,7 @@ export function WorkspacePage({
           serverName={view === 'channel' ? server?.name : undefined}
           isSelf={selectedProfile.id === session.user.id}
           onClose={() => setSelectedProfile(null)}
+          onEditProfile={() => openSettingsModal('profile')}
           onMessage={() => {
             const targetId = selectedProfile.id
             setSelectedProfile(null)
@@ -2445,6 +2449,62 @@ export function WorkspacePage({
         channelsByServer={data.channels}
         onClose={() => setSharePost(null)}
         onNotify={notify}
+      />
+
+      <SettingsModal
+        open={view === 'settings' || settingsModalTab !== null}
+        initialTab={settingsModalTab ?? 'account'}
+        authUser={session.user}
+        currentUser={currentUser}
+        theme={data.theme}
+        muted={muted}
+        deafened={false}
+        userStatus={userStatus}
+        socialStats={{
+          postsCount: socialPosts.length,
+          savedCount: socialPosts.filter((p) => p.saved).length,
+          followingCount: followedHandles.length,
+          serversCount: data.servers.length,
+        }}
+        onClose={() => {
+          setSettingsModalTab(null)
+          if (view === 'settings') navigateView('social')
+        }}
+        onDisplayNameChange={(name) => {
+          setData((prev) => ({ ...prev, displayName: name }))
+          const nextInitials =
+            name
+              .split(/\s+/)
+              .filter(Boolean)
+              .map((w) => w[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase() || 'ME'
+          setSocialPosts((prev) =>
+            prev.map((p) => {
+              const isMine = p.handle === session.user.username
+              const repliesChanged = p.replies.some((r) => r.handle === session.user.username)
+              if (!isMine && !repliesChanged) return p
+              return {
+                ...p,
+                ...(isMine ? { author: name, initials: nextInitials } : {}),
+                replies: repliesChanged
+                  ? p.replies.map((r) =>
+                      r.handle === session.user.username ? { ...r, author: name } : r,
+                    )
+                  : p.replies,
+              }
+            }),
+          )
+        }}
+        onToggleTheme={() =>
+          setData((prev) => ({ ...prev, theme: prev.theme === 'dark' ? 'light' : 'dark' }))
+        }
+        onToggleMute={() => setMuted((value) => !value)}
+        onToggleDeafen={() => notify('Deafen will be available when voice is connected.')}
+        onStatusChange={handleStatusChange}
+        onOpenThreads={() => navigateView('social')}
+        onLogout={() => void onLogout()}
       />
 
       <Toast message={toast} onClose={() => setToast('')} />

@@ -11,6 +11,7 @@ interface MemberProfileProps {
   onClose: () => void
   onMessage: () => void
   onCopyId: () => void
+  onEditProfile?: () => void
 }
 
 function formatProfileDate(value?: string): string | null {
@@ -31,6 +32,7 @@ export function MemberProfile({
   onClose,
   onMessage,
   onCopyId,
+  onEditProfile,
 }: MemberProfileProps) {
   const avatarInputId = useId()
   const [avatarBusy, setAvatarBusy] = useState(false)
@@ -98,8 +100,6 @@ export function MemberProfile({
         onClick={(event) => event.stopPropagation()}
       >
         <div className="member-profile-cover">
-          <span className="member-profile-cover-orbit member-profile-cover-orbit--one" />
-          <span className="member-profile-cover-orbit member-profile-cover-orbit--two" />
           <button type="button" className="member-profile-close" onClick={onClose} aria-label="Close profile">
             <Icon name="close" size={17} />
           </button>
@@ -118,9 +118,15 @@ export function MemberProfile({
               {isSelf && <span className="member-profile-you">YOU</span>}
             </div>
             <p>@{user.username || user.id.slice(0, 8)}</p>
-            <span className={`member-profile-presence member-profile-presence--${user.status}`}>
+              <span className={`member-profile-presence member-profile-presence--${user.status}`}>
               <i />
-              {user.status === 'online' ? 'Online' : 'Away'}
+              {user.status === 'online'
+                ? 'Online'
+                : user.status === 'dnd'
+                  ? 'Do Not Disturb'
+                  : user.status === 'invisible'
+                    ? 'Invisible'
+                    : 'Away'}
             </span>
           </div>
         </div>
@@ -176,6 +182,19 @@ export function MemberProfile({
             )}
             {isSelf && (
               <>
+                {isSelf && onEditProfile && (
+                  <button
+                    type="button"
+                    className="member-profile-primary"
+                    onClick={() => {
+                      onClose()
+                      onEditProfile()
+                    }}
+                  >
+                    <Icon name="edit" size={15} />
+                    Edit profile
+                  </button>
+                )}
                 <label
                   htmlFor={avatarInputId}
                   className="member-profile-avatar-upload"

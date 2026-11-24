@@ -1,5 +1,6 @@
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
+import { ProfilePopover } from '../common/ProfilePopover'
 import type { Channel, Conversation, Server, User } from '../../types/chat'
 import type { CommunityCategory } from '../../api/communities'
 import type { View, Theme } from '../../types/common'
@@ -55,6 +56,8 @@ interface ChannelSidebarProps {
   onNavigateDiscover: () => void
   onToggleTheme: () => void
   onOpenProfile: () => void
+  onEditProfile: () => void
+  onStatusChange: (status: User['status']) => void
   onLogout?: () => void
 }
 
@@ -108,6 +111,8 @@ export function ChannelSidebar({
   onNavigateDiscover,
   onToggleTheme,
   onOpenProfile,
+  onEditProfile,
+  onStatusChange,
   onLogout,
 }: ChannelSidebarProps) {
   const activeVoiceChannel = channels.find((channel) => channel.id === voiceId)
@@ -447,24 +452,19 @@ export function ChannelSidebar({
       </div>
 
       {profileMenuOpen && (
-        <div className="profile-menu">
-          <strong>{displayName}</strong>
-          <span>Account and preferences</span>
-          <button type="button" onClick={() => { onOpenProfile(); onToggleProfileMenu() }}>
-            <Icon name="user" size={15} /> View profile
-          </button>
-          <button type="button" onClick={() => { onNavigateSettings(); onToggleProfileMenu() }}>
-            <Icon name="settings" size={15} /> Edit profile &amp; settings
-          </button>
-          <button type="button" onClick={() => { onToggleTheme(); onToggleProfileMenu() }}>
-            <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} /> Switch theme
-          </button>
-          {onLogout && (
-            <button type="button" onClick={() => { onToggleProfileMenu(); onLogout() }}>
-              <Icon name="logout" size={15} /> Sign out
-            </button>
-          )}
-        </div>
+        <ProfilePopover
+          currentUser={currentUser}
+          displayName={displayName}
+          theme={theme}
+          className="profile-popover"
+          onClose={onToggleProfileMenu}
+          onOpenProfile={onOpenProfile}
+          onEditProfile={onEditProfile}
+          onOpenSettings={onNavigateSettings}
+          onStatusChange={onStatusChange}
+          onToggleTheme={onToggleTheme}
+          onLogout={onLogout}
+        />
       )}
     </aside>
   )

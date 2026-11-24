@@ -1,13 +1,15 @@
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
+import { ProfilePopover } from '../common/ProfilePopover'
 import type { Server, User } from '../../types/chat'
-import type { View } from '../../types/common'
+import type { Theme, View } from '../../types/common'
 
 interface ServerRailProps {
   servers: Server[]
   currentUser: User
   activeServerId: string
   activeView: View
+  theme: Theme
   isMobile?: boolean
   profileMenuOpen: boolean
   onSelectHome: () => void
@@ -17,6 +19,9 @@ interface ServerRailProps {
   onNavigateSocial: () => void
   onToggleProfileMenu: () => void
   onOpenProfile: () => void
+  onEditProfile: () => void
+  onStatusChange: (status: User['status']) => void
+  onToggleTheme: () => void
   onNavigateSettings: () => void
   isDev?: boolean
   onNavigateDev?: () => void
@@ -28,6 +33,7 @@ export function ServerRail({
   currentUser,
   activeServerId,
   activeView,
+  theme,
   isMobile = false,
   profileMenuOpen,
   onSelectHome,
@@ -37,6 +43,9 @@ export function ServerRail({
   onNavigateSocial,
   onToggleProfileMenu,
   onOpenProfile,
+  onEditProfile,
+  onStatusChange,
+  onToggleTheme,
   onNavigateSettings,
   isDev = false,
   onNavigateDev,
@@ -143,21 +152,19 @@ export function ServerRail({
           <Avatar user={currentUser} size="small" />
         </button>
         {profileMenuOpen && (
-          <div className="rail-profile-menu" role="menu" aria-label="Profile menu">
-            <strong>{currentUser.name}</strong>
-            <span>{currentUser.username ? `@${currentUser.username.replace(/^@/, '')}` : ''}</span>
-            <button type="button" role="menuitem" onClick={() => { onOpenProfile(); onToggleProfileMenu() }}>
-              <Icon name="user" size={15} /> View profile
-            </button>
-            <button type="button" role="menuitem" onClick={() => { onNavigateSettings(); onToggleProfileMenu() }}>
-              <Icon name="settings" size={15} /> Settings
-            </button>
-            {onLogout && (
-              <button type="button" role="menuitem" onClick={() => { onToggleProfileMenu(); onLogout() }}>
-                <Icon name="logout" size={15} /> Sign out
-              </button>
-            )}
-          </div>
+          <ProfilePopover
+            currentUser={currentUser}
+            displayName={currentUser.name}
+            theme={theme}
+            className="profile-popover rail-profile-popover"
+            onClose={onToggleProfileMenu}
+            onOpenProfile={onOpenProfile}
+            onEditProfile={onEditProfile}
+            onOpenSettings={onNavigateSettings}
+            onStatusChange={onStatusChange}
+            onToggleTheme={onToggleTheme}
+            onLogout={onLogout}
+          />
         )}
       </div>
     </aside>

@@ -29,9 +29,8 @@ export function SharePostModal({
   onClose,
   onNotify,
 }: SharePostModalProps) {
-  const [selectedServerId, setSelectedServerId] = useState<string>('')
-  const [serversExpanded, setServersExpanded] = useState(false)
-  const [channelsExpanded, setChannelsExpanded] = useState(false)
+  const [browsingServerId, setBrowsingServerId] = useState<string | null>(null)
+  const [communityExpanded, setCommunityExpanded] = useState(false)
   const [friendsExpanded, setFriendsExpanded] = useState(false)
   const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([])
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([])
@@ -40,20 +39,14 @@ export function SharePostModal({
   const [note, setNote] = useState('')
   const [sending, setSending] = useState(false)
 
-  const activeServerId =
-    selectedServerId && servers.some((s) => s.id === selectedServerId)
-      ? selectedServerId
-      : (servers[0]?.id ?? '')
-
-  const activeServer = useMemo(
-    () => servers.find((s) => s.id === activeServerId) ?? null,
-    [servers, activeServerId],
-  )
-
-  const activeServerChannels = useMemo(() => {
-    if (!activeServerId) return []
-    return (channelsByServer[activeServerId] ?? []).filter((c) => c.type !== 'voice')
-  }, [channelsByServer, activeServerId])
+  useEffect(() => {
+    if (!post) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [post, onClose])
 
   useEffect(() => {
     if (!post) return
@@ -83,6 +76,16 @@ export function SharePostModal({
       cancelled = true
     }
   }, [post])
+
+  const browsingServer = useMemo(
+    () => (browsingServerId ? servers.find((s) => s.id === browsingServerId) ?? null : null),
+    [servers, browsingServerId],
+  )
+
+  const browsingChannels = useMemo(() => {
+    if (!browsingServer) return []
+    return (channelsByServer[browsingServer.id] ?? []).filter((c) => c.type !== 'voice')
+  }, [channelsByServer, browsingServer])
 
   if (!post) return null
 
@@ -130,6 +133,7 @@ export function SharePostModal({
         )
         setSelectedChannelIds([])
         setSelectedFriendIds([])
+        setBrowsingServerId(null)
         setNote('')
         onClose()
       } else {
@@ -162,60 +166,121 @@ export function SharePostModal({
           </button>
         </div>
 
-        {/* Step 1: Community / Server */}
+        {/* Nested Community -> Channel Drill-Down */}
         <div className="share-section">
           <div className="share-section-head">
-            <span>Community {selectedChannelIds.length > 0 ? `(${selectedChannelIds.length} channel dipilih)` : ''}</span>
+            <div className="share-section-title-row">
+              {browsingServer ? (
+                <>
+                  <button
+                    type="button"
+                    className="share-back-btn"
+                    onClick={() => setBrowsingServerId(null)}
+                  >
+                    <Icon name="arrowLeft" size={14} />
+                    <span>Kembali</span>
+                  </button>
+                  <span className="share-section-label">
+                    {browsingServer.name}
+                    {selectedChannelIds.length > 0 ? ` (${selectedChannelIds.length})` : ''}
+                  </span>
+                </>
+              ) : (
+                <span className="share-section-label">
+                  Communities {selectedChannelIds.length > 0 ? `(${selectedChannelIds.length} channel)` : ''}
+                </span>
+              )}
+            </div>
             {servers.length > 0 && (
               <button
                 type="button"
                 className="share-expand-btn"
-                onClick={() => setServersExpanded((v) => !v)}
+                onClick={() => setCommunityExpanded((v) => !v)}
               >
-                {serversExpanded ? 'Collapse' : 'Expand'}
+                {communityExpanded ? 'Collapse' : 'Expand'}
               </button>
             )}
           </div>
-          {servers.length === 0 ? (
-            <p className="dev-muted">Belum bergabung di community mana pun.</p>
-          ) : serversExpanded ? (
+
+          {!browsingServer ? (
+            servers.length === 0 ? (
+              <p className="dev-muted">Belum bergabung di community mana pun.</p>
+            ) : communityExpanded ? (
+              <div className="share-expanded-list">
+                {servers.map((srv) => {
+                  const textChannels = (channelsByServer[srv.id] ?? []).filter((c) => c.type !== 'voice')
+                  const countInServer = textChannels.filter((c) => selectedChannelIds.includes(c.id)).length
+                  return (
+                    <button
+                      key={srv.id}
+                      type="button"
+                      className={`share-list-row ${countInServer > 0 ? 'selected' : ''}`}
+                      onClick={() => setBrowsingServerId(srv.id)}
+                    >
+                      <span className="share-row-icon">{srv.abbr || makeInitials(srv.name)}</span>
+                      <span className="share-check-title">{srv.name}</span>
+                      <span className="share-row-meta">
+                        {countInServer > 0 ? `${countInServer} dipilih` : `${textChannels.length} channel`}
+                      </span>
+                      <Icon name="arrow" size={14} />
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="share-carousel">
+                {servers.map((srv) => {
+                  const textChannels = (channelsByServer[srv.id] ?? []).filter((c) => c.type !== 'voice')
+                  const countInServer = textChannels.filter((c) => selectedChannelIds.includes(c.id)).length
+                  return (
+                    <button
+                      key={srv.id}
+                      type="button"
+                      className={`share-carousel-card ${countInServer > 0 ? 'selected' : ''}`}
+                      onClick={() => setBrowsingServerId(srv.id)}
+                    >
+                      <span className="share-card-icon">{srv.abbr || makeInitials(srv.name)}</span>
+                      <strong>{srv.name}</strong>
+                      <small>{countInServer > 0 ? `${countInServer} dipilih` : `${textChannels.length} channel`}</small>
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          ) : browsingChannels.length === 0 ? (
+            <p className="dev-muted">Tidak ada text channel di community ini.</p>
+          ) : communityExpanded ? (
             <div className="share-expanded-list">
-              {servers.map((srv) => {
-                const isSelected = srv.id === activeServerId
-                const countInServer = (channelsByServer[srv.id] ?? []).filter((c) =>
-                  selectedChannelIds.includes(c.id),
-                ).length
+              {browsingChannels.map((ch) => {
+                const checked = selectedChannelIds.includes(ch.id)
                 return (
-                  <button
-                    key={srv.id}
-                    type="button"
-                    className={`share-check-row share-server-row ${isSelected ? 'selected' : ''}`}
-                    onClick={() => setSelectedServerId(srv.id)}
-                  >
-                    <span className="share-card-icon">{srv.abbr || makeInitials(srv.name)}</span>
-                    <span className="share-check-title">{srv.name}</span>
-                    {countInServer > 0 && <span className="dev-muted">{countInServer} dipilih</span>}
-                  </button>
+                  <label key={ch.id} className={`share-list-row ${checked ? 'selected' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleId(selectedChannelIds, setSelectedChannelIds, ch.id)}
+                    />
+                    <span className="share-row-icon">#</span>
+                    <span className="share-check-title">{ch.name}</span>
+                    <span className="share-row-meta">{browsingServer.name}</span>
+                  </label>
                 )
               })}
             </div>
           ) : (
             <div className="share-carousel">
-              {servers.map((srv) => {
-                const isSelected = srv.id === activeServerId
-                const countInServer = (channelsByServer[srv.id] ?? []).filter((c) =>
-                  selectedChannelIds.includes(c.id),
-                ).length
+              {browsingChannels.map((ch) => {
+                const selected = selectedChannelIds.includes(ch.id)
                 return (
                   <button
-                    key={srv.id}
+                    key={ch.id}
                     type="button"
-                    className={`share-carousel-card ${isSelected ? 'selected' : ''}`}
-                    onClick={() => setSelectedServerId(srv.id)}
+                    className={`share-carousel-card ${selected ? 'selected' : ''}`}
+                    onClick={() => toggleId(selectedChannelIds, setSelectedChannelIds, ch.id)}
                   >
-                    <span className="share-card-icon">{srv.abbr || makeInitials(srv.name)}</span>
-                    <strong>{srv.name}</strong>
-                    <small>{countInServer > 0 ? `${countInServer} dipilih` : 'Community'}</small>
+                    <span className="share-card-icon">#</span>
+                    <strong>{ch.name}</strong>
+                    <small>{browsingServer.name}</small>
                   </button>
                 )
               })}
@@ -223,66 +288,12 @@ export function SharePostModal({
           )}
         </div>
 
-        {/* Step 2: Channels in selected Community */}
-        {activeServer && (
-          <div className="share-section">
-            <div className="share-section-head">
-              <span>Channels · {activeServer.name}</span>
-              {activeServerChannels.length > 0 && (
-                <button
-                  type="button"
-                  className="share-expand-btn"
-                  onClick={() => setChannelsExpanded((v) => !v)}
-                >
-                  {channelsExpanded ? 'Collapse' : 'Expand'}
-                </button>
-              )}
-            </div>
-            {activeServerChannels.length === 0 ? (
-              <p className="dev-muted">Tidak ada text channel di community ini.</p>
-            ) : channelsExpanded ? (
-              <div className="share-expanded-list">
-                {activeServerChannels.map((ch) => {
-                  const checked = selectedChannelIds.includes(ch.id)
-                  return (
-                    <label key={ch.id} className={`share-check-row ${checked ? 'selected' : ''}`}>
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleId(selectedChannelIds, setSelectedChannelIds, ch.id)}
-                      />
-                      <span className="share-check-title">#{ch.name}</span>
-                      <span className="dev-muted">{activeServer.name}</span>
-                    </label>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="share-carousel">
-                {activeServerChannels.map((ch) => {
-                  const selected = selectedChannelIds.includes(ch.id)
-                  return (
-                    <button
-                      key={ch.id}
-                      type="button"
-                      className={`share-carousel-card ${selected ? 'selected' : ''}`}
-                      onClick={() => toggleId(selectedChannelIds, setSelectedChannelIds, ch.id)}
-                    >
-                      <span className="share-card-icon">#</span>
-                      <strong>{ch.name}</strong>
-                      <small>{activeServer.name}</small>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Friends (DM) — separated from Community */}
+        {/* Friends (DM) */}
         <div className="share-section">
           <div className="share-section-head">
-            <span>Friends (DM) {selectedFriendIds.length > 0 ? `(${selectedFriendIds.length})` : ''}</span>
+            <span className="share-section-label">
+              Friends (DM) {selectedFriendIds.length > 0 ? `(${selectedFriendIds.length})` : ''}
+            </span>
             {friends.length > 0 && (
               <button
                 type="button"
@@ -296,13 +307,13 @@ export function SharePostModal({
           {loadingFriends ? (
             <p className="dev-muted">Memuat daftar teman...</p>
           ) : friends.length === 0 ? (
-            <p className="dev-muted">Belum berteman dengan siapa pun. Salin link di bawah untuk membagikan.</p>
+            <p className="dev-muted">Belum berteman dengan siapa pun. Salin link permanen di bawah untuk membagikan.</p>
           ) : friendsExpanded ? (
             <div className="share-expanded-list">
               {friends.map((friend) => {
                 const checked = selectedFriendIds.includes(friend.id)
                 return (
-                  <label key={friend.id} className={`share-check-row ${checked ? 'selected' : ''}`}>
+                  <label key={friend.id} className={`share-list-row ${checked ? 'selected' : ''}`}>
                     <input
                       type="checkbox"
                       checked={checked}
@@ -310,7 +321,7 @@ export function SharePostModal({
                     />
                     <Avatar user={friend} size="small" />
                     <span className="share-check-title">{friend.name}</span>
-                    {friend.username && <span className="dev-muted">@{friend.username}</span>}
+                    {friend.username && <span className="share-row-meta">@{friend.username}</span>}
                   </label>
                 )
               })}
