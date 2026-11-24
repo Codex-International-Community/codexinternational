@@ -134,7 +134,7 @@ export function setSession(next: AuthSession | null): void {
 
 export function updateSessionUser(user: AuthUserProfile): void {
   if (!memorySession) return
-  setSession({ ...memorySession, user })
+  setSession({ ...memorySession, user: { ...memorySession.user, ...user } })
 }
 
 export function subscribeSession(listener: (session: AuthSession | null) => void): () => void {
@@ -186,44 +186,74 @@ async function parseErrorResponse(res: Response): Promise<ApiError> {
   return new ApiError(res.status, code, message, retryAfterSecs)
 }
 
-async function performRefresh(): Promise<AuthSession | null> {
+function adoptSession(next: AuthSession): AuthSession {
+  memorySession = next
+  notifySessionListeners(next)
+  return next
+}
+
+async function performRefresh(expectedRefreshToken: string): Promise<AuthSession | null> {
   const latest = readStoredSession() ?? memorySession
   if (!latest?.refresh_token) return null
 
-  // If another tab already rotated the token while we waited for the lock, reuse it.
-  if (memorySession && latest.refresh_token !== memorySession.refresh_token) {
-    memorySession = latest
-    notifySessionListeners(latest)
-    return latest
+  // Another tab may have rotated the token before this tab acquired the lock.
+  // Reuse the latest session instead of submitting a stale refresh token.
+  if (latest.refresh_token !== expectedRefreshToken) {
+    return adoptSession(latest)
   }
 
   const res = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: latest.refresh_token }),
+    body: JSON.stringify({ refresh_token: expectedRefreshToken }),
   })
 
   if (!res.ok) {
-    setSession(null)
-    return null
+    const latestAfterFailure = readStoredSession() ?? memorySession
+    if (latestAfterFailure?.refresh_token && latestAfterFailure.refresh_token !== expectedRefreshToken) {
+      return adoptSession(latestAfterFailure)
+    }
+
+    // Only an explicit invalid/expired refresh token ends the session.
+    // Transient backend errors (5xx), rate limits and network failures must not log users out.
+    if (res.status === 401) {
+      if (latestAfterFailure?.refresh_token === expectedRefreshToken) {
+        setSession(null)
+      }
+      return null
+    }
+
+    throw await parseErrorResponse(res)
   }
 
   const rotated = (await res.json()) as AuthSession
+  const latestAfterSuccess = readStoredSession() ?? memorySession
+
+  // Do not overwrite a newer session or resurrect a session logged out in another tab.
+  if (!latestAfterSuccess) return null
+  if (latestAfterSuccess.refresh_token !== expectedRefreshToken) {
+    return adoptSession(latestAfterSuccess)
+  }
+
   setSession(rotated)
   return rotated
 }
 
-async function executeRefresh(): Promise<AuthSession | null> {
-  if (!memorySession?.refresh_token) return null
+async function executeRefresh(expectedRefreshToken: string): Promise<AuthSession | null> {
+  if (!expectedRefreshToken) return null
+  const runRefresh = () => performRefresh(expectedRefreshToken)
   if (typeof navigator !== 'undefined' && navigator.locks?.request) {
-    return navigator.locks.request('codexter_auth_refresh', performRefresh)
+    return navigator.locks.request('codexter_auth_refresh', runRefresh)
   }
-  return performRefresh()
+  return runRefresh()
 }
 
-export function refreshSessionOnce(): Promise<AuthSession | null> {
+export function refreshSessionOnce(
+  expectedRefreshToken = memorySession?.refresh_token,
+): Promise<AuthSession | null> {
+  if (!expectedRefreshToken) return Promise.resolve(null)
   if (!refreshPromise) {
-    refreshPromise = executeRefresh().finally(() => {
+    refreshPromise = executeRefresh(expectedRefreshToken).finally(() => {
       refreshPromise = null
     })
   }
@@ -245,12 +275,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     retryOnUnauthorized = true,
   } = options
 
+  const requestSession = memorySession
   const headers: Record<string, string> = {}
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json'
   }
-  if (auth && memorySession?.access_token) {
-    headers.Authorization = `Bearer ${memorySession.access_token}`
+  if (auth && requestSession?.access_token) {
+    headers.Authorization = `Bearer ${requestSession.access_token}`
   }
 
   let res: Response
@@ -268,8 +299,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     )
   }
 
-  if (res.status === 401 && auth && retryOnUnauthorized && memorySession?.refresh_token) {
-    const refreshed = await refreshSessionOnce()
+  if (res.status === 401 && auth && retryOnUnauthorized && requestSession?.refresh_token) {
+    const refreshed = await refreshSessionOnce(requestSession.refresh_token)
     if (refreshed) {
       return apiRequest<T>(path, { ...options, retryOnUnauthorized: false })
     }
@@ -288,13 +319,14 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 }
 
 export async function apiUpload<T>(path: string, file: Blob, fileName: string, extraHeaders: Record<string, string> = {}): Promise<T> {
+  const requestSession = memorySession
   const headers: Record<string, string> = {
     'Content-Type': file.type,
     'X-File-Name': fileName,
     ...extraHeaders,
   }
-  if (memorySession?.access_token) {
-    headers.Authorization = `Bearer ${memorySession.access_token}`
+  if (requestSession?.access_token) {
+    headers.Authorization = `Bearer ${requestSession.access_token}`
   }
 
   let res: Response
@@ -304,8 +336,8 @@ export async function apiUpload<T>(path: string, file: Blob, fileName: string, e
     throw new ApiError(0, 'NETWORK_ERROR', 'Could not connect to the media upload endpoint.')
   }
 
-  if (res.status === 401 && memorySession?.refresh_token) {
-    const refreshed = await refreshSessionOnce()
+  if (res.status === 401 && requestSession?.refresh_token) {
+    const refreshed = await refreshSessionOnce(requestSession.refresh_token)
     if (refreshed) {
       return apiUpload<T>(path, file, fileName, extraHeaders)
     }
