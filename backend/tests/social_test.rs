@@ -47,10 +47,19 @@ async fn social_routes_require_auth() {
         (Method::GET, "/api/v1/social/posts".to_string()),
         (Method::POST, "/api/v1/social/posts".to_string()),
         (Method::GET, "/api/v1/social/bookmarks".to_string()),
-        (Method::POST, format!("/api/v1/social/posts/{post_id}/replies")),
+        (
+            Method::POST,
+            format!("/api/v1/social/posts/{post_id}/replies"),
+        ),
         (Method::POST, format!("/api/v1/social/posts/{post_id}/like")),
-        (Method::POST, format!("/api/v1/social/posts/{post_id}/repost")),
-        (Method::POST, format!("/api/v1/social/posts/{post_id}/bookmark")),
+        (
+            Method::POST,
+            format!("/api/v1/social/posts/{post_id}/repost"),
+        ),
+        (
+            Method::POST,
+            format!("/api/v1/social/posts/{post_id}/bookmark"),
+        ),
     ];
 
     for (method, uri) in routes {
