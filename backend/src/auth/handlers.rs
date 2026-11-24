@@ -17,7 +17,6 @@ use crate::{
         },
     },
     error::AppError,
-    media,
     state::AppState,
 };
 
