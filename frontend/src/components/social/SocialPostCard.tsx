@@ -33,6 +33,11 @@ interface SocialPostCardProps {
   onShare: (id: string) => void
   onNotify?: (message: string) => void
   replyTarget?: { id: string; handle: string } | null
+  isDev?: boolean
+  onDevDeletePost?: (postId: string) => void
+  onDevDeleteReply?: (postId: string, replyId: string) => void
+  onReportPost?: (postId: string) => void
+  onReportReply?: (replyId: string) => void
 }
 
 interface ReplyNode {
@@ -76,6 +81,11 @@ export function SocialPostCard({
   onShare,
   onNotify,
   replyTarget,
+  isDev = false,
+  onDevDeletePost,
+  onDevDeleteReply,
+  onReportPost,
+  onReportReply,
 }: SocialPostCardProps) {
   const replyInputId = useId()
   const replyFileRef = useRef<HTMLInputElement>(null)
@@ -124,6 +134,23 @@ export function SocialPostCard({
         <div className="social-reply">
           <div className="social-reply-header">
             <strong>{reply.author}</strong>
+            {reply.verified && (
+              <span className="social-verified" title="Community verified" aria-label="Verified">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                  <circle cx="12" cy="12" r="10" fill="currentColor" />
+                  <path
+                    d="M8.5 12.3l2.3 2.3 4.8-5"
+                    stroke="#fff"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </span>
+            )}
+            {reply.platformBadge && (
+              <span className="platform-tag-pill">{reply.platformBadge}</span>
+            )}
             <span>@{reply.handle}</span>
             <time>{reply.time}</time>
           </div>
@@ -185,6 +212,25 @@ export function SocialPostCard({
                 Delete
               </button>
             )}
+            {!isOwnReply && isDev && onDevDeleteReply && (
+              <button
+                type="button"
+                className="social-reply-delete"
+                onClick={() => onDevDeleteReply(post.id, reply.id)}
+                title="Dev Delete Reply"
+              >
+                Dev Delete
+              </button>
+            )}
+            {!isOwnReply && onReportReply && (
+              <button
+                type="button"
+                onClick={() => onReportReply(reply.id)}
+                title="Report reply"
+              >
+                Report
+              </button>
+            )}
           </div>
         </div>
         {!isCollapsed && children.length > 0 && (
@@ -238,6 +284,9 @@ export function SocialPostCard({
                 </svg>
               </span>
             )}
+            {post.platformBadge && (
+              <span className="platform-tag-pill">{post.platformBadge}</span>
+            )}
             <span>@{post.handle}</span>
             <i aria-hidden="true">·</i>
             <time>{post.time}</time>
@@ -261,6 +310,26 @@ export function SocialPostCard({
                 onClick={() => onToggleFollow(post.handle)}
               >
                 {isFollowed ? 'Following' : '+ Follow'}
+              </button>
+            )}
+            {post.handle !== currentUsername && isDev && onDevDeletePost && (
+              <button
+                type="button"
+                className="social-delete-post-btn"
+                onClick={() => onDevDeletePost(post.id)}
+                title="Dev Delete Post"
+              >
+                Dev Delete
+              </button>
+            )}
+            {post.handle !== currentUsername && onReportPost && (
+              <button
+                type="button"
+                className="social-follow-inline"
+                onClick={() => onReportPost(post.id)}
+                title="Report post"
+              >
+                Report
               </button>
             )}
           </div>

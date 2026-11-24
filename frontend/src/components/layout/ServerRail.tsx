@@ -18,6 +18,8 @@ interface ServerRailProps {
   onToggleProfileMenu: () => void
   onOpenProfile: () => void
   onNavigateSettings: () => void
+  isDev?: boolean
+  onNavigateDev?: () => void
   onLogout?: () => void
 }
 
@@ -36,6 +38,8 @@ export function ServerRail({
   onToggleProfileMenu,
   onOpenProfile,
   onNavigateSettings,
+  isDev = false,
+  onNavigateDev,
   onLogout,
 }: ServerRailProps) {
   const homeActive = activeView === 'home' || activeView === 'dm'
@@ -112,6 +116,19 @@ export function ServerRail({
       )}
 
       <div className="rail-spacer" />
+
+      {isDev && onNavigateDev && (
+        <button
+          type="button"
+          className={`rail-discover ${activeView === 'dev' ? 'active' : ''}`}
+          aria-label="Dev Governance Panel"
+          aria-current={activeView === 'dev' ? 'page' : undefined}
+          title="Dev Panel"
+          onClick={onNavigateDev}
+        >
+          <Icon name="shield" size={19} />
+        </button>
+      )}
 
       <div className="rail-profile-wrap">
         <button

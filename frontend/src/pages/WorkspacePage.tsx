@@ -46,7 +46,19 @@ import { SettingsView } from '../components/views/SettingsView'
 import { NotificationsView } from '../components/views/NotificationsView'
 import { PinnedView } from '../components/views/PinnedView'
 import { BotsView } from '../components/views/BotsView'
+import { DevPanelView } from '../components/views/DevPanelView'
 import { NotFoundView } from '../components/views/NotFoundView'
+import { DevReasonModal } from '../components/modals/DevReasonModal'
+import {
+  createContentReport,
+  devDeleteChatMessage,
+  devDeleteSocialPost,
+  devDeleteSocialReply,
+  listActiveOnDuty,
+  startOnDuty,
+  stopOnDuty,
+  type ActiveOnDutySession,
+} from '../api/dev'
 
 interface WorkspacePageProps {
   session: AuthSession
@@ -122,6 +134,7 @@ function parseWorkspaceRoute(
     pinned: 'pinned',
     threads: 'social',
     bots: 'bots',
+    dev: 'dev',
   }
   const view = segments.length === 1 ? staticRoutes[segments[0]] : undefined
 
@@ -154,6 +167,8 @@ function buildWorkspacePath({ view, serverId, channelId, dmId, path }: Workspace
       return '/directory/people'
     case 'bots':
       return '/bots'
+    case 'dev':
+      return '/dev'
     case 'not-found':
       return path ?? '/404'
     case 'profile':
@@ -202,6 +217,32 @@ export function WorkspacePage({
     parseWorkspaceRoute(window.location.pathname),
   )
   const [view, setView] = useState<View>(initialRoute.view)
+  const isDev = session.user.platform_role === 'dev'
+  const [activeOnDuty, setActiveOnDuty] = useState<ActiveOnDutySession[]>([])
+  const [inlineModAction, setInlineModAction] = useState<
+    | { kind: 'dev_delete_post'; postId: string }
+    | { kind: 'dev_delete_reply'; postId: string; replyId: string }
+    | { kind: 'dev_delete_message'; message: Message }
+    | { kind: 'start_on_duty'; communityId: string; serverName: string }
+    | { kind: 'report_post'; postId: string }
+    | { kind: 'report_reply'; replyId: string }
+    | { kind: 'report_message'; messageId: string }
+    | null
+  >(null)
+
+  const refreshOnDuty = useCallback(async () => {
+    if (!isDev) return
+    try {
+      const list = await listActiveOnDuty()
+      setActiveOnDuty(list)
+    } catch {
+      // Ignore transient errors
+    }
+  }, [isDev])
+
+  useEffect(() => {
+    void refreshOnDuty()
+  }, [refreshOnDuty])
   const [pageTransition, setPageTransition] = useState<'slide-forward' | 'slide-backward' | null>(null)
   const previousViewRef = useRef<View>(initialRoute.view)
 
@@ -877,7 +918,9 @@ export function WorkspacePage({
           ? 'Threads'
           : view === 'bots'
             ? 'Bot Portal'
-            : view === 'channels'
+            : view === 'dev'
+              ? 'Dev Governance Panel'
+              : view === 'channels'
               ? 'Channels'
               : view === 'people'
                 ? 'People'
@@ -1421,6 +1464,8 @@ export function WorkspacePage({
           }}
           onOpenProfile={() => openProfile(session.user.id)}
           onNavigateSettings={() => navigateView('settings')}
+          isDev={isDev}
+          onNavigateDev={() => navigateView('dev')}
           onLogout={() => void onLogout()}
         />
       )}
@@ -1759,9 +1804,24 @@ export function WorkspacePage({
                   }
                 }}
                 onNotify={notify}
+                isDev={isDev}
+                onDevDeletePost={(postId) => setInlineModAction({ kind: 'dev_delete_post', postId })}
+                onDevDeleteReply={(postId, replyId) =>
+                  setInlineModAction({ kind: 'dev_delete_reply', postId, replyId })
+                }
+                onReportPost={(postId) => setInlineModAction({ kind: 'report_post', postId })}
+                onReportReply={(replyId) => setInlineModAction({ kind: 'report_reply', replyId })}
               />
             ) : view === 'bots' ? (
               <BotsView currentUser={session.user} isMobile={isMobile} onNotify={notify} />
+            ) : view === 'dev' && isDev ? (
+              <DevPanelView
+                currentUser={session.user}
+                servers={data.servers}
+                activeOnDuty={activeOnDuty}
+                onRefreshOnDuty={refreshOnDuty}
+                onToast={notify}
+              />
             ) : view === 'channels' ? (
               <ChannelDirectory
                 servers={data.servers}
@@ -2073,6 +2133,28 @@ export function WorkspacePage({
                 onDiscoverCommunities={() => navigateView('discover')}
                 onBrowseChannels={() => navigateView('channels')}
                 onBrowsePeople={() => navigateView('people')}
+                isDev={isDev}
+                isOnDutyForServer={Boolean(server && activeOnDuty.some((s) => s.community_id === server.id))}
+                onToggleServerOnDuty={() => {
+                  if (!server) return
+                  const active = activeOnDuty.some((s) => s.community_id === server.id)
+                  if (active) {
+                    void stopOnDuty(server.id)
+                      .then(() => refreshOnDuty())
+                      .then(() => notify(`On-Duty ended for ${server.name}`))
+                      .catch((err: unknown) =>
+                        notify(err instanceof Error ? err.message : 'Failed to stop On-Duty'),
+                      )
+                  } else {
+                    setInlineModAction({
+                      kind: 'start_on_duty',
+                      communityId: server.id,
+                      serverName: server.name,
+                    })
+                  }
+                }}
+                onDevDeleteMessage={(m) => setInlineModAction({ kind: 'dev_delete_message', message: m })}
+                onReportMessage={(m) => setInlineModAction({ kind: 'report_message', messageId: m.id })}
               />
             )}
           </section>
@@ -2290,6 +2372,71 @@ export function WorkspacePage({
           }}
         />
       )}
+
+      <DevReasonModal
+        open={Boolean(inlineModAction)}
+        title={
+          inlineModAction?.kind === 'dev_delete_post'
+            ? 'Dev Delete Post'
+            : inlineModAction?.kind === 'dev_delete_reply'
+              ? 'Dev Delete Reply'
+              : inlineModAction?.kind === 'dev_delete_message'
+                ? 'Dev Delete Chat Message'
+                : inlineModAction?.kind === 'start_on_duty'
+                  ? `Start On-Duty · ${inlineModAction.serverName}`
+                  : 'Report Content'
+        }
+        confirmLabel={
+          inlineModAction?.kind === 'start_on_duty'
+            ? 'Start On-Duty'
+            : inlineModAction?.kind.startsWith('report_')
+              ? 'Submit Report'
+              : 'Delete'
+        }
+        confirmTone={inlineModAction?.kind === 'start_on_duty' ? 'primary' : 'danger'}
+        onClose={() => setInlineModAction(null)}
+        onConfirm={async (reason) => {
+          if (!inlineModAction) return
+          if (inlineModAction.kind === 'dev_delete_post') {
+            await devDeleteSocialPost(inlineModAction.postId, reason)
+            setSocialPosts((prev) => prev.filter((p) => p.id !== inlineModAction.postId))
+            notify('Post deleted by Dev.')
+          } else if (inlineModAction.kind === 'dev_delete_reply') {
+            await devDeleteSocialReply(inlineModAction.replyId, reason)
+            setSocialPosts((prev) =>
+              prev.map((p) =>
+                p.id !== inlineModAction.postId
+                  ? p
+                  : { ...p, replies: p.replies.filter((r) => r.id !== inlineModAction.replyId) },
+              ),
+            )
+            notify('Reply deleted by Dev.')
+          } else if (inlineModAction.kind === 'dev_delete_message') {
+            await devDeleteChatMessage(inlineModAction.message.id, reason)
+            setData((prev) => {
+              const list = prev.messages[key] ?? []
+              return {
+                ...prev,
+                messages: { ...prev.messages, [key]: list.filter((item) => item.id !== inlineModAction.message.id) },
+              }
+            })
+            notify('Message deleted by On-Duty Dev.')
+          } else if (inlineModAction.kind === 'start_on_duty') {
+            await startOnDuty(inlineModAction.communityId, reason, 60)
+            await refreshOnDuty()
+            notify(`On-Duty active in ${inlineModAction.serverName}`)
+          } else if (inlineModAction.kind === 'report_post') {
+            await createContentReport('social_post', inlineModAction.postId, reason)
+            notify('Report submitted.')
+          } else if (inlineModAction.kind === 'report_reply') {
+            await createContentReport('social_reply', inlineModAction.replyId, reason)
+            notify('Report submitted.')
+          } else if (inlineModAction.kind === 'report_message') {
+            await createContentReport('chat_message', inlineModAction.messageId, reason)
+            notify('Report submitted.')
+          }
+        }}
+      />
 
       <Toast message={toast} onClose={() => setToast('')} />
     </div>

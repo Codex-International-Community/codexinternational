@@ -3,10 +3,10 @@
  *
  * Client-side security guarantees:
  * - Uses Bearer JWT access tokens + rotating device refresh tokens (no cookies/PHP/mock bypass).
- * - Stores active session in `sessionStorage` + in-memory cache so shared browsers do not persist
- *   long-lived tokens across restarts, and never stores OTP codes on the client.
- * - Serializes concurrent `401` refresh attempts through a single-flight mutex so parallel requests
- *   cannot trigger backend refresh-token reuse revocation.
+ * - Stores active session in `localStorage` + in-memory cache so users stay signed in across
+ *   browser restarts and new tabs, and never stores OTP codes on the client.
+ * - Serializes concurrent `401` refresh attempts through a single-flight mutex (and Web Locks
+ *   across tabs when available) so parallel requests cannot trigger refresh-token reuse revocation.
  */
 
 export interface AuthUserProfile {
@@ -20,6 +20,8 @@ export interface AuthUserProfile {
   email_verified_at: string | null
   bio: string
   platform_role: string
+  platform_badge: string | null
+  is_verified: boolean
   can_bypass_compress: boolean
   global_xp: number
   global_level: number
@@ -56,11 +58,9 @@ let memorySession: AuthSession | null = readStoredSession()
 let refreshPromise: Promise<AuthSession | null> | null = null
 const listeners = new Set<(session: AuthSession | null) => void>()
 
-function readStoredSession(): AuthSession | null {
-  if (typeof window === 'undefined') return null
+function parseStoredSession(raw: string | null): AuthSession | null {
+  if (!raw) return null
   try {
-    const raw = window.sessionStorage.getItem(SESSION_KEY)
-    if (!raw) return null
     const parsed = JSON.parse(raw) as Partial<AuthSession>
     if (!parsed.access_token || !parsed.refresh_token || !parsed.user?.id) {
       return null
@@ -71,8 +71,43 @@ function readStoredSession(): AuthSession | null {
   }
 }
 
+function readStoredSession(): AuthSession | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const localRaw = window.localStorage.getItem(SESSION_KEY)
+    const localParsed = parseStoredSession(localRaw)
+    if (localParsed) return localParsed
+
+    // Migrate any legacy sessionStorage entry to localStorage.
+    const legacyRaw = window.sessionStorage.getItem(SESSION_KEY)
+    const legacyParsed = parseStoredSession(legacyRaw)
+    if (legacyParsed && legacyRaw) {
+      window.localStorage.setItem(SESSION_KEY, legacyRaw)
+      window.sessionStorage.removeItem(SESSION_KEY)
+      return legacyParsed
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export function getSession(): AuthSession | null {
   return memorySession
+}
+
+function notifySessionListeners(next: AuthSession | null): void {
+  for (const listener of listeners) {
+    listener(next)
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key !== SESSION_KEY) return
+    memorySession = parseStoredSession(event.newValue)
+    notifySessionListeners(memorySession)
+  })
 }
 
 export function setSession(next: AuthSession | null): void {
@@ -80,17 +115,16 @@ export function setSession(next: AuthSession | null): void {
   if (typeof window !== 'undefined') {
     try {
       if (next) {
-        window.sessionStorage.setItem(SESSION_KEY, JSON.stringify(next))
+        window.localStorage.setItem(SESSION_KEY, JSON.stringify(next))
       } else {
-        window.sessionStorage.removeItem(SESSION_KEY)
+        window.localStorage.removeItem(SESSION_KEY)
       }
+      window.sessionStorage.removeItem(SESSION_KEY)
     } catch {
       // Ignore private-browsing storage quota issues; memorySession still tracks active tab.
     }
   }
-  for (const listener of listeners) {
-    listener(next)
-  }
+  notifySessionListeners(next)
 }
 
 export function updateSessionUser(user: AuthUserProfile): void {
@@ -147,14 +181,21 @@ async function parseErrorResponse(res: Response): Promise<ApiError> {
   return new ApiError(res.status, code, message, retryAfterSecs)
 }
 
-async function executeRefresh(): Promise<AuthSession | null> {
-  const current = memorySession
-  if (!current?.refresh_token) return null
+async function performRefresh(): Promise<AuthSession | null> {
+  const latest = readStoredSession() ?? memorySession
+  if (!latest?.refresh_token) return null
+
+  // If another tab already rotated the token while we waited for the lock, reuse it.
+  if (memorySession && latest.refresh_token !== memorySession.refresh_token) {
+    memorySession = latest
+    notifySessionListeners(latest)
+    return latest
+  }
 
   const res = await fetch(`${API_BASE}/api/v1/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refresh_token: current.refresh_token }),
+    body: JSON.stringify({ refresh_token: latest.refresh_token }),
   })
 
   if (!res.ok) {
@@ -165,6 +206,14 @@ async function executeRefresh(): Promise<AuthSession | null> {
   const rotated = (await res.json()) as AuthSession
   setSession(rotated)
   return rotated
+}
+
+async function executeRefresh(): Promise<AuthSession | null> {
+  if (!memorySession?.refresh_token) return null
+  if (typeof navigator !== 'undefined' && navigator.locks?.request) {
+    return navigator.locks.request('codexter_auth_refresh', performRefresh)
+  }
+  return performRefresh()
 }
 
 export function refreshSessionOnce(): Promise<AuthSession | null> {

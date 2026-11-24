@@ -13,6 +13,8 @@ export interface SocialReply {
   parentReplyId?: string | null
   author: string
   handle: string
+  verified?: boolean
+  platformBadge?: string | null
   text: string
   media?: string
   mediaAlt?: string
@@ -34,6 +36,7 @@ export interface SocialPost {
   mediaAlt?: string
   sticker?: SocialStickerRef
   verified?: boolean
+  platformBadge?: string | null
   likes: number
   reposts: number
   repostedBy?: string[]

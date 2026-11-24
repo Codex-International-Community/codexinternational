@@ -16,6 +16,9 @@ interface MessageItemProps {
   onToggleMenu: (messageId: string) => void
   onReplyReferenceClick: (replyToId: string) => void
   onSaveSticker?: (stickerId: string) => void
+  canDevDelete?: boolean
+  onDevDelete?: (message: Message) => void
+  onReportMessage?: (message: Message) => void
 }
 
 export function MessageItem({
@@ -32,6 +35,9 @@ export function MessageItem({
   onToggleMenu,
   onReplyReferenceClick,
   onSaveSticker,
+  canDevDelete = false,
+  onDevDelete,
+  onReportMessage,
 }: MessageItemProps) {
   const activeReactions = Object.entries(message.reactions).filter(
     ([, users]) => users.length > 0,
@@ -227,6 +233,29 @@ export function MessageItem({
                     <Icon name="trash" size={14} /> Delete message
                   </button>
                 </>
+              )}
+              {!isSelf && canDevDelete && onDevDelete && (
+                <button
+                  type="button"
+                  className="danger-text"
+                  onClick={() => {
+                    onToggleMenu(message.id)
+                    onDevDelete(message)
+                  }}
+                >
+                  <Icon name="shield" size={14} /> Dev Delete
+                </button>
+              )}
+              {!isSelf && onReportMessage && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onToggleMenu(message.id)
+                    onReportMessage(message)
+                  }}
+                >
+                  <Icon name="flag" size={14} /> Report message
+                </button>
               )}
             </div>
           )}

@@ -82,15 +82,29 @@ async fn check_message_manage(
     .fetch_optional(&state.pg)
     .await?
     .ok_or_else(|| AppError::NotFound("message channel not found".to_string()))?;
-    if permissions.0.is_none()
-        || !crate::communities::permissions::has_permission(
-            permissions.1.unwrap_or_default(),
-            crate::communities::permissions::PERM_MANAGE_MESSAGES,
-        )
-    {
+    if permissions.0.is_none() {
         return Err(AppError::Forbidden(
             "message owner or MANAGE_MESSAGES permission required".to_string(),
         ));
+    }
+    let community_id = permissions.0.unwrap();
+    let has_perm = crate::communities::permissions::has_permission(
+        permissions.1.unwrap_or_default(),
+        crate::communities::permissions::PERM_MANAGE_MESSAGES,
+    );
+    if !has_perm {
+        let on_duty_dev = if auth.platform_role == "dev" {
+            crate::auth::dev_governance::is_dev_on_duty(&state.pg, auth.user_id, community_id)
+                .await?
+        } else {
+            false
+        };
+        if !on_duty_dev {
+            return Err(AppError::Forbidden(
+                "message owner, MANAGE_MESSAGES permission, or active dev on-duty session required"
+                    .to_string(),
+            ));
+        }
     }
     Ok(())
 }

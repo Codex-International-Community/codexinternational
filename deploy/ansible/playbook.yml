@@ -154,6 +154,32 @@
         enabled: true
         state: started
 
+    - name: Ensure backup script is executable
+      ansible.builtin.file:
+        path: "{{ project_dir }}/deploy/backup/backup-db.sh"
+        mode: "0750"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+
+    - name: Install codexter-db-backup systemd service and timer
+      ansible.builtin.copy:
+        src: "{{ project_dir }}/deploy/backup/{{ item }}"
+        dest: "/etc/systemd/system/{{ item }}"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - codexter-db-backup.service
+        - codexter-db-backup.timer
+
+    - name: Enable and start codexter-db-backup timer
+      ansible.builtin.systemd:
+        name: codexter-db-backup.timer
+        daemon_reload: true
+        enabled: true
+        state: started
+
   handlers:
     - name: Reload Caddy
       ansible.builtin.systemd:

@@ -10,7 +10,7 @@ use axum::{
     http::{Request, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{get, post, put},
+    routing::{get, patch, post, put},
 };
 
 use crate::{
@@ -72,16 +72,7 @@ pub fn app_router(state: Arc<AppState>) -> Router {
         .nest("/api/v1/social", social::router())
         .nest("/api/v1/stickers", stickers::router())
         .nest("/api/v1", chat::router())
-        .route("/api/v1/media/presign", post(media::presign))
-        .route("/api/v1/media/{id}/complete", post(media::complete))
-        .route(
-            "/api/v1/media",
-            post(media::upload).layer(DefaultBodyLimit::max(media::MAX_CHAT_UPLOAD_BYTES)),
-        )
-        .route(
-            "/api/v1/media/social",
-            post(media::upload_social).layer(DefaultBodyLimit::max(media::MAX_CHAT_UPLOAD_BYTES)),
-        )
+        .nest("/api/v1/media", media::router())
         .route(
             "/internal/v1/media/ready",
             post(media::internal_media_ready),
@@ -102,6 +93,62 @@ pub fn app_router(state: Arc<AppState>) -> Router {
         .route(
             "/api/v1/dev/on-duty/stop",
             post(auth::dev_governance::stop_on_duty),
+        )
+        .route(
+            "/api/v1/dev/on-duty/active",
+            get(auth::dev_governance::list_active_on_duty),
+        )
+        .route(
+            "/api/v1/dev/users",
+            get(auth::dev_governance::search_dev_users),
+        )
+        .route(
+            "/api/v1/dev/users/{id}/verified",
+            patch(auth::dev_governance::set_user_verified),
+        )
+        .route(
+            "/api/v1/dev/users/{id}/governance",
+            patch(auth::dev_governance::update_user_governance),
+        )
+        .route(
+            "/api/v1/dev/users/{id}/suspend",
+            post(auth::dev_governance::suspend_user),
+        )
+        .route(
+            "/api/v1/dev/users/{id}/unsuspend",
+            post(auth::dev_governance::unsuspend_user),
+        )
+        .route(
+            "/api/v1/dev/users/{id}/ban",
+            post(auth::dev_governance::ban_user),
+        )
+        .route(
+            "/api/v1/dev/users/{id}/unban",
+            post(auth::dev_governance::unban_user),
+        )
+        .route(
+            "/api/v1/dev/social/posts/{id}/delete",
+            post(auth::dev_governance::dev_delete_social_post),
+        )
+        .route(
+            "/api/v1/dev/social/replies/{id}/delete",
+            post(auth::dev_governance::dev_delete_social_reply),
+        )
+        .route(
+            "/api/v1/dev/chat/messages/{id}/delete",
+            post(auth::dev_governance::dev_delete_chat_message),
+        )
+        .route(
+            "/api/v1/reports",
+            post(auth::dev_governance::create_content_report),
+        )
+        .route(
+            "/api/v1/dev/reports",
+            get(auth::dev_governance::list_dev_reports),
+        )
+        .route(
+            "/api/v1/dev/reports/{id}/resolve",
+            post(auth::dev_governance::resolve_dev_report),
         )
         .route(
             "/api/v1/dev/audit-logs",

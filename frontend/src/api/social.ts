@@ -14,6 +14,8 @@ export interface SocialReplyDto {
   parent_reply_id?: string | null
   author: string
   handle: string
+  verified?: boolean
+  platform_badge?: string | null
   text: string
   media?: string | null
   media_alt?: string | null
@@ -27,6 +29,7 @@ export interface SocialPostDto {
   author: string
   handle: string
   verified: boolean
+  platform_badge?: string | null
   text: string
   media?: string | null
   media_alt?: string | null
@@ -100,6 +103,8 @@ export function mapReplyDto(dto: SocialReplyDto): SocialReply {
     parentReplyId: dto.parent_reply_id ?? null,
     author: dto.author,
     handle: dto.handle,
+    verified: Boolean(dto.verified),
+    platformBadge: dto.platform_badge ?? null,
     text: dto.text,
     media: dto.media ?? undefined,
     mediaAlt: dto.media_alt ?? undefined,
@@ -124,6 +129,7 @@ export function mapPostDto(dto: SocialPostDto, currentUsername?: string): Social
     mediaAlt: dto.media_alt ?? undefined,
     sticker: mapStickerDto(dto.sticker),
     verified: dto.verified,
+    platformBadge: dto.platform_badge ?? null,
     likes: dto.likes,
     reposts: dto.reposts,
     repostedBy: dto.reposted_by ?? [],

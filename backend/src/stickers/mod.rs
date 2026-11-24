@@ -238,6 +238,7 @@ async fn upload_sticker(
     let response = HTTP_CLIENT
         .put(upload_url)
         .header(CONTENT_TYPE, mime_type.as_str())
+        .header("cache-control", "public, max-age=31536000, immutable")
         .body(body)
         .send()
         .await

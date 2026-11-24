@@ -1,0 +1,14 @@
+[Unit]
+Description=CodexInternational PostgreSQL Backup Worker
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=rallc
+Environment=PROJECT_DIR=/home/rallc/projects/codexinternational
+Environment=BACKUP_DIR=/home/rallc/backups/codexinternational
+ExecStart=/bin/bash /home/rallc/projects/codexinternational/deploy/backup/backup-db.sh
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

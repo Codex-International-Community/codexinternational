@@ -67,6 +67,7 @@ export type View =
   | 'discover'
   | 'settings'
   | 'bots'
+  | 'dev'
   | 'notifications'
   | 'profile'
   | 'pinned'

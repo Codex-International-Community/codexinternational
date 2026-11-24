@@ -1,14 +1,16 @@
-//! Authenticated chat media uploads backed by Cloudflare R2.
-use std::sync::Arc;
+//! Authenticated media uploads, compression, and presigned R2 workflows.
+use std::{io::Cursor, sync::Arc};
 
 use axum::{
-    Json,
+    Json, Router,
     body::Bytes,
-    extract::{Path, State},
+    extract::{DefaultBodyLimit, Path, State},
     http::{HeaderMap, StatusCode, header::CONTENT_TYPE},
+    routing::post,
 };
 use chrono::Utc;
 use hmac::{Hmac, Mac};
+use image::{ImageFormat, ImageReader, Limits, imageops::FilterType};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use subtle::ConstantTimeEq;
@@ -18,9 +20,32 @@ use crate::{auth::extractor::AuthUser, config::AppConfig, error::AppError, state
 
 type HmacSha256 = Hmac<Sha256>;
 pub const MAX_CHAT_UPLOAD_BYTES: usize = 10 * 1024 * 1024;
+pub const MAX_AVATAR_UPLOAD_BYTES: usize = 5 * 1024 * 1024;
+pub const AVATAR_MAX_DIMENSION: u32 = 512;
+const MAX_IMAGE_DIM: u32 = 8192;
+const MAX_IMAGE_ALLOC_BYTES: u64 = 256 * 1024 * 1024;
 pub const MAX_VIDEO_DURATION_STANDARD_SECS: u32 = 180; // 3 minutes
 pub const MAX_VIDEO_DURATION_PRO_SECS: u32 = 300; // 5 minutes
 const WEBHOOK_MAX_AGE_SECS: i64 = 300;
+
+/// Mounts all `/api/v1/media` endpoints. Add new media purpose endpoints here.
+pub fn router() -> Router<Arc<AppState>> {
+    Router::new()
+        .route(
+            "/",
+            post(upload).layer(DefaultBodyLimit::max(MAX_CHAT_UPLOAD_BYTES)),
+        )
+        .route(
+            "/social",
+            post(upload_social).layer(DefaultBodyLimit::max(MAX_CHAT_UPLOAD_BYTES)),
+        )
+        .route(
+            "/avatar",
+            post(upload_avatar).layer(DefaultBodyLimit::max(MAX_AVATAR_UPLOAD_BYTES)),
+        )
+        .route("/presign", post(presign))
+        .route("/{id}/complete", post(complete))
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -271,7 +296,7 @@ pub fn generate_r2_key(
     match purpose {
         "avatar" => format!("compressed/avatars/{user_id}/{media_id}.{extension}"),
         "community_icon" => format!("compressed/icons/{user_id}/{media_id}.{extension}"),
-        "chat" | "story" | "contribution" => {
+        "chat" | "story" | "contribution" | "social" => {
             if kind == "video" {
                 format!("raw/videos/{yyyy}/{mm}/{media_id}.{extension}")
             } else if kind == "image" {
@@ -422,6 +447,7 @@ pub async fn upload(
     let response = HTTP_CLIENT
         .put(upload_url)
         .header(CONTENT_TYPE, mime_type.as_str())
+        .header("cache-control", "public, max-age=31536000, immutable")
         .body(body)
         .send()
         .await
@@ -463,19 +489,100 @@ pub async fn upload(
     ))
 }
 
-pub async fn upload_social(
-    State(state): State<Arc<AppState>>,
-    auth: AuthUser,
-    headers: HeaderMap,
+#[derive(Debug, Clone, Copy)]
+pub struct ImageCompressOptions {
+    pub max_width: u32,
+    pub max_height: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct CompressedImage {
+    pub bytes: Vec<u8>,
+    pub width: u32,
+    pub height: u32,
+    pub mime_type: &'static str,
+    pub extension: &'static str,
+}
+
+/// Decodes an image with strict allocation/dimension limits, downscales proportionally
+/// if larger than `opts`, and encodes it as WebP.
+pub fn compress_image_to_webp(
+    input: &[u8],
+    opts: ImageCompressOptions,
+) -> Result<CompressedImage, AppError> {
+    let mut reader = ImageReader::new(Cursor::new(input))
+        .with_guessed_format()
+        .map_err(|_| AppError::BadRequest("unable to determine image format".to_string()))?;
+    let mut limits = Limits::default();
+    limits.max_image_width = Some(MAX_IMAGE_DIM);
+    limits.max_image_height = Some(MAX_IMAGE_DIM);
+    limits.max_alloc = Some(MAX_IMAGE_ALLOC_BYTES);
+    reader.limits(limits);
+
+    let img = reader
+        .decode()
+        .map_err(|_| AppError::BadRequest("invalid or unsupported image data".to_string()))?;
+
+    let processed = if img.width() > opts.max_width || img.height() > opts.max_height {
+        img.resize(opts.max_width, opts.max_height, FilterType::Lanczos3)
+    } else {
+        img
+    };
+
+    let width = processed.width();
+    let height = processed.height();
+    let mut out = Cursor::new(Vec::new());
+    processed
+        .write_to(&mut out, ImageFormat::WebP)
+        .map_err(|err| AppError::Internal(anyhow::anyhow!("failed to encode WebP: {err}")))?;
+
+    Ok(CompressedImage {
+        bytes: out.into_inner(),
+        width,
+        height,
+        mime_type: "image/webp",
+        extension: "webp",
+    })
+}
+
+/// Modular transformation strategy for direct media upload endpoints.
+/// New media types (e.g. animated profile banner video add-on) can add a variant here.
+#[derive(Debug, Clone, Copy)]
+pub enum MediaTransform {
+    None,
+    CompressWebp(ImageCompressOptions),
+}
+
+/// Declarative specification for a direct media upload endpoint.
+#[derive(Debug, Clone, Copy)]
+pub struct DirectUploadSpec {
+    pub purpose: &'static str,
+    pub max_bytes: usize,
+    pub max_bytes_label: &'static str,
+    pub allowed_kinds: &'static [&'static str],
+    pub unsupported_type_msg: &'static str,
+    pub transform: MediaTransform,
+}
+
+struct PreparedUpload {
+    payload: Bytes,
+    kind: &'static str,
+    mime_type: String,
+    extension: &'static str,
+    width: Option<i32>,
+    height: Option<i32>,
+}
+
+async fn prepare_direct_upload(
+    spec: &DirectUploadSpec,
+    headers: &HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<MediaUploadResponse>), AppError> {
+) -> Result<(PreparedUpload, String), AppError> {
     if body.is_empty() {
         return Err(AppError::BadRequest("uploaded file is empty".to_string()));
     }
-    if body.len() > MAX_CHAT_UPLOAD_BYTES {
-        return Err(AppError::PayloadTooLarge(
-            "social media uploads are limited to 10 MB".to_string(),
-        ));
+    if body.len() > spec.max_bytes {
+        return Err(AppError::PayloadTooLarge(spec.max_bytes_label.to_string()));
     }
 
     let mime_type = headers
@@ -487,13 +594,10 @@ pub async fn upload_social(
         .unwrap_or("")
         .trim()
         .to_ascii_lowercase();
+
     let (kind, extension) = allowed_media_type(&mime_type)
-        .filter(|(k, _)| *k == "image" || *k == "video")
-        .ok_or_else(|| {
-            AppError::BadRequest(
-                "only image, GIF, or video files are supported for Threads".to_string(),
-            )
-        })?;
+        .filter(|(k, _)| spec.allowed_kinds.contains(k))
+        .ok_or_else(|| AppError::BadRequest(spec.unsupported_type_msg.to_string()))?;
 
     if !magic_signature_matches(&mime_type, &body) {
         return Err(AppError::BadRequest(
@@ -501,24 +605,70 @@ pub async fn upload_social(
         ));
     }
 
-    let size_bytes = i64::try_from(body.len()).map_err(|error| AppError::Internal(error.into()))?;
     let raw_name = headers
         .get("x-file-name")
-        .and_then(|value| value.to_str().ok());
-    let file_name = safe_file_name(raw_name, extension);
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
+
+    let prepared = match spec.transform {
+        MediaTransform::None => PreparedUpload {
+            payload: body,
+            kind,
+            mime_type,
+            extension,
+            width: None,
+            height: None,
+        },
+        MediaTransform::CompressWebp(opts) => {
+            let compressed = tokio::task::spawn_blocking(move || compress_image_to_webp(&body, opts))
+                .await
+                .map_err(|err| AppError::Internal(err.into()))??;
+            let width = i32::try_from(compressed.width).ok();
+            let height = i32::try_from(compressed.height).ok();
+            PreparedUpload {
+                payload: Bytes::from(compressed.bytes),
+                kind: "image",
+                mime_type: compressed.mime_type.to_string(),
+                extension: compressed.extension,
+                width,
+                height,
+            }
+        }
+    };
+
+    let file_name = safe_file_name(raw_name.as_deref(), prepared.extension);
+    Ok((prepared, file_name))
+}
+
+async fn store_direct_upload(
+    state: &AppState,
+    user_id: Uuid,
+    purpose: &str,
+    prepared: PreparedUpload,
+    file_name: String,
+) -> Result<ChatAttachment, AppError> {
+    let size_bytes =
+        i64::try_from(prepared.payload.len()).map_err(|error| AppError::Internal(error.into()))?;
     let media_id = Uuid::now_v7();
-    let object_key = generate_r2_key("social", auth.user_id, media_id, kind, extension);
+    let object_key = generate_r2_key(
+        purpose,
+        user_id,
+        media_id,
+        prepared.kind,
+        prepared.extension,
+    );
     let upload_url = presigned_r2_url(&state.config, "PUT", &object_key, 900)?;
 
     let response = HTTP_CLIENT
         .put(upload_url)
-        .header(CONTENT_TYPE, mime_type.as_str())
-        .body(body)
+        .header(CONTENT_TYPE, prepared.mime_type.as_str())
+        .header("cache-control", "public, max-age=31536000, immutable")
+        .body(prepared.payload)
         .send()
         .await
         .map_err(|error| AppError::Internal(error.into()))?;
     if !response.status().is_success() {
-        tracing::error!(status = %response.status(), "Cloudflare R2 social upload failed");
+        tracing::error!(status = %response.status(), purpose = %purpose, "Cloudflare R2 upload failed");
         return Err(AppError::ServiceUnavailable {
             retry_after_secs: 30,
             message: "File could not be saved to media storage".to_string(),
@@ -527,32 +677,150 @@ pub async fn upload_social(
 
     sqlx::query(
         "INSERT INTO media_assets
-         (id, uploader_id, kind, purpose, status, r2_key, mime_type, size_bytes, ready_at, file_name)
-         VALUES ($1, $2, $3, 'social', 'READY', $4, $5, $6, NOW(), $7)",
+         (id, uploader_id, kind, purpose, status, r2_key, mime_type, size_bytes, width, height, ready_at, file_name)
+         VALUES ($1, $2, $3, $4, 'READY', $5, $6, $7, $8, $9, NOW(), $10)",
     )
     .bind(media_id)
-    .bind(auth.user_id)
-    .bind(kind)
+    .bind(user_id)
+    .bind(prepared.kind)
+    .bind(purpose)
     .bind(&object_key)
-    .bind(&mime_type)
+    .bind(&prepared.mime_type)
     .bind(size_bytes)
+    .bind(prepared.width)
+    .bind(prepared.height)
     .bind(&file_name)
     .execute(&state.pg)
     .await?;
 
-    let attachment = attachment_from_record(
+    attachment_from_record(
         &state.config,
         media_id,
         file_name,
-        mime_type,
+        prepared.mime_type,
         size_bytes,
         object_key,
-    )?;
+    )
+}
+
+const SOCIAL_UPLOAD_SPEC: DirectUploadSpec = DirectUploadSpec {
+    purpose: "social",
+    max_bytes: MAX_CHAT_UPLOAD_BYTES,
+    max_bytes_label: "social media uploads are limited to 10 MB",
+    allowed_kinds: &["image", "video"],
+    unsupported_type_msg: "only image, GIF, or video files are supported for Threads",
+    transform: MediaTransform::None,
+};
+
+const AVATAR_UPLOAD_SPEC: DirectUploadSpec = DirectUploadSpec {
+    purpose: "avatar",
+    max_bytes: MAX_AVATAR_UPLOAD_BYTES,
+    max_bytes_label: "profile avatar uploads are limited to 5 MB",
+    allowed_kinds: &["image"],
+    unsupported_type_msg: "only JPG, PNG, GIF, or WEBP images are supported for profile avatars",
+    transform: MediaTransform::CompressWebp(ImageCompressOptions {
+        max_width: AVATAR_MAX_DIMENSION,
+        max_height: AVATAR_MAX_DIMENSION,
+    }),
+};
+
+pub async fn upload_social(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<MediaUploadResponse>), AppError> {
+    let (prepared, file_name) = prepare_direct_upload(&SOCIAL_UPLOAD_SPEC, &headers, body).await?;
+    let attachment =
+        store_direct_upload(&state, auth.user_id, SOCIAL_UPLOAD_SPEC.purpose, prepared, file_name)
+            .await?;
 
     Ok((
         StatusCode::CREATED,
         Json(MediaUploadResponse { attachment }),
     ))
+}
+
+/// Uploads, compresses (max 512x512 WebP), and binds a profile avatar for the current user.
+pub async fn upload_avatar(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<MediaUploadResponse>), AppError> {
+    let (prepared, file_name) = prepare_direct_upload(&AVATAR_UPLOAD_SPEC, &headers, body).await?;
+    let attachment =
+        store_direct_upload(&state, auth.user_id, AVATAR_UPLOAD_SPEC.purpose, prepared, file_name)
+            .await?;
+
+    if let Ok(media_id) = Uuid::parse_str(&attachment.id) {
+        sqlx::query(
+            "UPDATE users
+             SET avatar_media_id = $1, updated_at = NOW()
+             WHERE id = $2",
+        )
+        .bind(media_id)
+        .bind(auth.user_id)
+        .execute(&state.pg)
+        .await?;
+    }
+
+    Ok((
+        StatusCode::CREATED,
+        Json(MediaUploadResponse { attachment }),
+    ))
+}
+
+/// Deletes an unreferenced social media object from `media_assets` and R2
+/// when its owning post/reply is deleted. Never touches deduplicated stickers.
+pub(crate) async fn delete_orphan_media_by_url(
+    pg: &sqlx::PgPool,
+    config: &AppConfig,
+    media_url: &str,
+) {
+    let base = config.r2_public_base_url.trim().trim_end_matches('/');
+    if base.is_empty() {
+        return;
+    }
+    let Some(r2_key) = media_url
+        .strip_prefix(base)
+        .map(|s| s.trim_start_matches('/'))
+        .filter(|s| !s.is_empty())
+    else {
+        return;
+    };
+
+    let still_referenced: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM posts WHERE media_url = $1)
+             OR EXISTS(SELECT 1 FROM post_replies WHERE media_url = $1)
+             OR EXISTS(SELECT 1 FROM stickers WHERE media_url = $1)",
+    )
+    .bind(media_url)
+    .fetch_one(pg)
+    .await
+    .unwrap_or(true);
+    if still_referenced {
+        return;
+    }
+
+    let deleted_key: Option<String> = sqlx::query_scalar(
+        "DELETE FROM media_assets WHERE r2_key = $1 AND purpose = 'social' RETURNING r2_key",
+    )
+    .bind(r2_key)
+    .fetch_optional(pg)
+    .await
+    .ok()
+    .flatten();
+
+    let Some(key_to_delete) = deleted_key else {
+        return;
+    };
+
+    if let Ok(delete_url) = presigned_r2_url(config, "DELETE", &key_to_delete, 300)
+        && let Err(err) = HTTP_CLIENT.delete(delete_url).send().await
+    {
+        tracing::warn!(error = %err, r2_key = %key_to_delete, "failed to delete orphan R2 object");
+    }
 }
 
 #[derive(Debug, Deserialize)]
