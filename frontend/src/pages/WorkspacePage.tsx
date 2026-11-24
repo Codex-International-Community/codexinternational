@@ -960,6 +960,7 @@ export function WorkspacePage({
       initials,
       tone: 'self',
       status: 'online' as const,
+      avatarMediaId: session.user.avatar_media_id ?? undefined,
       username: session.user.username,
       bio: session.user.bio,
       globalXp: session.user.global_xp,
@@ -974,6 +975,7 @@ export function WorkspacePage({
       session.user.id,
       session.user.display_name,
       session.user.username,
+      session.user.avatar_media_id,
       session.user.bio,
       session.user.global_xp,
       session.user.global_level,
@@ -2355,7 +2357,7 @@ export function WorkspacePage({
 
       {selectedProfile && (
         <MemberProfile
-          user={selectedProfile}
+          user={selectedProfile.id === session.user.id ? currentUser : selectedProfile}
           serverName={view === 'channel' ? server?.name : undefined}
           isSelf={selectedProfile.id === session.user.id}
           onClose={() => setSelectedProfile(null)}

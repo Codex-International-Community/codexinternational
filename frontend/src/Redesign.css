@@ -3433,6 +3433,53 @@ dialog.modal {
   cursor: pointer;
 }
 
+
+.member-profile-actions label {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 39px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: .78rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.member-profile-actions label:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.member-profile-actions label[aria-disabled="true"],
+.member-profile-actions button:disabled {
+  cursor: wait;
+  opacity: .58;
+}
+
+.member-profile-avatar-input {
+  display: none;
+}
+
+.member-profile-avatar-feedback {
+  margin: -8px 0 0;
+  font-size: .76rem;
+  line-height: 1.45;
+}
+
+.member-profile-avatar-feedback.is-error {
+  color: var(--danger, #ef4444);
+}
+
+.member-profile-avatar-feedback.is-success {
+  color: var(--success, #22c55e);
+}
+
 .member-profile-actions button:hover {
   border-color: var(--accent-border);
   color: var(--accent);

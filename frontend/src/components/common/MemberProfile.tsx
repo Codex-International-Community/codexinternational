@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useId, useState } from 'react'
+import { uploadProfileAvatar, updateProfileAvatar } from '../../api/auth'
+import { ApiError, publicApiUrl } from '../../api/client'
 import { Icon } from './Icon'
 import type { User } from '../../types/chat'
-import { publicApiUrl } from '../../api/client'
 
 interface MemberProfileProps {
   user: User
@@ -31,6 +32,11 @@ export function MemberProfile({
   onMessage,
   onCopyId,
 }: MemberProfileProps) {
+  const avatarInputId = useId()
+  const [avatarBusy, setAvatarBusy] = useState(false)
+  const [avatarError, setAvatarError] = useState('')
+  const [avatarInfo, setAvatarInfo] = useState('')
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose()
@@ -49,6 +55,38 @@ export function MemberProfile({
     : undefined
   const accountCreated = formatProfileDate(user.accountCreatedAt)
   const serverJoined = formatProfileDate(user.serverJoinedAt)
+
+  const handleAvatarUpload = async (file?: File) => {
+    if (!file || avatarBusy) return
+    setAvatarError('')
+    setAvatarInfo('')
+    setAvatarBusy(true)
+    try {
+      await uploadProfileAvatar(file)
+      setAvatarInfo('Profile photo updated.')
+    } catch (error) {
+      setAvatarError(
+        error instanceof ApiError ? error.message : error instanceof Error ? error.message : 'Failed to upload profile photo.',
+      )
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
+
+  const handleAvatarRemove = async () => {
+    if (!user.avatarMediaId || avatarBusy) return
+    setAvatarError('')
+    setAvatarInfo('')
+    setAvatarBusy(true)
+    try {
+      await updateProfileAvatar(null)
+      setAvatarInfo('Profile photo removed.')
+    } catch (error) {
+      setAvatarError(error instanceof ApiError ? error.message : 'Failed to remove profile photo.')
+    } finally {
+      setAvatarBusy(false)
+    }
+  }
 
   return (
     <div className="member-profile-overlay" onClick={onClose}>
@@ -136,11 +174,48 @@ export function MemberProfile({
                 Message
               </button>
             )}
+            {isSelf && (
+              <>
+                <label
+                  htmlFor={avatarInputId}
+                  className="member-profile-avatar-upload"
+                  aria-disabled={avatarBusy}
+                  title="Upload a new profile photo. GIF is supported."
+                >
+                  <Icon name="image" size={15} />
+                  {avatarBusy ? 'Uploading…' : 'Change photo'}
+                </label>
+                {user.avatarMediaId && (
+                  <button
+                    type="button"
+                    className="member-profile-remove"
+                    onClick={() => void handleAvatarRemove()}
+                    disabled={avatarBusy}
+                  >
+                    Remove photo
+                  </button>
+                )}
+                <input
+                  id={avatarInputId}
+                  type="file"
+                  accept="image/avif,image/jpeg,image/png,image/webp,image/gif"
+                  disabled={avatarBusy}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    event.target.value = ''
+                    void handleAvatarUpload(file)
+                  }}
+                  className="member-profile-avatar-input"
+                />
+              </>
+            )}
             <button type="button" className="member-profile-copy" onClick={onCopyId}>
               <Icon name="copy" size={15} />
               Copy user ID
             </button>
           </div>
+          {isSelf && avatarError && <p className="member-profile-avatar-feedback is-error" role="alert">{avatarError}</p>}
+          {isSelf && avatarInfo && <p className="member-profile-avatar-feedback is-success" role="status">{avatarInfo}</p>}
         </div>
       </section>
     </div>
