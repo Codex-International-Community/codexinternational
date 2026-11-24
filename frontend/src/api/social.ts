@@ -14,6 +14,7 @@ export interface SocialReplyDto {
   parent_reply_id?: string | null
   author: string
   handle: string
+  avatar_media_id?: string | null
   verified?: boolean
   platform_badge?: string | null
   text: string
@@ -28,6 +29,7 @@ export interface SocialPostDto {
   user_id: string
   author: string
   handle: string
+  avatar_media_id?: string | null
   verified: boolean
   platform_badge?: string | null
   text: string
@@ -103,6 +105,7 @@ export function mapReplyDto(dto: SocialReplyDto): SocialReply {
     parentReplyId: dto.parent_reply_id ?? null,
     author: dto.author,
     handle: dto.handle,
+    avatarMediaId: dto.avatar_media_id ?? undefined,
     verified: Boolean(dto.verified),
     platformBadge: dto.platform_badge ?? null,
     text: dto.text,
@@ -120,6 +123,7 @@ export function mapPostDto(dto: SocialPostDto, currentUsername?: string): Social
     userId: dto.user_id,
     author: dto.author,
     handle: dto.handle,
+    avatarMediaId: dto.avatar_media_id ?? undefined,
     initials: makeInitials(dto.author),
     tone: pickTone(dto.handle, currentUsername),
     time: formatRelativeTime(dto.created_at),

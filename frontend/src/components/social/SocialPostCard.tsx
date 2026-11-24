@@ -101,12 +101,45 @@ export function SocialPostCard({
     setReplyPickerOpen(false)
   }
 
+  const postAvatarUser: User =
+    post.userId === currentUser.id || post.handle === currentUsername
+      ? currentUser
+      : {
+          id: post.userId ?? post.handle,
+          name: post.author,
+          initials: post.initials,
+          tone: post.tone,
+          avatarMediaId: post.avatarMediaId,
+          status: 'online',
+        }
+
   const renderFlatReply = (reply: SocialReply) => {
-    const isOwnReply = reply.handle === currentUsername
+    const isOwnReply = reply.userId === currentUser.id || reply.handle === currentUsername
+    const replyAvatarUser: User = isOwnReply
+      ? currentUser
+      : {
+          id: reply.userId ?? reply.handle,
+          name: reply.author,
+          initials:
+            reply.author
+              .trim()
+              .split(/\s+/)
+              .filter(Boolean)
+              .map((part) => part[0] ?? '')
+              .join('')
+              .slice(0, 2)
+              .toUpperCase() || 'U',
+          tone: 'member',
+          avatarMediaId: reply.avatarMediaId,
+          status: 'online',
+        }
     return (
       <div className="social-reply-node" key={reply.id}>
         <div className="social-reply">
           <div className="social-reply-header">
+            <span className="social-reply-avatar">
+              <Avatar user={replyAvatarUser} size="small" />
+            </span>
             <strong>{reply.author}</strong>
             {reply.verified && (
               <span className="social-verified" title="Community verified" aria-label="Verified">
@@ -214,15 +247,7 @@ export function SocialPostCard({
   return (
     <article className="social-post" id={`post-${post.id}`}>
       <div className="social-post-avatar">
-        <Avatar
-          user={{
-            id: post.handle,
-            name: post.author,
-            initials: post.initials,
-            tone: post.tone,
-            status: 'online',
-          }}
-        />
+        <Avatar user={postAvatarUser} />
       </div>
 
       <div className="social-post-main">

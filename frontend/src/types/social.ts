@@ -13,6 +13,7 @@ export interface SocialReply {
   parentReplyId?: string | null
   author: string
   handle: string
+  avatarMediaId?: string
   verified?: boolean
   platformBadge?: string | null
   text: string
@@ -27,6 +28,7 @@ export interface SocialPost {
   userId?: string
   author: string
   handle: string
+  avatarMediaId?: string
   initials: string
   tone: string
   time: string

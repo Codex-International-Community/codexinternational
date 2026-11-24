@@ -67,6 +67,7 @@ struct PostRow {
     user_id: Uuid,
     author: String,
     handle: String,
+    avatar_media_id: Option<Uuid>,
     platform_role: String,
     platform_badge: Option<String>,
     is_verified: bool,
@@ -93,6 +94,7 @@ struct ReplyRow {
     parent_reply_id: Option<Uuid>,
     author: String,
     handle: String,
+    avatar_media_id: Option<Uuid>,
     platform_role: String,
     platform_badge: Option<String>,
     is_verified: bool,
@@ -203,8 +205,8 @@ pub async fn create_post(
     .execute(&state.pg)
     .await?;
 
-    let user: (String, String, String, Option<String>, bool) = sqlx::query_as(
-        "SELECT display_name, username, platform_role, platform_badge, is_verified FROM users WHERE id = $1",
+    let user: (String, String, String, Option<String>, bool, Option<Uuid>) = sqlx::query_as(
+        "SELECT display_name, username, platform_role, platform_badge, is_verified, avatar_media_id FROM users WHERE id = $1",
     )
     .bind(user_id)
     .fetch_one(&state.pg)
@@ -215,6 +217,7 @@ pub async fn create_post(
         user_id,
         author: user.0,
         handle: user.1,
+        avatar_media_id: user.5,
         verified: user.2 == "dev" || user.4,
         platform_badge: user.3,
         text: content,
@@ -307,8 +310,8 @@ pub async fn create_reply(
         .await?;
     tx.commit().await?;
 
-    let user: (String, String, String, Option<String>, bool) = sqlx::query_as(
-        "SELECT display_name, username, platform_role, platform_badge, is_verified FROM users WHERE id = $1",
+    let user: (String, String, String, Option<String>, bool, Option<Uuid>) = sqlx::query_as(
+        "SELECT display_name, username, platform_role, platform_badge, is_verified, avatar_media_id FROM users WHERE id = $1",
     )
     .bind(user_id)
     .fetch_one(&state.pg)
@@ -320,6 +323,7 @@ pub async fn create_reply(
         parent_reply_id: req.parent_reply_id,
         author: user.0,
         handle: user.1,
+        avatar_media_id: user.5,
         verified: user.2 == "dev" || user.4,
         platform_badge: user.3,
         text: content,
@@ -496,6 +500,7 @@ pub async fn list_posts(
             p.user_id,
             u.display_name AS author,
             u.username AS handle,
+            u.avatar_media_id,
             u.platform_role,
             u.platform_badge,
             u.is_verified,
@@ -538,6 +543,7 @@ pub async fn list_posts(
             r.parent_reply_id,
             u.display_name AS author,
             u.username AS handle,
+            u.avatar_media_id,
             u.platform_role,
             u.platform_badge,
             u.is_verified,
@@ -570,6 +576,7 @@ pub async fn list_posts(
                 parent_reply_id: rr.parent_reply_id,
                 author: rr.author,
                 handle: rr.handle,
+                avatar_media_id: rr.avatar_media_id,
                 verified: rr.platform_role == "dev" || rr.is_verified,
                 platform_badge: rr.platform_badge,
                 text: rr.content,
@@ -649,6 +656,7 @@ pub async fn list_posts(
             user_id: row.user_id,
             author: row.author,
             handle: row.handle,
+            avatar_media_id: row.avatar_media_id,
             verified: row.platform_role == "dev" || row.is_verified,
             platform_badge: row.platform_badge,
             text: row.content,
