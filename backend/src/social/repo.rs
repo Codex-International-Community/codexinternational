@@ -487,6 +487,7 @@ pub async fn list_posts(
     user_id: Uuid,
     tab: Option<&str>,
     limit: i64,
+    post_id: Option<Uuid>,
 ) -> Result<Vec<SocialPostResponse>, AppError> {
     let limit = limit.clamp(1, 100);
     let rows = sqlx::query_as::<_, PostRow>(
@@ -514,11 +515,13 @@ pub async fn list_posts(
          FROM posts p
          JOIN users u ON u.id = p.user_id
          LEFT JOIN stickers s ON s.id = p.sticker_id
+         WHERE ($3::uuid IS NULL OR p.id = $3)
          ORDER BY p.created_at DESC
          LIMIT $2",
     )
     .bind(user_id)
     .bind(limit)
+    .bind(post_id)
     .fetch_all(&state.pg)
     .await?;
 

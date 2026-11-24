@@ -16,6 +16,7 @@ interface ActionModalProps {
   onChangeCategoryId: (value: string) => void
   serverError?: string
   creatingServer?: boolean
+  initialServerStep?: 'choose' | 'create' | 'join'
   onChangeValue: (val: string) => void
   onSubmit: (e: FormEvent) => void
   onCreateServer: () => void
@@ -33,6 +34,7 @@ export function ActionModal({
   onChangeCategoryId,
   serverError = '',
   creatingServer = false,
+  initialServerStep = 'choose',
   onChangeValue,
   onSubmit,
   onCreateServer,
@@ -43,7 +45,7 @@ export function ActionModal({
   const titleId = useId()
   const inputId = useId()
   const dialogRef = useModalDialog({ onClose, dismissible: true })
-  const [serverStep, setServerStep] = useState<'choose' | 'create' | 'join'>('choose')
+  const [serverStep, setServerStep] = useState<'choose' | 'create' | 'join'>(initialServerStep)
   const [serverPurpose, setServerPurpose] = useState<'friends' | 'community'>('friends')
 
   const iconName =
@@ -71,7 +73,7 @@ export function ActionModal({
         ? 'Add a place for conversations in this server.'
         : type === 'dm'
           ? 'Choose a community member to start a private conversation.'
-          : 'Share this code with anyone you want to invite to the server.'
+          : 'Share this link with anyone you want to invite to the server.'
 
   const label =
     type === 'server'
@@ -288,14 +290,14 @@ export function ActionModal({
               )
             ) : type === 'invite' ? (
               <div className="server-invite-content">
-                <label htmlFor={inputId}>INVITE CODE</label>
+                <label htmlFor={inputId}>INVITE LINK</label>
                 <div className="server-invite-code">
                   <input id={inputId} className="modal-input" value={value} readOnly />
                   <button type="button" onClick={onCopyInvite} disabled={!value}>
-                    <Icon name="copy" size={15} /> Copy
+                    <Icon name="copy" size={15} /> Copy link
                   </button>
                 </div>
-                <small>Anyone with this code can join this server.</small>
+                <small>Anyone with this link can open the invite and join this server.</small>
               </div>
             ) : (
               <>

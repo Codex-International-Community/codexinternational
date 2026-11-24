@@ -22,6 +22,7 @@ export interface User {
   name: string
   initials: string
   tone: string
+  avatarMediaId?: string
   status: 'online' | 'idle'
   role?: string
   username?: string

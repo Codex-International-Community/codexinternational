@@ -98,6 +98,17 @@ export function SocialPostCard({
 
   const replyTree = useMemo(() => buildReplyTree(post.replies), [post.replies])
 
+  const postAvatarUser: User =
+    post.userId === currentUser.id || post.handle === currentUsername
+      ? currentUser
+      : {
+          id: post.userId ?? post.handle,
+          name: post.author,
+          initials: post.initials,
+          tone: post.tone,
+          status: 'online',
+        }
+
   const handleReplyFile = async (file?: File) => {
     if (!file) return
     setUploadingReplyMedia(true)
@@ -124,7 +135,16 @@ export function SocialPostCard({
     const { reply, children } = node
     const visualDepth = Math.min(depth, 2)
     const isCollapsed = Boolean(collapsedIds[reply.id])
-    const isOwnReply = reply.handle === currentUsername
+    const isOwnReply = reply.userId === currentUser.id || reply.handle === currentUsername
+    const replyAvatarUser: User = isOwnReply
+      ? currentUser
+      : {
+          id: reply.userId ?? reply.handle,
+          name: reply.author,
+          initials: reply.author.trim().split(/\s+/).filter(Boolean).map((part) => part[0] ?? '').join('').slice(0, 2).toUpperCase() || 'U',
+          tone: 'member',
+          status: 'online',
+        }
 
     return (
       <div
@@ -133,6 +153,9 @@ export function SocialPostCard({
       >
         <div className="social-reply">
           <div className="social-reply-header">
+            <span className="social-reply-avatar">
+              <Avatar user={replyAvatarUser} size="small" />
+            </span>
             <strong>{reply.author}</strong>
             {reply.verified && (
               <span className="social-verified" title="Community verified" aria-label="Verified">
@@ -247,15 +270,7 @@ export function SocialPostCard({
   return (
     <article className="social-post" id={`post-${post.id}`}>
       <div className="social-post-avatar">
-        <Avatar
-          user={{
-            id: post.handle,
-            name: post.author,
-            initials: post.initials,
-            tone: post.tone,
-            status: 'online',
-          }}
-        />
+        <Avatar user={postAvatarUser} />
       </div>
 
       <div className="social-post-main">

@@ -29,6 +29,8 @@ interface SocialFeedProps {
   onDeleteReply: (postId: string, replyId: string) => void
   onSaveSticker: (stickerId: string) => void
   onShare: (id: string) => void
+  focusedPostId?: string
+  onClearFocusedPost?: () => void
   onNotify?: (message: string) => void
   isDev?: boolean
   onDevDeletePost?: (postId: string) => void
@@ -55,6 +57,8 @@ export function SocialFeed({
   onDeleteReply,
   onSaveSticker,
   onShare,
+  focusedPostId,
+  onClearFocusedPost,
   onNotify,
   isDev = false,
   onDevDeletePost,
@@ -67,6 +71,7 @@ export function SocialFeed({
   const [replyDraft, setReplyDraft] = useState('')
 
   const visiblePosts = useMemo(() => {
+    if (focusedPostId) return posts.filter((post) => post.id === focusedPostId)
     if (socialTab === 'following') {
       return posts.filter((post) => followedHandles.includes(post.handle))
     }
@@ -77,7 +82,7 @@ export function SocialFeed({
       return posts.toSorted((a, b) => b.createdAt - a.createdAt)
     }
     return posts
-  }, [posts, socialTab, followedHandles])
+  }, [posts, socialTab, followedHandles, focusedPostId])
 
   const handleToggleReplyForm = (
     id: string,
@@ -119,11 +124,14 @@ export function SocialFeed({
             <h1>
               Threads
             </h1>
-            <p>Share a thought, follow conversations, and see what people are talking about.</p>
+            <p>{focusedPostId ? 'A conversation shared with you.' : 'Share a thought, follow conversations, and see what people are talking about.'}</p>
           </div>
+          {focusedPostId && (
+            <button type="button" onClick={onClearFocusedPost}>Back to Threads</button>
+          )}
         </div>
 
-        <SocialComposer
+        {!focusedPostId && <SocialComposer
           currentUser={currentUser}
           inputRef={composerRef}
           draft={draft}
@@ -131,9 +139,9 @@ export function SocialFeed({
           onSubmit={onPublish}
           onNotify={onNotify}
           canPublish
-        />
+        />}
 
-        <div className="social-feed-tabs" role="tablist" aria-label="Timeline filter">
+        {!focusedPostId && <div className="social-feed-tabs" role="tablist" aria-label="Timeline filter">
           {tabs.map((tab) => (
             <button
               type="button"
@@ -146,7 +154,7 @@ export function SocialFeed({
               {tab.label}
             </button>
           ))}
-        </div>
+        </div>}
 
         <div className="social-post-list">
           {visiblePosts.map((post) => (
@@ -185,14 +193,18 @@ export function SocialFeed({
                   ? 'Your Following feed is quiet.'
                   : socialTab === 'saved'
                     ? 'No saved posts yet.'
-                    : 'Nothing here yet.'}
+                    : focusedPostId
+                      ? 'This shared post is unavailable.'
+                      : 'Nothing here yet.'}
               </strong>
               <p>
                 {socialTab === 'following'
                   ? 'Follow a few people to bring their conversations into this feed.'
                   : socialTab === 'saved'
                     ? 'Save posts you want to come back to.'
-                    : 'Be the first to start a conversation. Your posts will appear here.'}
+                    : focusedPostId
+                      ? 'The post may have been deleted or you may not have access to it.'
+                      : 'Be the first to start a conversation. Your posts will appear here.'}
               </p>
               <button type="button" onClick={() => onTabChange('for-you')}>
                 Explore the timeline

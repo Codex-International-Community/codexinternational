@@ -16,6 +16,7 @@ export interface AuthUserProfile {
   has_password: boolean
   username: string
   display_name: string
+  avatar_media_id: string | null
   email: string
   email_verified_at: string | null
   bio: string
@@ -53,6 +54,10 @@ export class ApiError extends Error {
 
 const SESSION_KEY = 'codexter_session_v1'
 const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/+$/, '')
+
+export function publicApiUrl(path: string): string {
+  return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`
+}
 
 let memorySession: AuthSession | null = readStoredSession()
 let refreshPromise: Promise<AuthSession | null> | null = null

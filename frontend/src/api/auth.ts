@@ -217,6 +217,38 @@ export async function toggleUidLogin(enabled: boolean): Promise<AuthUserProfile>
   return res.user
 }
 
+export async function updateProfileAvatar(mediaId: string | null): Promise<AuthUserProfile> {
+  const res = await apiRequest<{ user: AuthUserProfile }>('/api/v1/auth/me/avatar', {
+    method: 'PATCH',
+    body: { avatar_media_id: mediaId },
+  })
+  updateSessionUser(res.user)
+  return res.user
+}
+
+export async function uploadProfileAvatar(file: File): Promise<AuthUserProfile> {
+  const allowedTypes = ['image/avif', 'image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowedTypes.includes(file.type)) throw new Error('Use an AVIF, JPG, PNG, WEBP, or GIF image.')
+  if (file.size <= 0 || file.size > 5 * 1024 * 1024) {
+    throw new Error('Profile photos must be between 1 byte and 5 MB.')
+  }
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^\.+/, '').slice(0, 120) || 'avatar'
+  const presign = await apiRequest<{ mediaId: string; uploadUrl: string }>('/api/v1/media/presign', {
+    method: 'POST',
+    body: { purpose: 'avatar', fileName: safeName, mimeType: file.type, sizeBytes: file.size },
+  })
+  const uploaded = await fetch(presign.uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  })
+  if (!uploaded.ok) throw new Error(`Photo upload failed (storage returned ${uploaded.status}).`)
+  await apiRequest<{ attachment: { id: string } }>(`/api/v1/media/${encodeURIComponent(presign.mediaId)}/complete`, {
+    method: 'POST',
+  })
+  return updateProfileAvatar(presign.mediaId)
+}
+
 export async function updateProfile(displayName: string): Promise<AuthUserProfile> {
   const res = await apiRequest<{ user: AuthUserProfile }>('/api/v1/auth/me', {
     method: 'PATCH',

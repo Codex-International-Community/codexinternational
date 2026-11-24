@@ -149,6 +149,13 @@ export async function listSocialPosts(
   return dtos.map((dto) => mapPostDto(dto, currentUsername))
 }
 
+export async function getSocialPost(postId: string, currentUsername?: string): Promise<SocialPost> {
+  const dto = await apiRequest<SocialPostDto>(
+    `/api/v1/social/posts/${encodeURIComponent(postId)}`,
+  )
+  return mapPostDto(dto, currentUsername)
+}
+
 export async function uploadSocialMedia(file: File): Promise<{ url: string; name: string }> {
   const session = getSession()
   const headers: Record<string, string> = {
