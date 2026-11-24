@@ -6,7 +6,8 @@ use axum::{
     body::Bytes,
     extract::{DefaultBodyLimit, Path, State},
     http::{HeaderMap, StatusCode, header::CONTENT_TYPE},
-    routing::post,
+    response::Redirect,
+    routing::{get, post},
 };
 use chrono::Utc;
 use hmac::{Hmac, Mac};
@@ -43,6 +44,7 @@ pub fn router() -> Router<Arc<AppState>> {
             "/avatar",
             post(upload_avatar).layer(DefaultBodyLimit::max(MAX_AVATAR_UPLOAD_BYTES)),
         )
+        .route("/avatar/{id}", get(get_avatar))
         .route("/presign", post(presign))
         .route("/{id}/complete", post(complete))
 }
@@ -780,6 +782,36 @@ pub async fn upload_avatar(
         StatusCode::CREATED,
         Json(MediaUploadResponse { attachment }),
     ))
+}
+
+/// Redirects to the public/presigned R2 URL for a ready profile avatar (`GET /api/v1/media/avatar/{id}`).
+pub async fn get_avatar(
+    State(state): State<Arc<AppState>>,
+    Path(media_id): Path<Uuid>,
+) -> Result<Redirect, AppError> {
+    let row: Option<(String, String, String, i64)> = sqlx::query_as(
+        "SELECT r2_key, file_name, mime_type, size_bytes
+         FROM media_assets
+         WHERE id = $1 AND purpose = 'avatar' AND status = 'READY'
+         LIMIT 1",
+    )
+    .bind(media_id)
+    .fetch_optional(&state.pg)
+    .await?;
+
+    let Some((r2_key, file_name, mime_type, size_bytes)) = row else {
+        return Err(AppError::NotFound("avatar not found".to_string()));
+    };
+
+    let attachment = attachment_from_record(
+        &state.config,
+        media_id,
+        file_name,
+        mime_type,
+        size_bytes,
+        r2_key,
+    )?;
+    Ok(Redirect::temporary(&attachment.url))
 }
 
 /// Deletes an unreferenced social media object from `media_assets` and R2

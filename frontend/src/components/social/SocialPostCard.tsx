@@ -45,6 +45,11 @@ interface ReplyNode {
   children: ReplyNode[]
 }
 
+function isVideoMedia(url?: string, alt?: string): boolean {
+  const pattern = /\.(mp4|webm|mov|m4v|ogg)(?:$|[?#])/i
+  return Boolean((url && pattern.test(url)) || (alt && pattern.test(alt)))
+}
+
 function buildReplyTree(replies: SocialReply[]): ReplyNode[] {
   const byId = new Map<string, ReplyNode>()
   for (const reply of replies) {
@@ -179,12 +184,23 @@ export function SocialPostCard({
           </div>
           {reply.text && <p>{reply.text}</p>}
           {reply.media && (
-            <img
-              className="social-reply-media"
-              src={reply.media}
-              alt={reply.mediaAlt ?? ''}
-              loading="lazy"
-            />
+            isVideoMedia(reply.media, reply.mediaAlt) ? (
+              <video
+                className="social-reply-media"
+                src={reply.media}
+                controls
+                playsInline
+                preload="metadata"
+                aria-label={reply.mediaAlt ?? 'Video'}
+              />
+            ) : (
+              <img
+                className="social-reply-media"
+                src={reply.media}
+                alt={reply.mediaAlt ?? ''}
+                loading="lazy"
+              />
+            )
           )}
           {reply.sticker && (
             <div className="social-sticker-wrap">
@@ -353,12 +369,23 @@ export function SocialPostCard({
         {post.text && <p className="social-post-copy">{post.text}</p>}
 
         {post.media && (
-          <img
-            className="social-post-media"
-            src={post.media}
-            alt={post.mediaAlt ?? ''}
-            loading="lazy"
-          />
+          isVideoMedia(post.media, post.mediaAlt) ? (
+            <video
+              className="social-post-media"
+              src={post.media}
+              controls
+              playsInline
+              preload="metadata"
+              aria-label={post.mediaAlt ?? 'Video'}
+            />
+          ) : (
+            <img
+              className="social-post-media"
+              src={post.media}
+              alt={post.mediaAlt ?? ''}
+              loading="lazy"
+            />
+          )
         )}
 
         {post.sticker && (
