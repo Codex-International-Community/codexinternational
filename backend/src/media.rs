@@ -620,9 +620,10 @@ async fn prepare_direct_upload(
             height: None,
         },
         MediaTransform::CompressWebp(opts) => {
-            let compressed = tokio::task::spawn_blocking(move || compress_image_to_webp(&body, opts))
-                .await
-                .map_err(|err| AppError::Internal(err.into()))??;
+            let compressed =
+                tokio::task::spawn_blocking(move || compress_image_to_webp(&body, opts))
+                    .await
+                    .map_err(|err| AppError::Internal(err.into()))??;
             let width = i32::try_from(compressed.width).ok();
             let height = i32::try_from(compressed.height).ok();
             PreparedUpload {
@@ -731,9 +732,14 @@ pub async fn upload_social(
     body: Bytes,
 ) -> Result<(StatusCode, Json<MediaUploadResponse>), AppError> {
     let (prepared, file_name) = prepare_direct_upload(&SOCIAL_UPLOAD_SPEC, &headers, body).await?;
-    let attachment =
-        store_direct_upload(&state, auth.user_id, SOCIAL_UPLOAD_SPEC.purpose, prepared, file_name)
-            .await?;
+    let attachment = store_direct_upload(
+        &state,
+        auth.user_id,
+        SOCIAL_UPLOAD_SPEC.purpose,
+        prepared,
+        file_name,
+    )
+    .await?;
 
     Ok((
         StatusCode::CREATED,
@@ -749,9 +755,14 @@ pub async fn upload_avatar(
     body: Bytes,
 ) -> Result<(StatusCode, Json<MediaUploadResponse>), AppError> {
     let (prepared, file_name) = prepare_direct_upload(&AVATAR_UPLOAD_SPEC, &headers, body).await?;
-    let attachment =
-        store_direct_upload(&state, auth.user_id, AVATAR_UPLOAD_SPEC.purpose, prepared, file_name)
-            .await?;
+    let attachment = store_direct_upload(
+        &state,
+        auth.user_id,
+        AVATAR_UPLOAD_SPEC.purpose,
+        prepared,
+        file_name,
+    )
+    .await?;
 
     if let Ok(media_id) = Uuid::parse_str(&attachment.id) {
         sqlx::query(
