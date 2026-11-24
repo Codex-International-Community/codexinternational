@@ -179,6 +179,11 @@ pub async fn login(
     ))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct UpdateProfileRequest {
+    pub display_name: String,
+}
+
 /// Returns the authenticated user's current profile (`GET /api/v1/auth/me`).
 pub async fn me(
     State(state): State<Arc<AppState>>,
@@ -193,6 +198,35 @@ pub async fn me(
     Ok(Json(MeResponse {
         user: record.into(),
     }))
+}
+
+/// Updates the authenticated user's profile (`PATCH /api/v1/auth/me`).
+pub async fn update_profile(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    Json(req): Json<UpdateProfileRequest>,
+) -> Result<Json<MeResponse>, AppError> {
+    let record = find_user_by_id(&state.pg, auth.user_id)
+        .await?
+        .ok_or_else(|| AppError::Unauthorized("user account no longer exists".to_string()))?;
+    ensure_not_suspended(&record)?;
+
+    let display_name = validate_profile_display_name(&req.display_name)?;
+
+    let updated = sqlx::query_as::<_, crate::auth::repo::UserProfile>(
+        "UPDATE users
+         SET display_name = $1, updated_at = NOW()
+         WHERE id = $2
+         RETURNING id, uid, uid_login_enabled, (password_hash IS NOT NULL) AS has_password,
+                   username, display_name, email, email_verified_at, bio,
+                   platform_role, can_bypass_compress, global_xp, global_level, created_at",
+    )
+    .bind(&display_name)
+    .bind(auth.user_id)
+    .fetch_one(&state.pg)
+    .await?;
+
+    Ok(Json(MeResponse { user: updated }))
 }
 
 pub(crate) fn ensure_not_suspended(record: &UserAuthRecord) -> Result<(), AppError> {
@@ -233,6 +267,18 @@ fn validate_display_name(raw: &str) -> Result<String, AppError> {
     if trimmed.is_empty() || trimmed.len() > 64 {
         return Err(AppError::BadRequest(
             "display_name must be 1-64 characters".to_string(),
+        ));
+    }
+    Ok(trimmed.to_string())
+}
+
+fn validate_profile_display_name(raw: &str) -> Result<String, AppError> {
+    let trimmed = raw.trim();
+    let len = trimmed.chars().count();
+    // Allow empty to clear custom display name (fall back to username on client).
+    if len > 0 && (len < 4 || len > 20) {
+        return Err(AppError::BadRequest(
+            "display_name must be 4-20 characters, or empty to clear".to_string(),
         ));
     }
     Ok(trimmed.to_string())

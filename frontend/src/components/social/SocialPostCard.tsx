@@ -104,7 +104,7 @@ export function SocialPostCard({
             title="Repost"
           >
             <span className="social-repost-mark" aria-hidden="true">↻</span>
-            <span>{post.reposts + (post.reposted ? 1 : 0)}</span>
+            <span>{post.reposts.toLocaleString()}</span>
           </button>
 
           <button
@@ -115,8 +115,22 @@ export function SocialPostCard({
             onClick={() => onToggleAction(post.id, 'liked')}
             title="Like"
           >
-            <Icon name="heart" size={17} />
-            <span>{(post.likes + (post.liked ? 1 : 0)).toLocaleString()}</span>
+            {post.liked ? (
+              <svg
+                className="social-heart-filled"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="#ef4444"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+            ) : (
+              <Icon name="heart" size={17} />
+            )}
+            <span>{post.likes.toLocaleString()}</span>
           </button>
 
           <button
@@ -137,7 +151,21 @@ export function SocialPostCard({
             onClick={() => onToggleAction(post.id, 'saved')}
             title={post.saved ? 'Remove bookmark' : 'Save post'}
           >
-            <Icon name="bookmark" size={16} />
+            {post.saved ? (
+              <svg
+                className="social-bookmark-filled"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="#facc15"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M6 3h12v18l-6-4-6 4V3Z" />
+              </svg>
+            ) : (
+              <Icon name="bookmark" size={16} />
+            )}
           </button>
         </div>
 

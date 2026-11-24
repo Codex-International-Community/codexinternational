@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import '../styles/landing.css'
 import codexLogo from '../assets/codex-logo.jpg'
 import { ApiError } from '../api/client'
@@ -65,6 +65,7 @@ interface LandingProps {
  */
 export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
   const { isMobile } = useViewport()
+  const dotsRef = useRef<HTMLCanvasElement | null>(null)
   const [desktopTab, setDesktopTab] = useState<AuthTab>('otp')
   const [mobileStep, setMobileStep] = useState<MobileStep>('welcome')
   const [stepDir, setStepDir] = useState<'forward' | 'back'>('forward')
@@ -92,6 +93,108 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
 
   const validEmail = /^\S+@\S+\.\S+$/.test(email.trim())
 
+
+  useEffect(() => {
+    const canvas = dotsRef.current
+    if (!canvas) return
+    const ctxRaw = canvas.getContext('2d')
+    if (!ctxRaw) return
+    const g = ctxRaw
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches
+    let W = 0, H = 0, mx = -9999, my = -9999, GAP = 22
+    let raf = 0
+    let rt: number | undefined
+    type Dot = { px: number; py: number; ox: number; oy: number; mid: number; v: number; fade: number }
+    let D: Dot[] = []
+    const hash = (i: number, j: number) => {
+      const h = Math.sin(i * 127.1 + j * 311.7) * 43758.5453
+      return h - Math.floor(h)
+    }
+    const sstep = (a: number, b: number, v: number) => {
+      v = Math.min(1, Math.max(0, (v - a) / (b - a)))
+      return v * v * (3 - 2 * v)
+    }
+    const cv = canvas
+    const gx = g
+    function build() {
+      const dpr = Math.min(devicePixelRatio || 1, 2)
+      W = innerWidth
+      H = innerHeight
+      GAP = W < 700 ? 19 : 22
+      cv.width = W * dpr
+      cv.height = H * dpr
+      gx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      D = []
+      const cols = Math.ceil(W / GAP) + 1
+      const rows = Math.ceil(H / GAP) + 1
+      for (let j = 0; j < rows; j++) {
+        for (let i = 0; i < cols; i++) {
+          const px = i * GAP + GAP / 2
+          const py = j * GAP + GAP / 2
+          const dx = (px - W / 2) / (W / 2)
+          const dy = (py - H / 2) / (H / 2)
+          const e = Math.hypot(dx * 0.9, dy * 1.1)
+          D.push({ px, py, ox: 0, oy: 0, mid: sstep(0.22, 0.85, e), v: 0.65 + hash(i, j) * 0.35, fade: hash(i + 3, j + 7) })
+        }
+      }
+    }
+    const R = 90
+    function frame(now: number) {
+      const t = now / 1000
+      gx.clearRect(0, 0, W, H)
+      gx.fillStyle = '#fff'
+      const fi = Math.min(1, t / 1.8)
+      for (const d of D) {
+        const px = d.px
+        const py = d.py
+        const a1 = px * 0.0068 + py * 0.0034 + t * 0.3
+        const a2 = px * 0.0038 - py * 0.0058 + t * 0.2 + 1.3
+        const a3 = py * 0.011 + px * 0.0022 - t * 0.24
+        const F = Math.sin(a1) + 0.6 * Math.sin(a2) + 0.35 * Math.sin(a3)
+        const n = (F + 1.95) / 3.9
+        const vis = sstep(0.28, 0.86, n)
+        let tx = Math.cos(a1) * 3
+        let ty = F * 4.5
+        let k = 0
+        const ddx = px - mx
+        const ddy = py - my
+        const dist = Math.hypot(ddx, ddy)
+        if (dist < R) {
+          k = 1 - dist / R
+          const p = k * k * 8
+          tx += (ddx / (dist || 1)) * p
+          ty += (ddy / (dist || 1)) * p
+        }
+        d.ox += (tx - d.ox) * 0.14
+        d.oy += (ty - d.oy) * 0.14
+        let a = vis * d.mid * d.v * 0.72 + k * 0.1 * d.mid
+        a *= Math.min(1, Math.max(0, fi * 1.4 - d.fade * 0.4))
+        if (a < 0.015) continue
+        gx.globalAlpha = a > 0.75 ? 0.75 : a
+        gx.beginPath()
+        gx.arc(px + d.ox, py + d.oy, 0.9 + vis * 0.6 + k * 0.4, 0, 6.283)
+        gx.fill()
+      }
+      gx.globalAlpha = 1
+      if (!reduce) raf = requestAnimationFrame(frame)
+    }
+    const onMove = (e: PointerEvent) => { mx = e.clientX; my = e.clientY }
+    const onLeave = () => { mx = -9999; my = -9999 }
+    const onResize = () => { window.clearTimeout(rt); rt = window.setTimeout(build, 150) }
+    addEventListener('pointermove', onMove, { passive: true })
+    document.addEventListener('pointerleave', onLeave)
+    addEventListener('resize', onResize)
+    build()
+    // Always animate (user requested motion)
+    raf = requestAnimationFrame(frame)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.clearTimeout(rt)
+      removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerleave', onLeave)
+      removeEventListener('resize', onResize)
+    }
+  }, [])
   // --goStep--
 
   const goStep = (step: MobileStep, dir: 'forward' | 'back' = 'forward') => {
@@ -384,6 +487,7 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
 
   return (
     <div className="landing-shell">
+      <canvas ref={dotsRef} id="dots" className="landing-dots-canvas" aria-hidden="true" />
       {!isMobile ? (
         /* ── Desktop & Tablet Web Split View ── */
         <main className="landing-desktop-frame">

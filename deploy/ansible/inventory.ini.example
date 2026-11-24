@@ -1,0 +1,2 @@
+[codex_servers]
+your-vps-ip ansible_user=rallc

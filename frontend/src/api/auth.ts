@@ -216,3 +216,12 @@ export async function toggleUidLogin(enabled: boolean): Promise<AuthUserProfile>
   updateSessionUser(res.user)
   return res.user
 }
+
+export async function updateProfile(displayName: string): Promise<AuthUserProfile> {
+  const res = await apiRequest<{ user: AuthUserProfile }>('/api/v1/auth/me', {
+    method: 'PATCH',
+    body: { display_name: displayName },
+  })
+  updateSessionUser(res.user)
+  return res.user
+}
