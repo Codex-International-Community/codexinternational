@@ -6,6 +6,7 @@ import '../styles/adaptive.css'
 import type { AuthSession } from '../api/client'
 import { ApiError } from '../api/client'
 import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, listPinnedMessages, mapChatMessage, pinMessage, postMessage, toggleMessageReaction, unpinMessage, uploadChatMedia, type ChatMessageWire } from '../api/chat'
+import { createSocialPost, createSocialReply, listSocialPosts, toggleSocialAction } from '../api/social'
 import { inspectZipFile } from '../utils/zipGuard'
 import { createChannel as createChannelApi, createCommunity, createCommunityCategory, createCommunityEvent, createOrGetDm, deleteCommunity, getCommunityInvite, getCommunityMemberSettings, joinCommunity, leaveCommunity, listChannels, listCommunities, listCommunityCategories, listCommunityMembers, updateCommunity, updateCommunityMemberSettings, updateCommunityNickname, type CommunityCategory, type CommunityMemberSettings } from '../api/communities'
 import type { ViewportInfo } from '../hooks/useViewport'
@@ -17,10 +18,8 @@ import { roomKey } from '../constants/seedData'
 import {
   loadData,
   loadFollowedHandles,
-  loadSocialPosts,
   saveData,
   saveFollowedHandles,
-  saveSocialPosts,
 } from '../utils/storage'
 
 import { Toast } from '../components/common/Toast'
@@ -249,7 +248,7 @@ export function WorkspacePage({
   const [serverMenuOpen, setServerMenuOpen] = useState(false)
   const [currentServerNickname, setCurrentServerNickname] = useState('')
   const [notificationRead, setNotificationRead] = useState(false)
-  const [socialPosts, setSocialPosts] = useState<SocialPost[]>(loadSocialPosts)
+  const [socialPosts, setSocialPosts] = useState<SocialPost[]>([])
   const [socialDraft, setSocialDraft] = useState('')
   const [socialTab, setSocialTab] = useState<SocialTab>('for-you')
   const [followedHandles, setFollowedHandles] = useState<string[]>(loadFollowedHandles)
@@ -460,18 +459,25 @@ export function WorkspacePage({
   }, [view, data.servers, data.channels, data.conversations, notify])
 
   useEffect(() => {
-    const ok = saveSocialPosts(socialPosts)
-    if (!ok) {
-      window.setTimeout(
-        () => notify('Social timeline is full. Remove large media to continue saving.'),
-        0,
-      )
-    }
-  }, [socialPosts, notify])
-
-  useEffect(() => {
     saveFollowedHandles(followedHandles)
   }, [followedHandles])
+
+  useEffect(() => {
+    if (view !== 'social') return
+    let cancelled = false
+    void listSocialPosts(socialTab, session.user.username)
+      .then((posts) => {
+        if (!cancelled) setSocialPosts(posts)
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          notify(error instanceof Error ? error.message : 'Failed to load social posts.')
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [view, socialTab, session.user.id, session.user.username, notify])
   useEffect(() => {
     if (view !== 'dm' || !people.some((person) => person.id === dmId)) return
     if (data.conversations.some((conversation) => conversation.userId === dmId)) return
@@ -1603,26 +1609,15 @@ export function WorkspacePage({
                   e.preventDefault()
                   const text = socialDraft.trim()
                   if (!text) return
-                  setSocialPosts((prev) => [
-                    {
-                      id: `p${Date.now()}`,
-                      author: data.displayName,
-                      handle: session.user.username,
-                      initials,
-                      tone: 'self',
-                      time: 'Just now',
-                      createdAt: Date.now(),
-                      text,
-                      likes: 0,
-                      reposts: 0,
-                      replies: [],
-                      liked: false,
-                      reposted: false,
-                      saved: false,
-                    },
-                    ...prev,
-                  ])
                   setSocialDraft('')
+                  void createSocialPost(text, session.user.username)
+                    .then((created) => {
+                      setSocialPosts((prev) => [created, ...prev])
+                    })
+                    .catch((error: unknown) => {
+                      setSocialDraft(text)
+                      notify(error instanceof Error ? error.message : 'Failed to publish post.')
+                    })
                 }}
                 onTabChange={setSocialTab}
                 onToggleFollow={(handle) =>
@@ -1630,40 +1625,59 @@ export function WorkspacePage({
                     prev.includes(handle) ? prev.filter((h) => h !== handle) : [...prev, handle],
                   )
                 }
-                onToggleAction={(id, action) =>
+                onToggleAction={(id, action) => {
+                  let snapshot: SocialPost | undefined
                   setSocialPosts((prev) =>
                     prev.map((p) => {
                       if (p.id !== id) return p
+                      snapshot = p
                       if (action === 'liked') {
-                        return { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) }
+                        return { ...p, liked: !p.liked, likes: Math.max(0, p.likes + (p.liked ? -1 : 1)) }
                       }
                       if (action === 'reposted') {
-                        return { ...p, reposted: !p.reposted, reposts: p.reposts + (p.reposted ? -1 : 1) }
+                        return { ...p, reposted: !p.reposted, reposts: Math.max(0, p.reposts + (p.reposted ? -1 : 1)) }
                       }
                       return { ...p, saved: !p.saved }
                     }),
                   )
-                }
-                onSubmitReply={(_e, postId, text) => {
-                  setSocialPosts((prev) =>
-                    prev.map((p) =>
-                      p.id === postId
-                        ? {
+                  void toggleSocialAction(id, action)
+                    .then((res) => {
+                      setSocialPosts((prev) =>
+                        prev.map((p) => {
+                          if (p.id !== id) return p
+                          return {
                             ...p,
-                            replies: [
-                              ...p.replies,
-                              {
-                                id: `r${Date.now()}`,
-                                author: data.displayName,
-                                handle: session.user.username,
-                                text,
-                                time: 'Just now',
-                              },
-                            ],
+                            likes: res.likes,
+                            reposts: res.reposts,
+                            liked: action === 'liked' ? res.active : p.liked,
+                            reposted: action === 'reposted' ? res.active : p.reposted,
+                            saved: action === 'saved' ? res.active : p.saved,
                           }
-                        : p,
-                    ),
-                  )
+                        }),
+                      )
+                    })
+                    .catch((error: unknown) => {
+                      if (snapshot) {
+                        const rollback = snapshot
+                        setSocialPosts((prev) => prev.map((p) => (p.id === id ? rollback : p)))
+                      }
+                      notify(error instanceof Error ? error.message : 'Failed to update post.')
+                    })
+                }}
+                onSubmitReply={(_e, postId, text) => {
+                  void createSocialReply(postId, text)
+                    .then((reply) => {
+                      setSocialPosts((prev) =>
+                        prev.map((p) =>
+                          p.id === postId
+                            ? { ...p, replies: [...p.replies, reply] }
+                            : p,
+                        ),
+                      )
+                    })
+                    .catch((error: unknown) => {
+                      notify(error instanceof Error ? error.message : 'Failed to post reply.')
+                    })
                 }}
                 onShare={(postId) => {
                   const found = socialPosts.find((p) => p.id === postId)

@@ -4312,9 +4312,28 @@ dialog.modal--discord-server::backdrop {
 .app-shell.view-social .social-post-actions button.is-liked:hover {
   color: #ef4444;
 }
+.app-shell.view-social .social-post-actions button.is-liked svg.social-heart-filled {
+  fill: #ef4444;
+  stroke: #ef4444;
+  color: #ef4444;
+}
 .app-shell.view-social .social-post-actions button.is-liked .gf-icon {
   filter: brightness(0) saturate(100%) invert(40%) sepia(79%) saturate(2476%) hue-rotate(336deg) brightness(95%) contrast(96%);
   opacity: 1;
+}
+.app-shell.view-social .social-post-actions button.is-reposted,
+.app-shell.view-social .social-post-actions button.is-reposted:hover {
+  color: #facc15;
+}
+.app-shell.view-social .social-post-actions button.is-saved,
+.app-shell.view-social .social-post-actions button.is-saved:hover {
+  color: #facc15;
+}
+.app-shell.view-social .social-post-actions button.is-saved svg,
+.app-shell.view-social .social-post-actions button.is-saved svg.social-bookmark-filled {
+  fill: #facc15;
+  stroke: #facc15;
+  color: #facc15;
 }
 .app-shell.view-social .social-right-panel { background: var(--side); }
 @media (max-width: 767px) {

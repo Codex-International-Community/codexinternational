@@ -13,6 +13,7 @@ use backend::{
     chat::{flusher::run_message_flusher, ws::start_pubsub_dispatcher},
     config::AppConfig,
     shared::db::run_migrations,
+    social::flusher::run_social_flusher,
     state::AppState,
 };
 use tokio::net::TcpListener;
@@ -57,6 +58,7 @@ async fn main() {
     }
 
     tokio::spawn(run_message_flusher(state.clone()));
+    tokio::spawn(run_social_flusher(state.clone()));
     start_pubsub_dispatcher(state.clone());
 
     let listener = match TcpListener::bind(&bind_addr).await {
