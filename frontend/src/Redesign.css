@@ -3125,42 +3125,32 @@ dialog.modal {
 }
 
 .member-profile-card {
-  width: min(100%, 390px);
-  max-height: min(84dvh, 720px);
+  width: min(36rem, 92vw);
+  max-height: 88dvh;
   overflow: auto;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: 1rem;
   background: var(--surface);
   color: var(--text);
-  box-shadow: 0 26px 90px rgba(0, 0, 0, .42);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .42);
   scrollbar-width: thin;
   animation: member-profile-rise-in .2s cubic-bezier(.2, .8, .2, 1);
 }
 
 .member-profile-cover {
   position: relative;
-  height: 116px;
+  height: clamp(5.5rem, 12vh, 7.5rem);
   overflow: hidden;
-  background:
-    radial-gradient(ellipse at 80% 10%, rgba(111, 191, 255, .42), transparent 40%),
-    radial-gradient(ellipse at 16% 100%, rgba(82, 92, 173, .4), transparent 48%),
-    linear-gradient(135deg, #182d46, #243b5b 52%, #182535);
+  background: var(--surface2);
+  border-bottom: 1px solid var(--line);
 }
 
 .theme-light .member-profile-cover {
-  background:
-    radial-gradient(ellipse at 80% 10%, rgba(111, 191, 255, .45), transparent 40%),
-    radial-gradient(ellipse at 16% 100%, rgba(82, 92, 173, .3), transparent 48%),
-    linear-gradient(135deg, #c7e0f4, #a9c4df 52%, #d8e4ef);
+  background: var(--surface2);
 }
 
 .member-profile-cover::after {
-  position: absolute;
-  inset: 0;
-  background-image: linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
-  background-size: 26px 26px;
-  content: '';
-  mask-image: linear-gradient(120deg, black, transparent 86%);
+  content: none;
 }
 
 .member-profile-cover-orbit {
@@ -3209,10 +3199,10 @@ dialog.modal {
 .member-profile-identity {
   position: relative;
   display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  min-height: 92px;
-  padding: 0 19px 15px;
+  align-items: center;
+  gap: 1rem;
+  min-height: 5.5rem;
+  padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--line);
 }
 
@@ -3302,14 +3292,18 @@ dialog.modal {
 .member-profile-content {
   display: grid;
   gap: 17px;
-  padding: 18px 19px 19px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+  padding: 1.25rem 1.5rem 1.5rem;
 }
 
 .member-profile-role-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 1rem;
+  padding: 0.25rem 0;
 }
 
 .member-profile-section-label {
@@ -3397,42 +3391,28 @@ dialog.modal {
 
 .member-profile-actions {
   display: flex;
-  gap: 8px;
-  padding-top: 2px;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  padding-top: 0.5rem;
 }
 
-.member-profile-actions button {
-  display: inline-flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 39px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: var(--surface2);
-  color: var(--text);
-  font-size: .78rem;
-  font-weight: 750;
-  cursor: pointer;
-}
-
-
+.member-profile-actions button,
 .member-profile-actions label {
   display: inline-flex;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: max-content;
+  white-space: nowrap;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 39px;
-  padding: 0 12px;
+  gap: 0.5rem;
+  min-height: 2.625rem;
+  padding: 0.5rem 1rem;
   border: 1px solid var(--line);
-  border-radius: 9px;
+  border-radius: 0.5rem;
   background: var(--surface2);
   color: var(--text);
-  font-size: .78rem;
-  font-weight: 750;
+  font-size: 0.84rem;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -3470,12 +3450,14 @@ dialog.modal {
   color: var(--accent);
 }
 
+.member-profile-actions .member-profile-primary,
 .member-profile-actions .member-profile-message {
   border-color: var(--accent-solid);
   background: var(--accent-solid);
   color: #fff;
 }
 
+.member-profile-actions .member-profile-primary:hover,
 .member-profile-actions .member-profile-message:hover {
   border-color: var(--accent-solid-hover);
   background: var(--accent-solid-hover);
@@ -3495,21 +3477,22 @@ dialog.modal {
 @media (max-width: 480px) {
   .member-profile-overlay {
     align-items: end;
-    padding: 10px;
+    padding: 0;
   }
 
   .member-profile-card {
-    width: 100%;
-    max-height: min(84dvh, 700px);
-    border-radius: 16px 16px 10px 10px;
+    width: 100vw;
+    max-height: 88dvh;
+    border-radius: 1rem 1rem 0 0;
   }
 
   .member-profile-identity {
-    gap: 11px;
-    padding-inline: 14px;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
   }
 
   .member-profile-content {
-    padding: 16px 14px max(16px, env(safe-area-inset-bottom));
+    gap: 1rem;
+    padding: 1rem 1rem max(1.25rem, env(safe-area-inset-bottom));
   }
 }
