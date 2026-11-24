@@ -34,8 +34,13 @@ pub async fn list_bookmarks(
     user: AuthUser,
     Query(query): Query<ListPostsQuery>,
 ) -> Result<impl IntoResponse, AppError> {
-    let posts =
-        repo::list_posts(&state, user.user_id, Some("saved"), query.limit.unwrap_or(50)).await?;
+    let posts = repo::list_posts(
+        &state,
+        user.user_id,
+        Some("saved"),
+        query.limit.unwrap_or(50),
+    )
+    .await?;
     Ok(Json(posts))
 }
 

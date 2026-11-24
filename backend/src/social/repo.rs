@@ -405,7 +405,11 @@ pub async fn toggle_action(
             .bind(post_id)
             .fetch_one(&state.pg)
             .await?;
-        if active { "1".to_string() } else { "0".to_string() }
+        if active {
+            "1".to_string()
+        } else {
+            "0".to_string()
+        }
     };
 
     let db_count = match kind {
@@ -419,11 +423,7 @@ pub async fn toggle_action(
         .valkey
         .eval(
             TOGGLE_ACTION_LUA,
-            vec![
-                action_key,
-                count_key,
-                SOCIAL_ACTION_STREAM.to_string(),
-            ],
+            vec![action_key, count_key, SOCIAL_ACTION_STREAM.to_string()],
             vec![
                 db_active_str,
                 db_count.to_string(),
