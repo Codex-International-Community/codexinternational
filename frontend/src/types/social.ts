@@ -1,15 +1,28 @@
 export type SocialTab = 'for-you' | 'following' | 'latest' | 'saved'
 
+export interface SocialStickerRef {
+  id: string
+  kind: 'sticker' | 'gif' | string
+  label: string
+  mediaUrl: string
+}
+
 export interface SocialReply {
   id: string
+  userId?: string
+  parentReplyId?: string | null
   author: string
   handle: string
   text: string
+  media?: string
+  mediaAlt?: string
+  sticker?: SocialStickerRef
   time: string
 }
 
 export interface SocialPost {
   id: string
+  userId?: string
   author: string
   handle: string
   initials: string
@@ -19,6 +32,7 @@ export interface SocialPost {
   text: string
   media?: string
   mediaAlt?: string
+  sticker?: SocialStickerRef
   verified?: boolean
   likes: number
   reposts: number

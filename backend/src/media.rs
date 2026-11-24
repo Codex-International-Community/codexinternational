@@ -81,7 +81,7 @@ impl QualityTier {
         }
     }
 }
-static HTTP_CLIENT: std::sync::LazyLock<reqwest::Client> =
+pub(crate) static HTTP_CLIENT: std::sync::LazyLock<reqwest::Client> =
     std::sync::LazyLock::new(reqwest::Client::new);
 
 #[derive(Debug, Clone, Serialize, serde::Deserialize)]
@@ -203,7 +203,7 @@ fn safe_file_name(raw: Option<&str>, fallback_extension: &str) -> String {
     }
 }
 
-fn magic_signature_matches(mime_type: &str, body: &[u8]) -> bool {
+pub(crate) fn magic_signature_matches(mime_type: &str, body: &[u8]) -> bool {
     match mime_type {
         "image/avif" | "video/mp4" | "video/quicktime" => {
             body.len() >= 12 && &body[4..8] == b"ftyp"
@@ -228,7 +228,7 @@ fn magic_signature_matches(mime_type: &str, body: &[u8]) -> bool {
     }
 }
 
-fn allowed_media_type(mime: &str) -> Option<(&'static str, &'static str)> {
+pub(crate) fn allowed_media_type(mime: &str) -> Option<(&'static str, &'static str)> {
     match mime {
         "image/avif" => Some(("image", "avif")),
         "image/jpeg" => Some(("image", "jpg")),
@@ -437,6 +437,98 @@ pub async fn upload(
         "INSERT INTO media_assets
          (id, uploader_id, kind, purpose, status, r2_key, mime_type, size_bytes, ready_at, file_name)
          VALUES ($1, $2, $3, 'chat', 'READY', $4, $5, $6, NOW(), $7)",
+    )
+    .bind(media_id)
+    .bind(auth.user_id)
+    .bind(kind)
+    .bind(&object_key)
+    .bind(&mime_type)
+    .bind(size_bytes)
+    .bind(&file_name)
+    .execute(&state.pg)
+    .await?;
+
+    let attachment = attachment_from_record(
+        &state.config,
+        media_id,
+        file_name,
+        mime_type,
+        size_bytes,
+        object_key,
+    )?;
+
+    Ok((
+        StatusCode::CREATED,
+        Json(MediaUploadResponse { attachment }),
+    ))
+}
+
+pub async fn upload_social(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<MediaUploadResponse>), AppError> {
+    if body.is_empty() {
+        return Err(AppError::BadRequest("uploaded file is empty".to_string()));
+    }
+    if body.len() > MAX_CHAT_UPLOAD_BYTES {
+        return Err(AppError::PayloadTooLarge(
+            "social media uploads are limited to 10 MB".to_string(),
+        ));
+    }
+
+    let mime_type = headers
+        .get(CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("")
+        .split(';')
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_ascii_lowercase();
+    let (kind, extension) = allowed_media_type(&mime_type)
+        .filter(|(k, _)| *k == "image" || *k == "video")
+        .ok_or_else(|| {
+            AppError::BadRequest(
+                "only image, GIF, or video files are supported for Threads".to_string(),
+            )
+        })?;
+
+    if !magic_signature_matches(&mime_type, &body) {
+        return Err(AppError::BadRequest(
+            "file contents do not match the selected file type".to_string(),
+        ));
+    }
+
+    let size_bytes = i64::try_from(body.len()).map_err(|error| AppError::Internal(error.into()))?;
+    let raw_name = headers
+        .get("x-file-name")
+        .and_then(|value| value.to_str().ok());
+    let file_name = safe_file_name(raw_name, extension);
+    let media_id = Uuid::now_v7();
+    let object_key = generate_r2_key("social", auth.user_id, media_id, kind, extension);
+    let upload_url = presigned_r2_url(&state.config, "PUT", &object_key, 900)?;
+
+    let response = HTTP_CLIENT
+        .put(upload_url)
+        .header(CONTENT_TYPE, mime_type.as_str())
+        .body(body)
+        .send()
+        .await
+        .map_err(|error| AppError::Internal(error.into()))?;
+    if !response.status().is_success() {
+        tracing::error!(status = %response.status(), "Cloudflare R2 social upload failed");
+        return Err(AppError::ServiceUnavailable {
+            retry_after_secs: 30,
+            message: "File could not be saved to media storage".to_string(),
+        });
+    }
+
+    sqlx::query(
+        "INSERT INTO media_assets
+         (id, uploader_id, kind, purpose, status, r2_key, mime_type, size_bytes, ready_at, file_name)
+         VALUES ($1, $2, $3, 'social', 'READY', $4, $5, $6, NOW(), $7)",
     )
     .bind(media_id)
     .bind(auth.user_id)

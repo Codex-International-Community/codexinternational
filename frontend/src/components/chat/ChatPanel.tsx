@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type RefObject } from 'react'
+import { saveSticker, type StickerItem } from '../../api/stickers'
 import { Icon } from '../common/Icon'
 import { MessageItem } from './MessageItem'
 import { Composer } from './Composer'
@@ -27,6 +28,7 @@ interface ChatPanelProps {
   onAttachmentSelect: (file?: File) => void
   onRemoveAttachment: () => void
   onAddEmoji: (emoji: string) => void
+  onSendSticker?: (sticker: StickerItem) => void
   onReact: (messageId: string, emoji: string) => void
   onReply: (message: Message) => void
   onEdit: (message: Message) => void
@@ -82,6 +84,7 @@ export function ChatPanel({
   onAttachmentSelect,
   onRemoveAttachment,
   onAddEmoji,
+  onSendSticker,
   onReact,
   onReply,
   onEdit,
@@ -202,6 +205,13 @@ export function ChatPanel({
                 onTogglePin={(item) => { onTogglePin(item); setActiveMenuId(null) }}
                 onToggleMenu={(id) => setActiveMenuId((current) => current === id ? null : id)}
                 onReplyReferenceClick={(id) => onNotify(`Reply reference: ${id}`)}
+                onSaveSticker={(stickerId) => {
+                  void saveSticker(stickerId)
+                    .then(() => onNotify('Sticker saved to your collection!'))
+                    .catch((err: unknown) =>
+                      onNotify(err instanceof Error ? err.message : 'Could not save sticker.'),
+                    )
+                }}
               />
             </div>
           )
@@ -234,6 +244,8 @@ export function ChatPanel({
         onAttachmentSelect={onAttachmentSelect}
         onRemoveAttachment={onRemoveAttachment}
         onAddEmoji={onAddEmoji}
+        onSendSticker={onSendSticker}
+        onNotify={onNotify}
       />
     </>
   )

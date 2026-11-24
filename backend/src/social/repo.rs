@@ -8,7 +8,8 @@ use uuid::Uuid;
 
 use super::protocol::{
     CreatePostRequest, CreateReplyRequest, SocialActionKind, SocialActionStreamRecord,
-    SocialActivityItem, SocialPostResponse, SocialReplyResponse, ToggleActionResponse,
+    SocialActivityItem, SocialPostResponse, SocialReplyResponse, SocialStickerRef,
+    ToggleActionResponse,
 };
 use crate::{error::AppError, state::AppState};
 
@@ -71,6 +72,10 @@ struct PostRow {
     content: String,
     media_url: Option<String>,
     media_alt: Option<String>,
+    sticker_id: Option<Uuid>,
+    sticker_kind: Option<String>,
+    sticker_label: Option<String>,
+    sticker_media_url: Option<String>,
     likes_count: i32,
     reposts_count: i32,
     liked: bool,
@@ -83,10 +88,57 @@ struct PostRow {
 struct ReplyRow {
     id: Uuid,
     post_id: Uuid,
+    user_id: Uuid,
+    parent_reply_id: Option<Uuid>,
     author: String,
     handle: String,
     content: String,
+    media_url: Option<String>,
+    media_alt: Option<String>,
+    sticker_id: Option<Uuid>,
+    sticker_kind: Option<String>,
+    sticker_label: Option<String>,
+    sticker_media_url: Option<String>,
     created_at: DateTime<Utc>,
+}
+
+fn build_sticker_ref(
+    id: Option<Uuid>,
+    kind: Option<String>,
+    label: Option<String>,
+    media_url: Option<String>,
+) -> Option<SocialStickerRef> {
+    match (id, kind, media_url) {
+        (Some(id), Some(kind), Some(media_url)) => Some(SocialStickerRef {
+            id,
+            kind,
+            label: label.unwrap_or_default(),
+            media_url,
+        }),
+        _ => None,
+    }
+}
+
+async fn fetch_sticker_ref(
+    pg: &PgPool,
+    sticker_id: Option<Uuid>,
+) -> Result<Option<SocialStickerRef>, AppError> {
+    let Some(sid) = sticker_id else {
+        return Ok(None);
+    };
+    let row: Option<(Uuid, String, String, String)> =
+        sqlx::query_as("SELECT id, kind, label, media_url FROM stickers WHERE id = $1")
+            .bind(sid)
+            .fetch_optional(pg)
+            .await?;
+    let (id, kind, label, media_url) =
+        row.ok_or_else(|| AppError::NotFound("sticker not found".into()))?;
+    Ok(Some(SocialStickerRef {
+        id,
+        kind,
+        label,
+        media_url,
+    }))
 }
 
 #[derive(Debug, FromRow)]
@@ -109,14 +161,6 @@ pub async fn create_post(
     req: CreatePostRequest,
 ) -> Result<SocialPostResponse, AppError> {
     let content = req.content.trim().to_string();
-    if content.is_empty() {
-        return Err(AppError::BadRequest("post content cannot be empty".into()));
-    }
-    if content.chars().count() > 500 {
-        return Err(AppError::BadRequest(
-            "post content cannot exceed 500 characters".into(),
-        ));
-    }
     let media_url = req
         .media_url
         .map(|s| s.trim().to_string())
@@ -125,19 +169,32 @@ pub async fn create_post(
         .media_alt
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty());
+    let sticker = fetch_sticker_ref(&state.pg, req.sticker_id).await?;
+
+    if content.is_empty() && media_url.is_none() && sticker.is_none() {
+        return Err(AppError::BadRequest(
+            "post must have text, media, or a sticker".into(),
+        ));
+    }
+    if content.chars().count() > 500 {
+        return Err(AppError::BadRequest(
+            "post content cannot exceed 500 characters".into(),
+        ));
+    }
 
     let post_id = Uuid::now_v7();
     let now = Utc::now();
 
     sqlx::query(
-        "INSERT INTO posts (id, user_id, content, media_url, media_alt, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $6)",
+        "INSERT INTO posts (id, user_id, content, media_url, media_alt, sticker_id, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $7)",
     )
     .bind(post_id)
     .bind(user_id)
     .bind(&content)
     .bind(&media_url)
     .bind(&media_alt)
+    .bind(sticker.as_ref().map(|s| s.id))
     .bind(now)
     .execute(&state.pg)
     .await?;
@@ -158,6 +215,7 @@ pub async fn create_post(
         text: content,
         media: media_url,
         media_alt,
+        sticker,
         likes: 0,
         reposts: 0,
         replies: Vec::new(),
@@ -175,8 +233,20 @@ pub async fn create_reply(
     req: CreateReplyRequest,
 ) -> Result<SocialReplyResponse, AppError> {
     let content = req.content.trim().to_string();
-    if content.is_empty() {
-        return Err(AppError::BadRequest("reply content cannot be empty".into()));
+    let media_url = req
+        .media_url
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    let media_alt = req
+        .media_alt
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+    let sticker = fetch_sticker_ref(&state.pg, req.sticker_id).await?;
+
+    if content.is_empty() && media_url.is_none() && sticker.is_none() {
+        return Err(AppError::BadRequest(
+            "reply must have text, media, or a sticker".into(),
+        ));
     }
     if content.chars().count() > 500 {
         return Err(AppError::BadRequest(
@@ -192,18 +262,35 @@ pub async fn create_reply(
         return Err(AppError::NotFound("post not found".into()));
     }
 
+    if let Some(parent_id) = req.parent_reply_id {
+        let parent_valid: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM post_replies WHERE id = $1 AND post_id = $2)",
+        )
+        .bind(parent_id)
+        .bind(post_id)
+        .fetch_one(&state.pg)
+        .await?;
+        if !parent_valid {
+            return Err(AppError::NotFound("parent reply not found".into()));
+        }
+    }
+
     let reply_id = Uuid::now_v7();
     let now = Utc::now();
 
     let mut tx = state.pg.begin().await?;
     sqlx::query(
-        "INSERT INTO post_replies (id, post_id, user_id, content, created_at)
-         VALUES ($1, $2, $3, $4, $5)",
+        "INSERT INTO post_replies (id, post_id, user_id, parent_reply_id, content, media_url, media_alt, sticker_id, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
     )
     .bind(reply_id)
     .bind(post_id)
     .bind(user_id)
+    .bind(req.parent_reply_id)
     .bind(&content)
+    .bind(&media_url)
+    .bind(&media_alt)
+    .bind(sticker.as_ref().map(|s| s.id))
     .bind(now)
     .execute(&mut *tx)
     .await?;
@@ -222,11 +309,65 @@ pub async fn create_reply(
 
     Ok(SocialReplyResponse {
         id: reply_id,
+        user_id,
+        parent_reply_id: req.parent_reply_id,
         author: user.0,
         handle: user.1,
         text: content,
+        media: media_url,
+        media_alt,
+        sticker,
         created_at: now,
     })
+}
+
+pub async fn delete_post(state: &AppState, user_id: Uuid, post_id: Uuid) -> Result<(), AppError> {
+    let owner: Option<Uuid> = sqlx::query_scalar("SELECT user_id FROM posts WHERE id = $1")
+        .bind(post_id)
+        .fetch_optional(&state.pg)
+        .await?;
+    let Some(owner_id) = owner else {
+        return Err(AppError::NotFound("post not found".into()));
+    };
+    if owner_id != user_id {
+        return Err(AppError::Forbidden(
+            "cannot delete another user's post".into(),
+        ));
+    }
+    sqlx::query("DELETE FROM posts WHERE id = $1")
+        .bind(post_id)
+        .execute(&state.pg)
+        .await?;
+    Ok(())
+}
+
+pub async fn delete_reply(state: &AppState, user_id: Uuid, reply_id: Uuid) -> Result<(), AppError> {
+    let row: Option<(Uuid, Uuid)> =
+        sqlx::query_as("SELECT user_id, post_id FROM post_replies WHERE id = $1")
+            .bind(reply_id)
+            .fetch_optional(&state.pg)
+            .await?;
+    let Some((owner_id, post_id)) = row else {
+        return Err(AppError::NotFound("reply not found".into()));
+    };
+    if owner_id != user_id {
+        return Err(AppError::Forbidden(
+            "cannot delete another user's reply".into(),
+        ));
+    }
+    let mut tx = state.pg.begin().await?;
+    sqlx::query("DELETE FROM post_replies WHERE id = $1")
+        .bind(reply_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "UPDATE posts SET replies_count = (SELECT COUNT(*)::INT FROM post_replies WHERE post_id = $1) WHERE id = $1",
+    )
+    .bind(post_id)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(())
 }
 
 pub async fn list_posts(
@@ -247,6 +388,10 @@ pub async fn list_posts(
             p.content,
             p.media_url,
             p.media_alt,
+            s.id AS sticker_id,
+            s.kind AS sticker_kind,
+            s.label AS sticker_label,
+            s.media_url AS sticker_media_url,
             p.likes_count,
             p.reposts_count,
             EXISTS(SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $1) AS liked,
@@ -255,6 +400,7 @@ pub async fn list_posts(
             p.created_at
          FROM posts p
          JOIN users u ON u.id = p.user_id
+         LEFT JOIN stickers s ON s.id = p.sticker_id
          ORDER BY p.created_at DESC
          LIMIT $2",
     )
@@ -272,12 +418,21 @@ pub async fn list_posts(
         "SELECT
             r.id,
             r.post_id,
+            r.user_id,
+            r.parent_reply_id,
             u.display_name AS author,
             u.username AS handle,
             r.content,
+            r.media_url,
+            r.media_alt,
+            s.id AS sticker_id,
+            s.kind AS sticker_kind,
+            s.label AS sticker_label,
+            s.media_url AS sticker_media_url,
             r.created_at
          FROM post_replies r
          JOIN users u ON u.id = r.user_id
+         LEFT JOIN stickers s ON s.id = r.sticker_id
          WHERE r.post_id = ANY($1)
          ORDER BY r.created_at ASC",
     )
@@ -292,9 +447,19 @@ pub async fn list_posts(
             .or_default()
             .push(SocialReplyResponse {
                 id: rr.id,
+                user_id: rr.user_id,
+                parent_reply_id: rr.parent_reply_id,
                 author: rr.author,
                 handle: rr.handle,
                 text: rr.content,
+                media: rr.media_url,
+                media_alt: rr.media_alt,
+                sticker: build_sticker_ref(
+                    rr.sticker_id,
+                    rr.sticker_kind,
+                    rr.sticker_label,
+                    rr.sticker_media_url,
+                ),
                 created_at: rr.created_at,
             });
     }
@@ -350,6 +515,12 @@ pub async fn list_posts(
             text: row.content,
             media: row.media_url,
             media_alt: row.media_alt,
+            sticker: build_sticker_ref(
+                row.sticker_id,
+                row.sticker_kind,
+                row.sticker_label,
+                row.sticker_media_url,
+            ),
             likes,
             reposts,
             replies: replies_by_post.remove(&row.id).unwrap_or_default(),
@@ -590,7 +761,22 @@ pub async fn list_activity(
              FROM post_replies r
              JOIN posts p ON p.id = r.post_id
              JOIN users u ON u.id = r.user_id
-             WHERE p.user_id = $1 AND r.user_id <> $1
+             WHERE p.user_id = $1 AND r.user_id <> $1 AND r.parent_reply_id IS NULL
+
+             UNION ALL
+
+             SELECT
+                 'reply_to_reply:' || r.id::text AS id,
+                 r.post_id,
+                 'reply_to_reply'::text AS kind,
+                 u.display_name AS actor_name,
+                 u.username AS actor_handle,
+                 r.content AS preview,
+                 r.created_at
+             FROM post_replies r
+             JOIN post_replies parent ON parent.id = r.parent_reply_id
+             JOIN users u ON u.id = r.user_id
+             WHERE parent.user_id = $1 AND r.user_id <> $1
 
              UNION ALL
 

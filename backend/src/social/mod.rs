@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     Router,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 
 use crate::state::AppState;
@@ -18,7 +18,9 @@ pub fn router() -> Router<Arc<AppState>> {
             "/posts",
             get(handlers::list_posts).post(handlers::create_post),
         )
+        .route("/posts/{id}", delete(handlers::delete_post))
         .route("/posts/{id}/replies", post(handlers::create_reply))
+        .route("/replies/{id}", delete(handlers::delete_reply))
         .route("/posts/{id}/like", post(handlers::toggle_like))
         .route("/posts/{id}/repost", post(handlers::toggle_repost))
         .route("/posts/{id}/bookmark", post(handlers::toggle_bookmark))

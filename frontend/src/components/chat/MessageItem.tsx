@@ -15,6 +15,7 @@ interface MessageItemProps {
   onTogglePin: (message: Message) => void
   onToggleMenu: (messageId: string) => void
   onReplyReferenceClick: (replyToId: string) => void
+  onSaveSticker?: (stickerId: string) => void
 }
 
 export function MessageItem({
@@ -30,6 +31,7 @@ export function MessageItem({
   onTogglePin,
   onToggleMenu,
   onReplyReferenceClick,
+  onSaveSticker,
 }: MessageItemProps) {
   const activeReactions = Object.entries(message.reactions).filter(
     ([, users]) => users.length > 0,
@@ -90,7 +92,27 @@ export function MessageItem({
           </button>
         )}
 
-        {message.text && <p>{message.text}</p>}
+        {message.text && (() => {
+          const match = message.text.match(/^\[sticker:([0-9a-f-]+):([^\]]+)\]$/)
+          if (match) {
+            const [, stickerId, stickerUrl] = match
+            return (
+              <div className="social-sticker-wrap">
+                <img className="social-sticker-img" src={stickerUrl} alt="Sticker" loading="lazy" />
+                {onSaveSticker && (
+                  <button
+                    type="button"
+                    className="social-save-sticker-btn"
+                    onClick={() => onSaveSticker(stickerId)}
+                  >
+                    + Save Sticker
+                  </button>
+                )}
+              </div>
+            )
+          }
+          return <p>{message.text}</p>
+        })()}
 
         {message.attachment && (
           message.attachment.url ? (

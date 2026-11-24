@@ -31,14 +31,21 @@ pub struct SocialActionStreamRecord {
 
 #[derive(Debug, Deserialize)]
 pub struct CreatePostRequest {
+    #[serde(default)]
     pub content: String,
     pub media_url: Option<String>,
     pub media_alt: Option<String>,
+    pub sticker_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct CreateReplyRequest {
+    #[serde(default)]
     pub content: String,
+    pub parent_reply_id: Option<Uuid>,
+    pub media_url: Option<String>,
+    pub media_alt: Option<String>,
+    pub sticker_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -48,11 +55,24 @@ pub struct ListPostsQuery {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub struct SocialStickerRef {
+    pub id: Uuid,
+    pub kind: String,
+    pub label: String,
+    pub media_url: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct SocialReplyResponse {
     pub id: Uuid,
+    pub user_id: Uuid,
+    pub parent_reply_id: Option<Uuid>,
     pub author: String,
     pub handle: String,
     pub text: String,
+    pub media: Option<String>,
+    pub media_alt: Option<String>,
+    pub sticker: Option<SocialStickerRef>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -66,6 +86,7 @@ pub struct SocialPostResponse {
     pub text: String,
     pub media: Option<String>,
     pub media_alt: Option<String>,
+    pub sticker: Option<SocialStickerRef>,
     pub likes: i64,
     pub reposts: i64,
     pub replies: Vec<SocialReplyResponse>,

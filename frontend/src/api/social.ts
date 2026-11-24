@@ -1,11 +1,23 @@
-import { apiRequest } from './client'
-import type { SocialPost, SocialReply, SocialTab } from '../types/social'
+import { ApiError, apiRequest, getSession } from './client'
+import type { SocialPost, SocialReply, SocialStickerRef, SocialTab } from '../types/social'
+
+export interface SocialStickerDto {
+  id: string
+  kind: string
+  label: string
+  media_url: string
+}
 
 export interface SocialReplyDto {
   id: string
+  user_id?: string
+  parent_reply_id?: string | null
   author: string
   handle: string
   text: string
+  media?: string | null
+  media_alt?: string | null
+  sticker?: SocialStickerDto | null
   created_at: string
 }
 
@@ -18,6 +30,7 @@ export interface SocialPostDto {
   text: string
   media?: string | null
   media_alt?: string | null
+  sticker?: SocialStickerDto | null
   likes: number
   reposts: number
   replies: SocialReplyDto[]
@@ -67,12 +80,29 @@ function formatRelativeTime(iso: string): string {
   return new Date(ts).toLocaleDateString()
 }
 
+const API_BASE = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').replace(/\/+$/, '')
+
+function mapStickerDto(dto?: SocialStickerDto | null): SocialStickerRef | undefined {
+  if (!dto) return undefined
+  return {
+    id: dto.id,
+    kind: dto.kind,
+    label: dto.label,
+    mediaUrl: dto.media_url,
+  }
+}
+
 export function mapReplyDto(dto: SocialReplyDto): SocialReply {
   return {
     id: dto.id,
+    userId: dto.user_id,
+    parentReplyId: dto.parent_reply_id ?? null,
     author: dto.author,
     handle: dto.handle,
     text: dto.text,
+    media: dto.media ?? undefined,
+    mediaAlt: dto.media_alt ?? undefined,
+    sticker: mapStickerDto(dto.sticker),
     time: formatRelativeTime(dto.created_at),
   }
 }
@@ -81,6 +111,7 @@ export function mapPostDto(dto: SocialPostDto, currentUsername?: string): Social
   const createdAt = Date.parse(dto.created_at) || Date.now()
   return {
     id: dto.id,
+    userId: dto.user_id,
     author: dto.author,
     handle: dto.handle,
     initials: makeInitials(dto.author),
@@ -90,6 +121,7 @@ export function mapPostDto(dto: SocialPostDto, currentUsername?: string): Social
     text: dto.text,
     media: dto.media ?? undefined,
     mediaAlt: dto.media_alt ?? undefined,
+    sticker: mapStickerDto(dto.sticker),
     verified: dto.verified,
     likes: dto.likes,
     reposts: dto.reposts,
@@ -109,11 +141,38 @@ export async function listSocialPosts(
   return dtos.map((dto) => mapPostDto(dto, currentUsername))
 }
 
+export async function uploadSocialMedia(file: File): Promise<{ url: string; name: string }> {
+  const session = getSession()
+  const headers: Record<string, string> = {
+    'Content-Type': file.type || 'application/octet-stream',
+    'x-file-name': file.name || 'media',
+  }
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`
+  }
+  const res = await fetch(`${API_BASE}/api/v1/media/social`, {
+    method: 'POST',
+    headers,
+    body: file,
+  })
+  if (!res.ok) {
+    const data = (await res.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null
+    throw new ApiError(
+      res.status,
+      data?.error?.code ?? 'UPLOAD_FAILED',
+      data?.error?.message ?? 'Media upload failed.',
+    )
+  }
+  const json = (await res.json()) as { attachment: { url: string; name: string } }
+  return { url: json.attachment.url, name: json.attachment.name }
+}
+
 export async function createSocialPost(
   content: string,
   currentUsername?: string,
   mediaUrl?: string,
   mediaAlt?: string,
+  stickerId?: string,
 ): Promise<SocialPost> {
   const dto = await apiRequest<SocialPostDto>('/api/v1/social/posts', {
     method: 'POST',
@@ -121,6 +180,7 @@ export async function createSocialPost(
       content,
       media_url: mediaUrl,
       media_alt: mediaAlt,
+      sticker_id: stickerId,
     },
   })
   return mapPostDto(dto, currentUsername)
@@ -129,12 +189,36 @@ export async function createSocialPost(
 export async function createSocialReply(
   postId: string,
   content: string,
+  options?: {
+    parentReplyId?: string | null
+    mediaUrl?: string
+    mediaAlt?: string
+    stickerId?: string
+  },
 ): Promise<SocialReply> {
   const dto = await apiRequest<SocialReplyDto>(`/api/v1/social/posts/${postId}/replies`, {
     method: 'POST',
-    body: { content },
+    body: {
+      content,
+      parent_reply_id: options?.parentReplyId ?? null,
+      media_url: options?.mediaUrl,
+      media_alt: options?.mediaAlt,
+      sticker_id: options?.stickerId,
+    },
   })
   return mapReplyDto(dto)
+}
+
+export async function deleteSocialPost(postId: string): Promise<void> {
+  await apiRequest<void>(`/api/v1/social/posts/${postId}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function deleteSocialReply(replyId: string): Promise<void> {
+  await apiRequest<void>(`/api/v1/social/replies/${replyId}`, {
+    method: 'DELETE',
+  })
 }
 
 export async function toggleSocialAction(

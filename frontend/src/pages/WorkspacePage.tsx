@@ -6,7 +6,8 @@ import '../styles/adaptive.css'
 import type { AuthSession } from '../api/client'
 import { ApiError } from '../api/client'
 import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, listPinnedMessages, mapChatMessage, pinMessage, postMessage, toggleMessageReaction, unpinMessage, uploadChatMedia, type ChatMessageWire } from '../api/chat'
-import { createSocialPost, createSocialReply, listSocialActivity, listSocialPosts, toggleSocialAction, type SocialActivityItem } from '../api/social'
+import { createSocialPost, createSocialReply, deleteSocialPost, deleteSocialReply, listSocialActivity, listSocialPosts, toggleSocialAction, type SocialActivityItem } from '../api/social'
+import { saveSticker } from '../api/stickers'
 import { inspectZipFile } from '../utils/zipGuard'
 import { createChannel as createChannelApi, createCommunity, createCommunityCategory, createCommunityEvent, createOrGetDm, deleteCommunity, getCommunityInvite, getCommunityMemberSettings, joinCommunity, leaveCommunity, listChannels, listCommunities, listCommunityCategories, listCommunityMembers, updateCommunity, updateCommunityMemberSettings, updateCommunityNickname, type CommunityCategory, type CommunityMemberSettings } from '../api/communities'
 import type { ViewportInfo } from '../hooks/useViewport'
@@ -1607,20 +1608,28 @@ export function WorkspacePage({
             ) : view === 'social' ? (
               <SocialFeed
                 currentUser={currentUser}
+                currentUsername={session.user.username}
                 posts={socialPosts}
                 socialTab={socialTab}
                 followedHandles={followedHandles}
                 composerRef={socialInputRef}
                 draft={socialDraft}
                 onDraftChange={setSocialDraft}
-                onPublish={(e) => {
+                onPublish={(e, payload, resetMedia) => {
                   e.preventDefault()
                   const text = socialDraft.trim()
-                  if (!text) return
+                  if (!text && !payload.mediaUrl && !payload.sticker) return
                   setSocialDraft('')
-                  void createSocialPost(text, session.user.username)
+                  void createSocialPost(
+                    text,
+                    session.user.username,
+                    payload.mediaUrl,
+                    payload.mediaAlt,
+                    payload.sticker?.id,
+                  )
                     .then((created) => {
                       setSocialPosts((prev) => [created, ...prev])
+                      resetMedia()
                     })
                     .catch((error: unknown) => {
                       setSocialDraft(text)
@@ -1672,8 +1681,13 @@ export function WorkspacePage({
                       notify(error instanceof Error ? error.message : 'Failed to update post.')
                     })
                 }}
-                onSubmitReply={(_e, postId, text) => {
-                  void createSocialReply(postId, text)
+                onSubmitReply={(_e, postId, payload, reset) => {
+                  void createSocialReply(postId, payload.text, {
+                    parentReplyId: payload.parentReplyId,
+                    mediaUrl: payload.mediaUrl,
+                    mediaAlt: payload.mediaAlt,
+                    stickerId: payload.sticker?.id,
+                  })
                     .then((reply) => {
                       setSocialPosts((prev) =>
                         prev.map((p) =>
@@ -1682,18 +1696,66 @@ export function WorkspacePage({
                             : p,
                         ),
                       )
+                      reset()
                     })
                     .catch((error: unknown) => {
                       notify(error instanceof Error ? error.message : 'Failed to post reply.')
                     })
                 }}
+                onDeletePost={(postId) => {
+                  void deleteSocialPost(postId)
+                    .then(() => {
+                      setSocialPosts((prev) => prev.filter((p) => p.id !== postId))
+                      notify('Post deleted.')
+                    })
+                    .catch((error: unknown) => {
+                      notify(error instanceof Error ? error.message : 'Failed to delete post.')
+                    })
+                }}
+                onDeleteReply={(postId, replyId) => {
+                  void deleteSocialReply(replyId)
+                    .then(() => {
+                      setSocialPosts((prev) =>
+                        prev.map((p) => {
+                          if (p.id !== postId) return p
+                          const toDelete = new Set<string>([replyId])
+                          let added = true
+                          while (added) {
+                            added = false
+                            for (const r of p.replies) {
+                              if (r.parentReplyId && toDelete.has(r.parentReplyId) && !toDelete.has(r.id)) {
+                                toDelete.add(r.id)
+                                added = true
+                              }
+                            }
+                          }
+                          return {
+                            ...p,
+                            replies: p.replies.filter((r) => !toDelete.has(r.id)),
+                          }
+                        }),
+                      )
+                      notify('Reply deleted.')
+                    })
+                    .catch((error: unknown) => {
+                      notify(error instanceof Error ? error.message : 'Failed to delete reply.')
+                    })
+                }}
+                onSaveSticker={(stickerId) => {
+                  void saveSticker(stickerId)
+                    .then(() => notify('Sticker saved to your collection!'))
+                    .catch((error: unknown) => {
+                      notify(error instanceof Error ? error.message : 'Could not save sticker.')
+                    })
+                }}
                 onShare={(postId) => {
                   const found = socialPosts.find((p) => p.id === postId)
                   if (found) {
-                    void navigator.clipboard?.writeText(found.text)
+                    void navigator.clipboard?.writeText(found.text || found.media || '')
                     notify('Post text copied')
                   }
                 }}
+                onNotify={notify}
               />
             ) : view === 'bots' ? (
               <BotsView currentUser={session.user} isMobile={isMobile} onNotify={notify} />
@@ -1900,6 +1962,46 @@ export function WorkspacePage({
                   setAttachmentFile(null)
                 }}
                 onAddEmoji={(emoji) => setComposer((v) => `${v} ${emoji}`)}
+                onSendSticker={(sticker) => {
+                  if (!activeChatChannelId) return
+                  const content = `[sticker:${sticker.id}:${sticker.media_url}]`
+                  void postMessage(activeChatChannelId, {
+                    client_msg_id: crypto.randomUUID(),
+                    content,
+                  })
+                    .then((ack) =>
+                      listMessages(activeChatChannelId, Math.max(0, ack.seq_id - 1), 5),
+                    )
+                    .then((persisted) => {
+                      const key = roomKey(serverId, channel?.id ?? '')
+                      setData((previous) => {
+                        const current =
+                          view === 'dm'
+                            ? previous.dmMessages[activeChatChannelId] ?? []
+                            : previous.messages[key] ?? []
+                        const bySequence = new Map<string, Message>()
+                        for (const message of [...current, ...persisted]) {
+                          const identity =
+                            message.seqId && message.seqId > 0
+                              ? `seq:${message.seqId}`
+                              : `id:${message.id}`
+                          bySequence.set(identity, message)
+                        }
+                        const next = [...bySequence.values()].sort(
+                          (a, b) => (a.seqId ?? 0) - (b.seqId ?? 0),
+                        )
+                        return view === 'dm'
+                          ? {
+                              ...previous,
+                              dmMessages: { ...previous.dmMessages, [activeChatChannelId]: next },
+                            }
+                          : { ...previous, messages: { ...previous.messages, [key]: next } }
+                      })
+                    })
+                    .catch((error: unknown) => {
+                      notify(error instanceof Error ? error.message : 'Could not send sticker.')
+                    })
+                }}
                 onReact={(id, emoji) => {
                   void (async () => {
                     try {

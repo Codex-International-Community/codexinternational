@@ -1,14 +1,24 @@
-import { useId, type FormEvent, type RefObject } from 'react'
+import { useId, useRef, useState, type FormEvent, type RefObject } from 'react'
+import { uploadSocialMedia } from '../../api/social'
+import type { StickerItem } from '../../api/stickers'
 import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
+import { StickerPicker } from '../common/StickerPicker'
 import type { User } from '../../types/chat'
+
+export interface SocialPublishPayload {
+  mediaUrl?: string
+  mediaAlt?: string
+  sticker?: StickerItem
+}
 
 interface SocialComposerProps {
   currentUser: User
   inputRef: RefObject<HTMLTextAreaElement | null>
   draft: string
   onChange: (value: string) => void
-  onSubmit: (e: FormEvent) => void
+  onSubmit: (e: FormEvent, payload: SocialPublishPayload, reset: () => void) => void
+  onNotify?: (message: string) => void
   canPublish?: boolean
 }
 
@@ -18,12 +28,46 @@ export function SocialComposer({
   draft,
   onChange,
   onSubmit,
+  onNotify,
   canPublish = true,
 }: SocialComposerProps) {
   const textareaId = useId()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [mediaUrl, setMediaUrl] = useState<string | undefined>()
+  const [mediaName, setMediaName] = useState<string | undefined>()
+  const [uploadingMedia, setUploadingMedia] = useState(false)
+  const [selectedSticker, setSelectedSticker] = useState<StickerItem | undefined>()
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  const handleFileChange = async (file?: File) => {
+    if (!file) return
+    setUploadingMedia(true)
+    try {
+      const res = await uploadSocialMedia(file)
+      setMediaUrl(res.url)
+      setMediaName(res.name)
+    } catch (error) {
+      onNotify?.(error instanceof Error ? error.message : 'Media upload failed.')
+    } finally {
+      setUploadingMedia(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const reset = () => {
+    setMediaUrl(undefined)
+    setMediaName(undefined)
+    setSelectedSticker(undefined)
+    setPickerOpen(false)
+  }
+
+  const hasContent = Boolean(draft.trim() || mediaUrl || selectedSticker)
 
   return (
-    <form className="social-composer" onSubmit={onSubmit}>
+    <form
+      className="social-composer"
+      onSubmit={(e) => onSubmit(e, { mediaUrl, mediaAlt: mediaName, sticker: selectedSticker }, reset)}
+    >
       <Avatar user={currentUser} size="large" />
       <div className="social-compose-body">
         <label htmlFor={textareaId} className="visually-hidden">
@@ -38,9 +82,79 @@ export function SocialComposer({
           rows={3}
           maxLength={500}
         />
+
+        {mediaUrl && (
+          <div className="social-compose-preview">
+            <img src={mediaUrl} alt={mediaName ?? 'Attachment preview'} />
+            <button
+              type="button"
+              className="social-preview-remove"
+              onClick={() => {
+                setMediaUrl(undefined)
+                setMediaName(undefined)
+              }}
+              aria-label="Remove media"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {selectedSticker && (
+          <div className="social-compose-preview social-compose-preview--sticker">
+            <img src={selectedSticker.media_url} alt={selectedSticker.label || selectedSticker.kind} />
+            <button
+              type="button"
+              className="social-preview-remove"
+              onClick={() => setSelectedSticker(undefined)}
+              aria-label="Remove sticker"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {pickerOpen && (
+          <StickerPicker
+            onSelect={(sticker) => {
+              setSelectedSticker(sticker)
+              setPickerOpen(false)
+            }}
+            onClose={() => setPickerOpen(false)}
+            onNotify={onNotify}
+          />
+        )}
+
         <div className="social-compose-footer">
-          <span>{draft.length}/500</span>
-          <button type="submit" disabled={!draft.trim() || !canPublish}>
+          <div className="social-compose-tools">
+            <input
+              ref={fileInputRef}
+              type="file"
+              hidden
+              accept="image/*,video/*"
+              onChange={(e) => void handleFileChange(e.target.files?.[0])}
+            />
+            <button
+              type="button"
+              className="social-tool-btn"
+              disabled={uploadingMedia}
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach image, GIF, or video"
+            >
+              <Icon name="paperclip" size={15} />
+              <span>{uploadingMedia ? 'Uploading...' : 'Media'}</span>
+            </button>
+            <button
+              type="button"
+              className={`social-tool-btn ${pickerOpen ? 'active' : ''}`}
+              onClick={() => setPickerOpen((open) => !open)}
+              title="Add Sticker or GIF"
+            >
+              <span>Sticker / GIF</span>
+            </button>
+            <span className="social-char-count">{draft.length}/500</span>
+          </div>
+          <button type="submit" className="social-submit-btn" disabled={!hasContent || uploadingMedia || !canPublish}>
             <Icon name="arrowUp" size={15} /> Post
           </button>
         </div>

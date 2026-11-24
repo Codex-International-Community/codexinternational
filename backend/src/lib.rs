@@ -30,6 +30,7 @@ pub mod media;
 pub mod shared;
 pub mod social;
 pub mod state;
+pub mod stickers;
 
 pub const REST_BODY_LIMIT_BYTES: usize = 64 * 1024;
 pub const REST_REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
@@ -69,12 +70,17 @@ pub fn app_router(state: Arc<AppState>) -> Router {
         .nest("/api/v1/dms", communities::dms_router())
         .nest("/api/v1/friends", friends::router())
         .nest("/api/v1/social", social::router())
+        .nest("/api/v1/stickers", stickers::router())
         .nest("/api/v1", chat::router())
         .route("/api/v1/media/presign", post(media::presign))
         .route("/api/v1/media/{id}/complete", post(media::complete))
         .route(
             "/api/v1/media",
             post(media::upload).layer(DefaultBodyLimit::max(media::MAX_CHAT_UPLOAD_BYTES)),
+        )
+        .route(
+            "/api/v1/media/social",
+            post(media::upload_social).layer(DefaultBodyLimit::max(media::MAX_CHAT_UPLOAD_BYTES)),
         )
         .route(
             "/internal/v1/media/ready",
