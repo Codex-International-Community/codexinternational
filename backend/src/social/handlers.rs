@@ -12,16 +12,26 @@ use super::{
     protocol::{CreatePostRequest, CreateReplyRequest, ListPostsQuery, SocialActionKind},
     repo,
 };
-use crate::{auth::extractor::AuthUser, error::AppError, state::AppState};
+use crate::{
+    auth::extractor::{AuthUser, OptionalAuthUser},
+    error::AppError,
+    state::AppState,
+};
 
 pub async fn list_posts(
     State(state): State<Arc<AppState>>,
-    user: AuthUser,
+    OptionalAuthUser(user): OptionalAuthUser,
     Query(query): Query<ListPostsQuery>,
 ) -> Result<impl IntoResponse, AppError> {
+    if query.tab.as_deref() == Some("saved") && user.is_none() {
+        return Err(AppError::Unauthorized(
+            "authentication required to view saved posts".into(),
+        ));
+    }
+    let viewer_id = user.map(|u| u.user_id).unwrap_or(Uuid::nil());
     let posts = repo::list_posts(
         &state,
-        user.user_id,
+        viewer_id,
         query.tab.as_deref(),
         query.limit.unwrap_or(50),
         None,
@@ -32,10 +42,11 @@ pub async fn list_posts(
 
 pub async fn get_post(
     State(state): State<Arc<AppState>>,
-    user: AuthUser,
+    OptionalAuthUser(user): OptionalAuthUser,
     Path(post_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let mut posts = repo::list_posts(&state, user.user_id, None, 1, Some(post_id)).await?;
+    let viewer_id = user.map(|u| u.user_id).unwrap_or(Uuid::nil());
+    let mut posts = repo::list_posts(&state, viewer_id, None, 1, Some(post_id)).await?;
     let post = posts
         .pop()
         .ok_or_else(|| AppError::NotFound("post not found".into()))?;

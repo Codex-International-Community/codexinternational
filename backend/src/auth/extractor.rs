@@ -59,6 +59,27 @@ impl FromRequestParts<Arc<AppState>> for AuthUser {
     }
 }
 
+/// Optional human user extractor for public read-only endpoints that personalize
+/// responses when a valid Bearer JWT is supplied.
+#[derive(Debug, Clone)]
+pub struct OptionalAuthUser(pub Option<AuthUser>);
+
+impl FromRequestParts<Arc<AppState>> for OptionalAuthUser {
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &Arc<AppState>,
+    ) -> Result<Self, Self::Rejection> {
+        if !parts.headers.contains_key(AUTHORIZATION) {
+            return Ok(Self(None));
+        }
+        AuthUser::from_request_parts(parts, state)
+            .await
+            .map(|user| Self(Some(user)))
+    }
+}
+
 impl FromRequestParts<Arc<AppState>> for AuthPrincipal {
     type Rejection = AppError;
 

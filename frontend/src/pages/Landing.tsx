@@ -52,6 +52,7 @@ function GitHubIcon() {
 
 interface LandingProps {
   onAuthenticated: () => void
+  onBrowseThreads?: () => void
   initialError?: string
 }
 
@@ -63,7 +64,7 @@ interface LandingProps {
  * Security: OTP codes are verified strictly on the Rust backend (Brevo + Valkey SHA-256 hash);
  * no OTP code is ever stored on the client.
  */
-export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
+export function Landing({ onAuthenticated, onBrowseThreads, initialError = '' }: LandingProps) {
   const { isMobile } = useViewport()
   const dotsRef = useRef<HTMLCanvasElement | null>(null)
   const [desktopTab, setDesktopTab] = useState<AuthTab>('otp')
@@ -514,6 +515,18 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
                 <span>Register chmod-scoped bots and copy one-time credentials straight to your VPS secret manager.</span>
               </div>
             </div>
+            {onBrowseThreads && (
+              <div style={{ marginTop: '1.25rem' }}>
+                <button
+                  type="button"
+                  className="oauth-btn"
+                  style={{ width: 'auto', paddingInline: '1.1rem' }}
+                  onClick={onBrowseThreads}
+                >
+                  Browse Public Threads (Read-Only)
+                </button>
+              </div>
+            )}
           </section>
 
           <section className="landing-card">
@@ -625,6 +638,15 @@ export function Landing({ onAuthenticated, initialError = '' }: LandingProps) {
                 >
                   Sign in with Password
                 </button>
+                {onBrowseThreads && (
+                  <button
+                    type="button"
+                    className="oauth-btn"
+                    onClick={onBrowseThreads}
+                  >
+                    Browse Public Threads (Read-Only)
+                  </button>
+                )}
                 <button
                   type="button"
                   className="oauth-btn"

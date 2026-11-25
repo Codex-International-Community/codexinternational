@@ -10,12 +10,23 @@ import { ApiError, getSession, setSession, subscribeSession, type AuthSession } 
 import { useViewport } from './hooks/useViewport'
 import { useDelayedLoading } from './hooks/useDelayedLoading'
 import { Landing } from './pages/Landing'
+import { PublicThreadsPage } from './pages/PublicThreadsPage'
 import { WorkspacePage } from './pages/WorkspacePage'
 import codexLogo from './assets/codex-logo.jpg'
 
 export default function App() {
   const viewport = useViewport()
   const [session, setLocalSession] = useState<AuthSession | null>(() => getSession())
+  const [publicThreadsRoute, setPublicThreadsRoute] = useState<{
+    active: boolean
+    postId?: string
+  }>(() => {
+    if (typeof window === 'undefined') return { active: false }
+    const match = window.location.pathname.match(/^\/threads(?:\/([^/]+))?\/?$/)
+    return match
+      ? { active: true, postId: match[1] ? decodeURIComponent(match[1]) : undefined }
+      : { active: false }
+  })
   const [bootstrapping, setBootstrapping] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false
     return /^\/auth\/callback\/(github|google)\/?$/.test(window.location.pathname)
@@ -103,9 +114,30 @@ export default function App() {
   }
 
   if (!session) {
+    if (publicThreadsRoute.active) {
+      return (
+        <PublicThreadsPage
+          focusedPostId={publicThreadsRoute.postId}
+          onSelectPost={(postId) => {
+            const nextUrl = postId ? `/threads/${encodeURIComponent(postId)}` : '/threads'
+            window.history.pushState({}, '', nextUrl)
+            setPublicThreadsRoute({ active: true, postId })
+          }}
+          onSignIn={() => {
+            window.history.pushState({}, '', '/')
+            setPublicThreadsRoute({ active: false })
+          }}
+        />
+      )
+    }
+
     return (
       <Landing
         initialError={authError}
+        onBrowseThreads={() => {
+          window.history.pushState({}, '', '/threads')
+          setPublicThreadsRoute({ active: true })
+        }}
         onAuthenticated={() => {
           setAuthError('')
           setLocalSession(getSession())

@@ -44,13 +44,15 @@ async fn social_routes_require_auth() {
     let post_id = Uuid::now_v7();
 
     let routes = [
-        (Method::GET, "/api/v1/social/posts".to_string()),
+        (Method::GET, "/api/v1/social/posts?tab=saved".to_string()),
         (Method::POST, "/api/v1/social/posts".to_string()),
         (Method::GET, "/api/v1/social/bookmarks".to_string()),
+        (Method::GET, "/api/v1/social/activity".to_string()),
         (
             Method::POST,
             format!("/api/v1/social/posts/{post_id}/replies"),
         ),
+        (Method::DELETE, format!("/api/v1/social/posts/{post_id}")),
         (Method::POST, format!("/api/v1/social/posts/{post_id}/like")),
         (
             Method::POST,
@@ -78,6 +80,29 @@ async fn social_routes_require_auth() {
             resp.status(),
             StatusCode::UNAUTHORIZED,
             "route {uri} should require auth"
+        );
+    }
+
+    // Public read-only routes must not reject anonymous requests at auth layer.
+    for uri in [
+        "/api/v1/social/posts".to_string(),
+        format!("/api/v1/social/posts/{post_id}"),
+    ] {
+        let resp = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(Method::GET)
+                    .uri(&uri)
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_ne!(
+            resp.status(),
+            StatusCode::UNAUTHORIZED,
+            "public read-only route {uri} must not return 401"
         );
     }
 }

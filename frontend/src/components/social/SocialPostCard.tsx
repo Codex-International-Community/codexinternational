@@ -43,6 +43,8 @@ interface SocialPostCardProps {
   onDevDeleteReply?: (postId: string, replyId: string) => void
   onReportPost?: (postId: string) => void
   onReportReply?: (replyId: string) => void
+  readOnly?: boolean
+  onRequireAuth?: () => void
 }
 
 function isVideoMedia(url?: string, alt?: string): boolean {
@@ -76,6 +78,8 @@ export function SocialPostCard({
   onDevDeleteReply,
   onReportPost,
   onReportReply,
+  readOnly = false,
+  onRequireAuth,
 }: SocialPostCardProps) {
   const replyInputId = useId()
   const replyFileRef = useRef<HTMLInputElement>(null)
@@ -212,27 +216,28 @@ export function SocialPostCard({
               </button>
             </div>
           )}
-          <div className="social-reply-actions">
-            <button
-              type="button"
-              onClick={() =>
-                onToggleReplyForm(post.id, { id: reply.id, handle: reply.handle })
-              }
-            >
-              Reply
-            </button>
-            {isOwnReply && (
+          {!readOnly && (
+            <div className="social-reply-actions">
               <button
                 type="button"
-                className="social-reply-delete"
-                onClick={() => onDeleteReply(post.id, reply.id)}
+                onClick={() =>
+                  onToggleReplyForm(post.id, { id: reply.id, handle: reply.handle })
+                }
               >
-                Delete
+                Reply
               </button>
-            )}
-            {!isOwnReply && isDev && onDevDeleteReply && (
-              <button
-                type="button"
+              {isOwnReply && (
+                <button
+                  type="button"
+                  className="social-reply-delete"
+                  onClick={() => onDeleteReply(post.id, reply.id)}
+                >
+                  Delete
+                </button>
+              )}
+              {!isOwnReply && isDev && onDevDeleteReply && (
+                <button
+                  type="button"
                 className="social-reply-delete"
                 onClick={() => onDevDeleteReply(post.id, reply.id)}
                 title="Dev Delete Reply"
@@ -250,6 +255,7 @@ export function SocialPostCard({
               </button>
             )}
           </div>
+          )}
         </div>
       </div>
     )
@@ -296,6 +302,7 @@ export function SocialPostCard({
             <i aria-hidden="true">·</i>
             <time>{post.time}</time>
           </div>
+          {!readOnly && (
           <div className="social-post-meta-actions">
             <button
               type="button"
@@ -384,6 +391,7 @@ export function SocialPostCard({
               </div>
             )}
           </div>
+          )}
         </div>
 
         {post.text && (
@@ -435,13 +443,15 @@ export function SocialPostCard({
           <button
             type="button"
             aria-label={`Reply (${post.replies.length})`}
-            aria-expanded={isReplying}
-            className={isReplying ? 'active' : ''}
+            aria-expanded={readOnly ? showReplies : isReplying}
+            className={(readOnly ? showReplies : isReplying) ? 'active' : ''}
             onClick={() => {
               setShowReplies((v) => !v)
-              onToggleReplyForm(post.id, null)
+              if (!readOnly) {
+                onToggleReplyForm(post.id, null)
+              }
             }}
-            title="Reply"
+            title={readOnly ? 'View replies' : 'Reply'}
           >
             <Icon name="message" size={17} />
             <span>{post.replies.length}</span>
@@ -452,8 +462,8 @@ export function SocialPostCard({
             aria-label={`Repost (${post.reposts})`}
             aria-pressed={post.reposted}
             className={post.reposted ? 'is-reposted' : ''}
-            onClick={() => onToggleAction(post.id, 'reposted')}
-            title="Repost"
+            onClick={() => (readOnly ? onRequireAuth?.() : onToggleAction(post.id, 'reposted'))}
+            title={readOnly ? 'Sign in to repost' : 'Repost'}
           >
             <span className="social-repost-mark" aria-hidden="true">↻</span>
             <span>{post.reposts.toLocaleString()}</span>
@@ -464,8 +474,8 @@ export function SocialPostCard({
             aria-label={`Like (${post.likes})`}
             aria-pressed={post.liked}
             className={post.liked ? 'is-liked' : ''}
-            onClick={() => onToggleAction(post.id, 'liked')}
-            title="Like"
+            onClick={() => (readOnly ? onRequireAuth?.() : onToggleAction(post.id, 'liked'))}
+            title={readOnly ? 'Sign in to like' : 'Like'}
           >
             {post.liked ? (
               <svg
@@ -495,6 +505,7 @@ export function SocialPostCard({
             <span>Share</span>
           </button>
 
+          {!readOnly && (
           <button
             type="button"
             aria-label={post.saved ? 'Remove bookmark' : 'Save post'}
@@ -519,6 +530,7 @@ export function SocialPostCard({
               <Icon name="bookmark" size={16} />
             )}
           </button>
+          )}
         </div>
 
         {showReplies && post.replies.length > 0 && (
@@ -530,7 +542,7 @@ export function SocialPostCard({
           </div>
         )}
 
-        {isReplying && (
+        {!readOnly && isReplying && (
           <div className="social-reply-composer-wrap">
             <form
               className="social-reply-form"

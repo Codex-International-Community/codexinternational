@@ -39,6 +39,8 @@ interface SocialFeedProps {
   onDevDeleteReply?: (postId: string, replyId: string) => void
   onReportPost?: (postId: string) => void
   onReportReply?: (replyId: string) => void
+  readOnly?: boolean
+  onRequireAuth?: () => void
 }
 
 export function SocialFeed({
@@ -67,6 +69,8 @@ export function SocialFeed({
   onDevDeleteReply,
   onReportPost,
   onReportReply,
+  readOnly = false,
+  onRequireAuth,
 }: SocialFeedProps) {
   const [replyForId, setReplyForId] = useState<string | null>(null)
   const [replyTarget, setReplyTarget] = useState<{ id: string; handle: string } | null>(null)
@@ -174,7 +178,7 @@ export function SocialFeed({
           )}
         </div>
 
-        {!focusedPostId && <SocialComposer
+        {!focusedPostId && !readOnly && <SocialComposer
           currentUser={currentUser}
           inputRef={composerRef}
           draft={draft}
@@ -186,8 +190,19 @@ export function SocialFeed({
           canPublish
         />}
 
+        {!focusedPostId && readOnly && (
+          <div className="social-tag-filter-bar" role="region" aria-label="Public read-only notice">
+            <span>Public Threads (Read-Only)</span>
+            {onRequireAuth && (
+              <button type="button" onClick={onRequireAuth}>
+                Sign in to post
+              </button>
+            )}
+          </div>
+        )}
+
         {!focusedPostId && <div className="social-feed-tabs" role="tablist" aria-label="Timeline filter">
-          {tabs.map((tab) => (
+          {(readOnly ? tabs.filter((t) => t.id === 'for-you' || t.id === 'latest') : tabs).map((tab) => (
             <button
               type="button"
               role="tab"
@@ -241,6 +256,8 @@ export function SocialFeed({
               onDevDeleteReply={onDevDeleteReply}
               onReportPost={onReportPost}
               onReportReply={onReportReply}
+              readOnly={readOnly}
+              onRequireAuth={onRequireAuth}
             />
           ))}
 
