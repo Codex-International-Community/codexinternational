@@ -2,6 +2,7 @@
 
 pub mod channels;
 pub mod handlers;
+pub mod moderation;
 pub mod permissions;
 pub mod roles;
 pub mod server_menu;
@@ -42,6 +43,18 @@ pub fn router() -> Router<Arc<AppState>> {
         .route(
             "/{community_id}/members/{user_id}/role",
             axum::routing::patch(roles::assign_member_role),
+        )
+        .route(
+            "/{community_id}/members/{user_id}/timeout",
+            post(moderation::timeout_member).delete(moderation::clear_timeout_member),
+        )
+        .route(
+            "/{community_id}/members/{user_id}/ban",
+            post(moderation::ban_member),
+        )
+        .route(
+            "/{community_id}/bans/{user_id}",
+            delete(moderation::unban_member),
         )
         .route(
             "/{community_id}/categories",

@@ -32,6 +32,22 @@ async fn community_routes_require_authentication() {
             "/api/v1/communities/00000000-0000-0000-0000-000000000001/channels",
         ),
         ("POST", "/api/v1/dms/00000000-0000-0000-0000-000000000001"),
+        (
+            "POST",
+            "/api/v1/communities/00000000-0000-0000-0000-000000000001/members/00000000-0000-0000-0000-000000000002/timeout",
+        ),
+        (
+            "DELETE",
+            "/api/v1/communities/00000000-0000-0000-0000-000000000001/members/00000000-0000-0000-0000-000000000002/timeout",
+        ),
+        (
+            "POST",
+            "/api/v1/communities/00000000-0000-0000-0000-000000000001/members/00000000-0000-0000-0000-000000000002/ban",
+        ),
+        (
+            "DELETE",
+            "/api/v1/communities/00000000-0000-0000-0000-000000000001/bans/00000000-0000-0000-0000-000000000002",
+        ),
     ];
 
     for (method, uri) in routes {

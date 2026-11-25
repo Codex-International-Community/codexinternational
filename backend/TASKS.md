@@ -220,7 +220,7 @@ codexinternational/
   1. **Red:** Tulis integration test: pembuatan komunitas auto-membuat role `Superadmin` (pembuat komunitas) + `Admin` + `@everyone` + `#general`, `Admin` dilarang kick/ban/demote `Superadmin` (`403`, `INV-15`), user yang di-ban tidak bisa join ulang lewat `invite_code` (`403`, `INV-15`), user yang di-timeout ditolak saat `SEND_MESSAGE` (`403`), assignment role melampaui posisi sendiri ditolak `403`, dan dua request paralel `POST /dms/{target}` menghasilkan satu `channel_id` identik (`INV-7`).
   2. **Green:** Implementasikan seluruh endpoint community, role, moderation (`timeout`/`ban`/`unban`/`suspend` + cache Valkey TTL), channel, DM, notification preferences, dan cache `perm:comm:{cid}:{uid}` di Valkey.
 - **DoD:**
-  - [ ] Seluruh permission check & `INV-7` DM uniqueness test lulus.
+  - [x] Seluruh permission check, moderasi komunitas (`timeout`/`ban`/`unban`), & `INV-7` DM uniqueness test lulus *(instalasi bot komunitas ditunda)*.
 
 ### Task 2.2 — Valkey Lua Scripts: Atomic `seq_id`, Cold-Start Seeding & Idempotency (`INV-2`, `INV-3`, `INV-4`)
 
