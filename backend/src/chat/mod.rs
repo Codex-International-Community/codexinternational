@@ -1,3 +1,5 @@
+pub mod archive;
+pub mod cleaner;
 pub mod flusher;
 pub mod handlers;
 pub mod protocol;

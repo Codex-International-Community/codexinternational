@@ -10,7 +10,10 @@ use std::sync::Arc;
 
 use backend::{
     app_router,
-    chat::{flusher::run_message_flusher, ws::start_pubsub_dispatcher},
+    chat::{
+        cleaner::run_archive_and_media_cleaner, flusher::run_message_flusher,
+        ws::start_pubsub_dispatcher,
+    },
     config::AppConfig,
     gamification::flusher::run_counter_flusher,
     shared::db::run_migrations,
@@ -60,7 +63,10 @@ async fn main() {
 
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
     tokio::spawn(run_message_flusher(state.clone()));
-    let counter_handle = tokio::spawn(run_counter_flusher(state.clone(), shutdown_rx));
+    let counter_handle = tokio::spawn(run_counter_flusher(state.clone(), shutdown_rx.clone()));
+    if state.config.worker_roles.cleaner {
+        tokio::spawn(run_archive_and_media_cleaner(state.clone(), shutdown_rx));
+    }
     tokio::spawn(run_social_flusher(state.clone()));
     start_pubsub_dispatcher(state.clone());
 

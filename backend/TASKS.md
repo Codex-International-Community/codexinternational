@@ -286,7 +286,7 @@ codexinternational/
   1. **Red:** Tulis integration test: (a) Hot Path mengembalikan 50 baris tanpa menyentuh R2, (b) Boundary Crossing menggabungkan `< 50` baris DB + sisa dari stream `jsonl.zst` secara urut `before_seq`, (c) `USER_DELETED` & `wiped_archive_users` di-skip sedangkan `MOD_REMOVED` diganti placeholder tanpa mengubah file R2, (d) media berumur `> 3 bulan` dihapus dari R2 & diset `EXPIRED` sementara baris teks pesan tetap utuh.
   2. **Green:** Implementasikan tabel `archive_manifests`, `archive_tombstones`, `wiped_archive_users`, handler `before_seq` dengan `tokio::join!` filter-on-read `HashMap`/`HashSet`, serta worker cleaner ber-distributed lock. (Pengecualian retensi untuk `Super Server` dan DM berlangganan dihubungkan penuh pada `Task 7.4`.)
 - **DoD:**
-  - [ ] `archive_test.rs` lulus 100% untuk Hot Path, Boundary Crossing, Cold Path, Tombstone Overlay, dan retensi media `> 3 bulan`.
+  - [x] `archive_test.rs` lulus 100% untuk Hot Path, Boundary Crossing, Cold Path, Tombstone Overlay, dan retensi media `> 3 bulan`.
 
 ### Phase Gate 2
 

@@ -20,6 +20,7 @@ use uuid::Uuid;
 pub struct HistoryQuery {
     #[serde(default)]
     pub after_seq: i64,
+    pub before_seq: Option<i64>,
     #[serde(default = "limit_default")]
     pub limit: i64,
 }
@@ -42,9 +43,13 @@ pub async fn list_messages(
     Query(q): Query<HistoryQuery>,
 ) -> Result<Json<HistoryResponse>, AppError> {
     channel_access(&state, channel, auth.user_id, PERM_VIEW_CHANNEL, false).await?;
-    Ok(Json(HistoryResponse {
-        messages: history(&state, channel, q.after_seq, q.limit).await?,
-    }))
+    let messages = if let Some(before_seq) = q.before_seq {
+        let storage = super::archive::R2ArchiveStorage::new(state.config.clone());
+        super::archive::history_before_seq(&state, &storage, channel, before_seq, q.limit).await?
+    } else {
+        history(&state, channel, q.after_seq, q.limit).await?
+    };
+    Ok(Json(HistoryResponse { messages }))
 }
 pub async fn send_message(
     State(state): State<Arc<AppState>>,
