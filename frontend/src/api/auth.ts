@@ -247,6 +247,27 @@ export async function uploadProfileAvatar(file: File): Promise<AuthUserProfile> 
   return fetchMe()
 }
 
+export interface PublicUserProfileDto {
+  id: string
+  username: string
+  display_name: string
+  avatar_media_id: string | null
+  bio: string
+  platform_role: string
+  platform_badge: string | null
+  is_verified: boolean
+  global_xp: number
+  global_level: number
+  created_at: string
+}
+
+export async function fetchPublicUserProfile(userId: string): Promise<PublicUserProfileDto> {
+  const res = await apiRequest<{ user: PublicUserProfileDto }>(
+    `/api/v1/users/${encodeURIComponent(userId)}/profile`,
+  )
+  return res.user
+}
+
 export async function updateProfile(displayName: string): Promise<AuthUserProfile> {
   const res = await apiRequest<{ user: AuthUserProfile }>('/api/v1/auth/me', {
     method: 'PATCH',

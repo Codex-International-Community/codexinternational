@@ -20,6 +20,7 @@ export interface ReplySubmitPayload {
 interface SocialPostCardProps {
   currentUser: User
   currentUsername: string
+  onOpenProfile: (userId: string) => void
   post: SocialPost
   isFollowed: boolean
   isReplying: boolean
@@ -53,6 +54,7 @@ function isVideoMedia(url?: string, alt?: string): boolean {
 export function SocialPostCard({
   currentUser,
   currentUsername,
+  onOpenProfile,
   post,
   isFollowed,
   isReplying,
@@ -147,9 +149,30 @@ export function SocialPostCard({
         <div className="social-reply">
           <div className="social-reply-header">
             <span className="social-reply-avatar">
-              <Avatar user={replyAvatarUser} size="small" />
+              {reply.userId ? (
+                <button
+                  type="button"
+                  className="social-profile-avatar-button"
+                  onClick={() => onOpenProfile(reply.userId!)}
+                  aria-label={`Open ${reply.author}'s profile`}
+                >
+                  <Avatar user={replyAvatarUser} size="small" />
+                </button>
+              ) : (
+                <Avatar user={replyAvatarUser} size="small" />
+              )}
             </span>
-            <strong>{reply.author}</strong>
+            {reply.userId ? (
+              <button
+                type="button"
+                className="social-profile-name-button social-reply-author-trigger"
+                onClick={() => onOpenProfile(reply.userId!)}
+              >
+                {reply.author}
+              </button>
+            ) : (
+              <strong>{reply.author}</strong>
+            )}
             {reply.verified && (
               <span className="social-verified" title="Community verified" aria-label="Verified">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
@@ -260,7 +283,18 @@ export function SocialPostCard({
   return (
     <article className="social-post" id={`post-${post.id}`}>
       <div className="social-post-avatar">
-        <Avatar user={postAvatarUser} />
+        {post.userId ? (
+          <button
+            type="button"
+            className="social-profile-avatar-button"
+            onClick={() => onOpenProfile(post.userId!)}
+            aria-label={`Open ${post.author}'s profile`}
+          >
+            <Avatar user={postAvatarUser} />
+          </button>
+        ) : (
+          <Avatar user={postAvatarUser} />
+        )}
       </div>
 
       <div className="social-post-main">
@@ -274,7 +308,17 @@ export function SocialPostCard({
         )}
         <div className="social-post-meta">
           <div>
-            <strong>{post.author}</strong>
+            {post.userId ? (
+              <button
+                type="button"
+                className="social-profile-name-button"
+                onClick={() => onOpenProfile(post.userId!)}
+              >
+                {post.author}
+              </button>
+            ) : (
+              <strong>{post.author}</strong>
+            )}
             {post.verified && (
               <span className="social-verified" title="Community verified" aria-label="Verified">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">

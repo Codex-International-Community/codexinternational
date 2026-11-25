@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{Json, extract::{Path, State}, http::StatusCode};
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -182,6 +182,48 @@ pub async fn login(
 #[derive(Debug, Deserialize)]
 pub struct UpdateProfileRequest {
     pub display_name: String,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct PublicUserProfile {
+    pub id: Uuid,
+    pub username: String,
+    pub display_name: String,
+    pub avatar_media_id: Option<Uuid>,
+    pub bio: String,
+    pub platform_role: String,
+    pub platform_badge: Option<String>,
+    pub is_verified: bool,
+    pub global_xp: i64,
+    pub global_level: i32,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct PublicUserProfileResponse {
+    pub user: PublicUserProfile,
+}
+
+/// Returns only fields intended to be visible on another member's public profile.
+pub async fn public_profile(
+    State(state): State<Arc<AppState>>,
+    _auth: AuthUser,
+    Path(user_id): Path<Uuid>,
+) -> Result<Json<PublicUserProfileResponse>, AppError> {
+    let user = sqlx::query_as::<_, PublicUserProfile>(
+        "SELECT id, username, display_name, avatar_media_id, bio, platform_role,
+                platform_badge, is_verified, global_xp, global_level, created_at
+         FROM users
+         WHERE id = $1
+           AND banned_at IS NULL
+           AND (suspended_until IS NULL OR suspended_until <= NOW())",
+    )
+    .bind(user_id)
+    .fetch_optional(&state.pg)
+    .await?
+    .ok_or_else(|| AppError::NotFound("user profile not found".to_string()))?;
+
+    Ok(Json(PublicUserProfileResponse { user }))
 }
 
 /// Returns the authenticated user's current profile (`GET /api/v1/auth/me`).

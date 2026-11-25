@@ -3,6 +3,7 @@ import '../App.css'
 import '../Redesign.css'
 import '../styles/adaptive.css'
 
+import { fetchPublicUserProfile } from '../api/auth'
 import type { AuthSession } from '../api/client'
 import { ApiError } from '../api/client'
 import { deleteMessage as deleteChatMessage, editMessage as editChatMessage, listMessages, listPinnedMessages, mapChatMessage, pinMessage, postMessage, toggleMessageReaction, unpinMessage, uploadChatMedia, type ChatMessageWire } from '../api/chat'
@@ -402,6 +403,7 @@ export function WorkspacePage({
             id: member.id,
             name: member.display_name,
             username: member.username,
+            avatarMediaId: member.avatar_media_id ?? undefined,
             initials: member.display_name
               .split(/\s+/)
               .map((part) => part[0] ?? '')
@@ -1016,14 +1018,49 @@ export function WorkspacePage({
     setSettingsModalTab(tab)
   }
 
-  const openProfile = (userId: string) => {
+  const profileLookupRequestRef = useRef(0)
+
+  const openProfile = async (userId: string) => {
+    const requestId = ++profileLookupRequestRef.current
     const targetId = userId === 'self' ? session.user.id : userId
-    const profile = targetId === session.user.id
+    const cachedProfile = targetId === session.user.id
       ? currentUser
       : currentServerPeople.find((person) => person.id === targetId)
         ?? people.find((person) => person.id === targetId)
-    if (profile) setSelectedProfile(profile)
-    else notify('This member profile is no longer available.')
+
+    if (cachedProfile) {
+      setSelectedProfile(cachedProfile)
+      return
+    }
+
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(targetId)) {
+      notify('This member profile is unavailable.')
+      return
+    }
+
+    try {
+      const profile = await fetchPublicUserProfile(targetId)
+      if (requestId !== profileLookupRequestRef.current) return
+      const name = profile.display_name || profile.username
+      const initials = name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0] ?? '').join('').toUpperCase() || 'U'
+      setSelectedProfile({
+        id: profile.id,
+        name,
+        initials,
+        tone: 'member',
+        avatarMediaId: profile.avatar_media_id ?? undefined,
+        status: 'idle',
+        role: profile.platform_role === 'dev' ? 'Developer' : 'Member',
+        username: profile.username,
+        bio: profile.bio,
+        globalXp: profile.global_xp,
+        globalLevel: profile.global_level,
+        accountCreatedAt: profile.created_at,
+      })
+    } catch (error) {
+      if (requestId !== profileLookupRequestRef.current) return
+      notify(error instanceof Error ? error.message : 'Could not load this member profile.')
+    }
   }
 
   const handleCreateCommunity = async () => {
@@ -1692,6 +1729,7 @@ export function WorkspacePage({
             ) : view === 'social' ? (
               <SocialFeed
                 currentUser={currentUser}
+                onOpenProfile={(userId) => void openProfile(userId)}
                 currentUsername={session.user.username}
                 posts={socialPosts}
                 socialTab={socialTab}
@@ -2365,7 +2403,10 @@ export function WorkspacePage({
           user={selectedProfile.id === session.user.id ? currentUser : selectedProfile}
           serverName={view === 'channel' ? server?.name : undefined}
           isSelf={selectedProfile.id === session.user.id}
-          onClose={() => setSelectedProfile(null)}
+          onClose={() => {
+            profileLookupRequestRef.current += 1
+            setSelectedProfile(null)
+          }}
           onEditProfile={() => openSettingsModal('profile')}
           onMessage={() => {
             const targetId = selectedProfile.id

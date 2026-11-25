@@ -15,6 +15,7 @@ const tabs: { id: SocialTab; label: string }[] = [
 
 interface SocialFeedProps {
   currentUser: User
+  onOpenProfile: (userId: string) => void
   currentUsername: string
   posts: SocialPost[]
   socialTab: SocialTab
@@ -43,6 +44,7 @@ interface SocialFeedProps {
 
 export function SocialFeed({
   currentUser,
+  onOpenProfile,
   currentUsername,
   posts,
   socialTab,
@@ -217,6 +219,7 @@ export function SocialFeed({
             <SocialPostCard
               key={post.id}
               currentUser={currentUser}
+              onOpenProfile={onOpenProfile}
               currentUsername={currentUsername}
               post={post}
               isFollowed={followedHandles.includes(post.handle)}

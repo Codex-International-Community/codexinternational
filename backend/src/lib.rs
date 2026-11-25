@@ -77,6 +77,7 @@ pub fn app_router(state: Arc<AppState>) -> Router {
             "/internal/v1/media/ready",
             post(media::internal_media_ready),
         )
+        .route("/api/v1/users/{id}/profile", get(auth::handlers::public_profile))
         .route("/api/v1/dev/bots/{id}/review", post(auth::bots::review_bot))
         .route(
             "/api/v1/dev/uid-slots",
