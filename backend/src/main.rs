@@ -12,11 +12,12 @@ use backend::{
     app_router,
     chat::{flusher::run_message_flusher, ws::start_pubsub_dispatcher},
     config::AppConfig,
+    gamification::flusher::run_counter_flusher,
     shared::db::run_migrations,
     social::flusher::run_social_flusher,
     state::AppState,
 };
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::watch};
 use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
@@ -57,7 +58,9 @@ async fn main() {
         std::process::exit(1);
     }
 
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
     tokio::spawn(run_message_flusher(state.clone()));
+    let counter_handle = tokio::spawn(run_counter_flusher(state.clone(), shutdown_rx));
     tokio::spawn(run_social_flusher(state.clone()));
     start_pubsub_dispatcher(state.clone());
 
@@ -79,6 +82,9 @@ async fn main() {
         tracing::error!(error = %err, "axum server exited with error");
         std::process::exit(1);
     }
+
+    let _ = shutdown_tx.send(true);
+    let _ = counter_handle.await;
 }
 
 /// Resolves on Ctrl+C (and SIGTERM on Unix) for clean server shutdown.

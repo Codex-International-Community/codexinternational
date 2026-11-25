@@ -264,7 +264,7 @@ codexinternational/
   1. **Red:** Tulis test atomic swap XP (tidak kehilangan increment yang masuk bersamaan di tengah flush) dan `GREATEST` pada `last_read_seq_id` (`INV-4`).
   2. **Green:** Implementasikan Lua atomic `HGETALL` + `DEL` / `RENAME` per domain counter, batch SQL update, kalkulasi ulang `level` dari `calculate_level(xp)`, serta final flush saat graceful shutdown (`SIGTERM`/`CancellationToken`).
 - **DoD:**
-  - [ ] Seluruh counter tersinkron ke Postgres secara akurat tanpa race condition.
+  - [x] Seluruh counter tersinkron ke Postgres secara akurat tanpa race condition.
 
 ### Task 2.6 — Gap-Sync Protocol & Message Edit/Delete (`INV-12`)
 

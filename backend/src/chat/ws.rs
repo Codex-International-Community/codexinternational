@@ -10,7 +10,7 @@ use axum::extract::{
     ws::{Message, WebSocket},
 };
 use chrono::Utc;
-use fred::interfaces::{EventInterface, KeysInterface, PubsubInterface};
+use fred::interfaces::{EventInterface, KeysInterface, PubsubInterface, SortedSetsInterface};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{
@@ -121,7 +121,9 @@ async fn run_socket(mut socket: WebSocket, state: Arc<AppState>) {
             if channel_access(&state,channel_id,claims.sub,crate::communities::permissions::PERM_SEND_MESSAGES,true).await.is_ok(){let e=serde_json::json!({"type":"TYPING_START","channelId":channel_id,"userId":claims.sub});let _:Result<i64,_>=state.valkey.next().publish(format!("pubsub:ch:{channel_id}"),e.to_string()).await;}
            },
            ClientFrame::MarkRead{channel_id,seq_id}=>{
-            if channel_access(&state,channel_id,claims.sub,PERM_VIEW_CHANNEL,false).await.is_ok(){let _=sqlx::query("UPDATE channel_members SET last_read_seq_id=GREATEST(last_read_seq_id,$3) WHERE channel_id=$1 AND user_id=$2").bind(channel_id).bind(claims.sub).bind(seq_id.max(0)).execute(&state.pg).await;}
+            if channel_access(&state,channel_id,claims.sub,PERM_VIEW_CHANNEL,false).await.is_ok(){
+             let _=crate::shared::valkey_lua::mark_read_max(&state.valkey,channel_id,claims.sub,seq_id).await;
+            }
            },
            ClientFrame::FocusChannel{channel_id}=>{
             if let Some(old)=focused.take(){let _:Result<i64,_>=state.valkey.del(format!("ws:active:{}:{old}",claims.sub)).await;}
@@ -152,8 +154,9 @@ async fn run_socket(mut socket: WebSocket, state: Arc<AppState>) {
             }
            }
           }
-          let _:Result<(),_>=state.valkey.set(&presence,Utc::now().timestamp().to_string(),Some(fred::types::Expiration::EX(90)),None,false).await;
-          let _=sqlx::query("UPDATE users SET last_seen_at=NOW() WHERE id=$1").bind(claims.sub).execute(&state.pg).await;
+          let now_ts = Utc::now().timestamp();
+          let _:Result<(),_>=state.valkey.set(&presence,now_ts.to_string(),Some(fred::types::Expiration::EX(90)),None,false).await;
+          let _:Result<i64,_>=state.valkey.zadd("users:last_seen",None,None,false,false,(now_ts as f64, claims.sub.to_string())).await;
           if let Some(id)=focused{let _:Result<(),_>=state.valkey.set(format!("ws:active:{}:{id}",claims.sub),"1",Some(fred::types::Expiration::EX(90)),None,false).await;}
          }
         }
