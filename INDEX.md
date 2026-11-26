@@ -10,8 +10,8 @@ Perlakukan dokumen di bawah ini sebagai modul independen dengan pemisahan tanggu
 
 | Dokumen | Peran & Tanggung Jawab Utama | Rujukan Kunci |
 | :--- | :--- | :--- |
-| **[`backend/PRD.md`](backend/PRD.md)** | Hukum teknis tertinggi sisi backend: arsitektur sistem, Valkey state schema, PostgreSQL DDL, invariants (`INV-1..22`), decision log (`DEC-1..25`), AI Native (`P§10`), dan gotchas. | `P§1.2` (Valkey State Schema), `P§1.3` (PostgreSQL DDL), `P§5` (`INV-1..22`), `P§6` (`DEC-1..25`), `P§8` (Archive), `P§10` (AI Native) |
-| **[`backend/TASKS.md`](backend/TASKS.md)** | Roadmap implementasi teknis TDD Rust per-fase (`Fase 0`–`Fase 10`). Wajib lolos *Phase Gate* sebelum melangkah ke fase berikutnya. | `Fase 0`–`2` (Core & Chat), `Fase 3` (Media), `Fase 4`–`5` (Stories & Load Test), `Fase 6`–`9` (Monetisasi & Ekonomi), `Fase 10` (AI Native) |
+| **[`backend/PRD.md`](backend/PRD.md)** | Hukum teknis tertinggi sisi backend: arsitektur sistem, Valkey state schema, PostgreSQL DDL, invariants (`INV-1..22`), decision log (`DEC-1..25`), AI Native (`P§9`), dan gotchas. | `P§1.2` (Valkey State Schema), `P§1.3` (PostgreSQL DDL), `P§5` (`INV-1..22`), `P§6` (`DEC-1..25`), `P§8` (Archive), `P§9` (AI Native) |
+| **[`backend/TASKS.md`](backend/TASKS.md)** | Roadmap implementasi teknis TDD Rust per-fase (`Fase 0`–`Fase 7`). Wajib lolos *Phase Gate* sebelum melangkah ke fase berikutnya. | `Fase 0`–`2` (Core & Chat), `Fase 3` (Media), `Fase 4`–`5` (Stories & Load Test), `Fase 6` (Managed Bot), `Fase 7` (AI Native) |
 
 ---
 
