@@ -879,3 +879,39 @@ CREATE TABLE banned_identities (
      `Points = (Save × 5) + (Share × 3) + (Upvote_trusted × 2) + (Dwell × 1) − (Report × 10)`
      (*dwell time* via heartbeat 10s tab aktif ke Valkey `wb:dwell`, flush 500ms, cap 10 menit/post/user; rate per poin di-tune otomatis bulanan dan tampil transparan di UI).
    - **Anti-Spam & Anti-Farm:** Batas posting harian Threads mengikuti **tangga XP/Level** dari Fase 1 (bukan paywall beli post satuan). Settlement delay 14 hari untuk deteksi *mutual-vote ring* & klaster device/IP, *shadow eligibility* (metrik tampil, earn 0) bagi AI-slop/farmer, minimum payout Rp100.000 rollover, biaya transfer payout ditanggung creator.
+
+---
+
+## P§10. Subsistem AI Native (DeepSeek v4.1 Flash Multi-Key Pool) & Sinkronisasi Implementasi Aktual
+
+### P§10.1 Arsitektur Multi-API-Key & Quota Guard (`DEC-25`)
+
+- **Tabel `0013_ai_native.sql`:**
+  - `ai_api_keys`: menyimpan pool API key DeepSeek v4.1 Flash (`label`, `provider`, `model`, `base_url`, `api_key_encrypted`, `key_preview`, `weight`, `is_active`, `max_concurrency`, `total_requests`, `total_input_tokens`, `total_output_tokens`, `error_count`, `cooldown_until`). Plaintext key **tidak pernah** dikembalikan ke client; seluruh mutasi dicatat ke `audit_logs` (`dev` only).
+  - `ai_message_embeddings`: indeks pencarian semantik (`source_type` `'message' | 'post'`, `source_id`, `channel_id`, `content_preview`, `keywords TEXT[]`, `embedding REAL[]`) yang diisi asinkron via `tokio::spawn` untuk pesan `>= 20` karakter tanpa ketergantungan ekstensi `pgvector`.
+  - `ai_triage_reports`: hasil analisis trust & safety (`toxicity_score`, `spam_score`, `category`, `summary`, `recommended_action`) yang dipicu asinkron saat `POST /api/v1/reports`.
+  - `ai_voice_transcripts`: penyimpanan transkrip dan *meeting notes* hasil fitur Voice Notes (`duration_secs`, `transcript`, `meeting_notes`).
+- **Load Balancing & Failover:** `call_deepseek_chat` memakai *weighted round-robin* di seluruh key aktif yang tidak sedang `cooldown_until`. Jika satu key mengembalikan `429` atau `5xx`, key tersebut masuk cooldown 60 detik dan request otomatis *failover* ke key lain.
+- **Valkey Quota & Cache Keys:**
+  - `ai:summary:{channel_id}:{from_seq}:{to_seq}` (TTL `600s`) — cache ringkasan *Catch Me Up* agar puluhan member di channel yang sama tidak memanggil API AI berulang kali.
+  - `ai:quota:req:{user_id}:{yyyy-mm-dd}` (TTL 25 jam), `ai:quota:search:{user_id}:{yyyy-mm-dd}` (TTL 25 jam), dan `ai:quota:asr:{user_id}:{yyyy-mm}` (TTL 35 hari) — penegakan batas kuota per tier (`free`, `super`, `sudo`, `dev`).
+
+### P§10.2 Endpoint AI Native & Dev Key Pool
+
+| Endpoint | Akses | Fungsi |
+| :--- | :--- | :--- |
+| `GET /api/v1/ai/limits` | Auth | Spesifikasi pricing DeepSeek v4.1 Flash, matriks batas tier (`free`/`super`/`sudo`/`dev`), dan pemakaian user saat ini. |
+| `POST /api/v1/ai/channels/{id}/catch-me-up` | Auth + `VIEW_CHANNEL` | Ringkasan pesan unread (`last_read_seq_id..last_seq_id`, Postgres + tail `stream:messages`) dengan cache Valkey. |
+| `GET /api/v1/ai/search` | Auth | Smart Semantic Search lintas pesan channel terotorisasi dan public posts. |
+| `POST /api/v1/ai/channels/{id}/command` | Auth + `SEND_MESSAGES` | Slash command AI (`/ai`, `/ask`, `/summarize`, `/translate`, `/code`) dengan mode `ephemeral`. |
+| `POST /api/v1/ai/voice/transcribe` | Auth | Pembuatan *meeting notes* dari transkrip voice channel sesuai kuota menit ASR bulanan. |
+| `GET / POST /api/v1/dev/ai/keys` & `PATCH / DELETE /api/v1/dev/ai/keys/{id}` | `dev` Only | Manajemen pool multi-API-key (tambah, ubah weight/model/status, clear cooldown, hapus). |
+| `GET /api/v1/dev/ai/triage` & `POST /api/v1/dev/ai/triage/{report_id}` | `dev` Only | Antrean hasil auto-triage AI untuk `content_reports` dan trigger ulang analisis. |
+
+### P§10.3 Catatan Sinkronisasi Implementasi Aktual (`0008`–`0013`)
+
+- **Penomoran Migrasi Aktual:** Migrasi `0008`–`0011` telah terpakai oleh fitur sosial dan governance (`0008_social_posts.sql`, `0009_friends.sql`, `0010_nested_replies_stickers.sql`, `0011_dev_panel_verified_reports.sql`), diikuti `0012_archive.sql` (Task 2.7) dan `0013_ai_native.sql` (AI Native). Migrasi Fase 6–8 (`managed_bots`, `billing`, `escrow_hackathon`) akan melanjutkan dari `0014+`.
+- **Modul Sosial, Friends & Stickers:**
+  - **Public Read-Only Threads:** `GET /api/v1/social/posts` dan `GET /api/v1/social/posts/{id}` mendukung `OptionalAuthUser` (dapat diakses publik tanpa login di `/threads` dan `/threads/:postId` dalam mode read-only), sementara `tab=saved`, `/bookmarks`, `/activity`, dan seluruh aksi tulis tetap mewajibkan `AuthUser`.
+  - **Friends (`/api/v1/friends/*`):** daftar teman, pencarian user, kirim/terima/tolak permintaan pertemanan, dan hapus teman.
+  - **Stickers & GIFs (`/api/v1/stickers/*`):** upload dengan deduplikasi SHA-256 dan koleksi sticker tersimpan.

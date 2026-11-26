@@ -604,3 +604,28 @@ codexinternational/
 - [ ] **Admin Panel (On-Duty Only) & Broadcast Log:**
   - Buat Admin Panel di frontend yang hanya aktif/terbuka saat `dev` sedang dalam status **On Duty** (sekaligus menjadi tempat eksekusi *Release* Escrow `Task 8.2` dan Unban Perangkat `Task 7.5`).
   - Saat satu `dev` mengaktifkan **On Duty**, sistem memicu **log broadcast** real-time (beserta `reason`) ke semua akun ber-role `dev` dan ke server (`community_id`) yang sedang dikunjungi/di-intercept.
+
+---
+
+## FASE 10 — AI NATIVE (DEEPSEEK V4.1 FLASH MULTI-KEY POOL & 5 FITUR AI)
+
+- [x] **Task 10.1 — Migrasi `0013_ai_native.sql`, Multi-Key Pool & Dev Panel AI Keys (`backend/src/ai/keys.rs`, `frontend/src/components/views/DevAiPanel.tsx`):**
+  - Tabel `ai_api_keys` (masking `key_preview`, `weight`, `is_active`, `cooldown_until`, tracking `total_requests` & token).
+  - Weighted round-robin load balancer + auto-cooldown 60s failover pada `429`/`5xx`, serta tab **AI Keys & Limits** di `DevPanelView.tsx`.
+- [x] **Task 10.2 — Pricing & Quota Guard Add-On (`backend/src/ai/quotas.rs`):**
+  - Acuan DeepSeek v4.1 Flash (`1M` context, `2500` concurrency, Cache Hit/Miss, Output, Search/Fetch, OCR, ASR) dengan kuota Valkey per tier (`free`, `super`, `sudo`, `dev`) dan endpoint `GET /api/v1/ai/limits`.
+- [x] **Task 10.3 — 5 Fitur AI Native (`backend/src/ai/features.rs`, `frontend/src/components/chat/AiAssistantBar.tsx`):**
+  - **Catch Me Up:** `POST /api/v1/ai/channels/{id}/catch-me-up` (cache Valkey `ai:summary:*` 10 menit, unread range Postgres + tail `stream:messages`).
+  - **Smart Semantic Search:** `GET /api/v1/ai/search` + background indexer non-blocking `spawn_index_content` (`ai_message_embeddings`).
+  - **Auto-Triage Moderasi:** `spawn_auto_triage` (`tokio::spawn` saat `create_content_report`) + `GET /api/v1/dev/ai/triage`.
+  - **Slash Command AI:** `POST /api/v1/ai/channels/{id}/command` (`/ai`, `/ask`, `/summarize`, `/translate`, `/code`).
+  - **Voice Meeting Notes:** `POST /api/v1/ai/voice/transcribe` dengan kuota menit ASR bulanan.
+
+---
+
+## Fitur Tambahan Terimplementasi (Sinkronisasi Kode Aktual)
+
+- [x] **Task 1.5 — Domain Helpers:** `communities/permissions.rs` & `gamification/level.rs` (`calculate_level`) sudah terimplementasi beserta unit test.
+- [x] **Social Posts & Public Read-Only Threads (`0008_social_posts.sql`, `backend/src/social/`, `frontend/src/pages/PublicThreadsPage.tsx`):** Timeline sosial dengan nested replies, like/repost/bookmark, serta akses publik read-only di `/threads` (`OptionalAuthUser`).
+- [x] **Friends & Stickers (`0009_friends.sql`, `0010_nested_replies_stickers.sql`):** Modul pertemanan (`backend/src/friends/mod.rs`) dan stiker/GIF dengan deduplikasi SHA-256 (`backend/src/stickers/mod.rs`).
+- [x] **Catatan Penomoran Migrasi:** `0008`–`0011` telah terpakai oleh `social_posts`, `friends`, `nested_replies_stickers`, dan `dev_panel_verified_reports`; `0012_archive.sql` (Task 2.7) dan `0013_ai_native.sql` (Fase 10) sudah aktif; migrasi Fase 6–8 dilanjutkan mulai `0014+`.
