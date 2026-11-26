@@ -44,9 +44,15 @@ struct AccessRow {
     last_seq_id: i64,
 }
 #[derive(Debug, FromRow)]
-struct AuthorRow {
-    display_name: String,
-    username: String,
+struct SendContextRow {
+    community_id: Option<Uuid>,
+    last_seq_id: i64,
+    member: bool,
+    permissions: i64,
+    timed_out: bool,
+    already_persisted: bool,
+    display_name: Option<String>,
+    username: Option<String>,
     role: Option<String>,
 }
 #[derive(Debug, FromRow)]
@@ -127,7 +133,46 @@ pub async fn enqueue(
             "message content or media is required".into(),
         ));
     }
-    let last = channel_access(state, channel, user.user_id, PERM_SEND_MESSAGES, true).await?;
+    let ctx = sqlx::query_as::<_, SendContextRow>(
+        "SELECT ch.community_id, ch.last_seq_id,
+                EXISTS(SELECT 1 FROM channel_members cm WHERE cm.channel_id=ch.id AND cm.user_id=$2) AS member,
+                COALESCE(r.permissions,0)::BIGINT AS permissions,
+                COALESCE(cm.timed_out_until>NOW(),FALSE) AS timed_out,
+                EXISTS(SELECT 1 FROM messages WHERE client_msg_id=$3) AS already_persisted,
+                u.display_name, u.username, r.name AS role
+         FROM channels ch
+         LEFT JOIN users u ON u.id=$2
+         LEFT JOIN community_members cm ON cm.community_id=ch.community_id AND cm.user_id=$2
+         LEFT JOIN community_roles r ON r.id=cm.role_id
+         WHERE ch.id=$1",
+    )
+    .bind(channel)
+    .bind(user.user_id)
+    .bind(input.client_msg_id)
+    .fetch_optional(&state.pg)
+    .await?
+    .ok_or_else(|| AppError::NotFound("channel not found".into()))?;
+
+    if !ctx.member {
+        return Err(AppError::Forbidden("channel membership required".into()));
+    }
+    if ctx.community_id.is_some() {
+        if !has_permission(ctx.permissions, PERM_VIEW_CHANNEL) {
+            return Err(AppError::Forbidden(
+                "missing VIEW_CHANNEL permission".into(),
+            ));
+        }
+        if ctx.timed_out {
+            return Err(AppError::Forbidden(
+                "you are timed out in this community".into(),
+            ));
+        }
+        if !has_permission(ctx.permissions, PERM_SEND_MESSAGES) {
+            return Err(AppError::Forbidden("missing channel permission".into()));
+        }
+    }
+    let last = ctx.last_seq_id;
+
     if let Some(reply) = input.reply_to_id {
         let ok = sqlx::query_scalar::<_, bool>(
             "SELECT EXISTS(SELECT 1 FROM messages WHERE id=$1 AND channel_id=$2)",
@@ -153,16 +198,16 @@ pub async fn enqueue(
             ));
         }
     }
-    let already_persisted = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM messages WHERE client_msg_id=$1)",
-    )
-    .bind(input.client_msg_id)
-    .fetch_one(&state.pg)
-    .await?;
-    if already_persisted {
+    if ctx.already_persisted {
         return Err(AppError::Conflict("duplicate client_msg_id".into()));
     }
-    let author=sqlx::query_as::<_,AuthorRow>("SELECT u.display_name,u.username,r.name AS role FROM users u LEFT JOIN channels ch ON ch.id=$2 LEFT JOIN community_members cm ON cm.community_id=ch.community_id AND cm.user_id=u.id LEFT JOIN community_roles r ON r.id=cm.role_id WHERE u.id=$1").bind(user.user_id).bind(channel).fetch_optional(&state.pg).await?.ok_or_else(||AppError::Unauthorized("user account no longer exists".into()))?;
+    let display_name = ctx
+        .display_name
+        .ok_or_else(|| AppError::Unauthorized("user account no longer exists".into()))?;
+    let username = ctx
+        .username
+        .ok_or_else(|| AppError::Unauthorized("user account no longer exists".into()))?;
+    let role = ctx.role;
     let attachment = if let Some(media_id) = input.media_id {
         let row=sqlx::query_as::<_,(String,String,i64,String)>("SELECT file_name,mime_type,COALESCE(size_bytes,0),r2_key FROM media_assets WHERE id=$1 AND uploader_id=$2 AND purpose='chat' AND status='READY'")
    .bind(media_id).bind(user.user_id).fetch_optional(&state.pg).await?
@@ -178,8 +223,7 @@ pub async fn enqueue(
     } else {
         None
     };
-    let initials = author
-        .display_name
+    let initials = display_name
         .split_whitespace()
         .filter_map(|p| p.chars().next())
         .take(2)
@@ -200,10 +244,10 @@ pub async fn enqueue(
         reply_to_id: input.reply_to_id,
         reply_to_story_id: input.reply_to_story_id,
         created_at: Utc::now(),
-        author: author.display_name,
-        username: author.username,
+        author: display_name,
+        username,
         initials,
-        role: author.role,
+        role,
         attachment,
     };
     let ack: String = state
@@ -417,23 +461,68 @@ pub async fn persist_batch(
     if batch.is_empty() {
         return Ok(());
     }
-    let mut tx = pool.begin().await?;
+
+    let len = batch.len();
+    let mut ids = Vec::with_capacity(len);
+    let mut channel_ids = Vec::with_capacity(len);
+    let mut sender_ids = Vec::with_capacity(len);
+    let mut seq_ids = Vec::with_capacity(len);
+    let mut client_msg_ids = Vec::with_capacity(len);
+    let mut contents = Vec::with_capacity(len);
+    let mut media_ids = Vec::with_capacity(len);
+    let mut reply_to_ids = Vec::with_capacity(len);
+    let mut reply_to_story_ids = Vec::with_capacity(len);
+    let mut created_ats = Vec::with_capacity(len);
     let mut latest = HashMap::<Uuid, i64>::new();
+
     for (_, m) in batch {
-        sqlx::query("INSERT INTO messages(id,channel_id,sender_id,seq_id,client_msg_id,content,media_id,reply_to_id,reply_to_story_id,created_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(client_msg_id) DO NOTHING")
-   .bind(m.id).bind(m.channel_id).bind(m.sender_id).bind(m.seq_id).bind(m.client_msg_id).bind(&m.content).bind(m.media_id).bind(m.reply_to_id).bind(m.reply_to_story_id).bind(m.created_at).execute(&mut *tx).await?;
+        ids.push(m.id);
+        channel_ids.push(m.channel_id);
+        sender_ids.push(m.sender_id);
+        seq_ids.push(m.seq_id);
+        client_msg_ids.push(m.client_msg_id);
+        contents.push(m.content.as_deref());
+        media_ids.push(m.media_id);
+        reply_to_ids.push(m.reply_to_id);
+        reply_to_story_ids.push(m.reply_to_story_id);
+        created_ats.push(m.created_at);
         latest
             .entry(m.channel_id)
             .and_modify(|v| *v = (*v).max(m.seq_id))
             .or_insert(m.seq_id);
     }
-    for (ch, seq) in latest {
-        sqlx::query("UPDATE channels SET last_seq_id=GREATEST(last_seq_id,$2) WHERE id=$1")
-            .bind(ch)
-            .bind(seq)
-            .execute(&mut *tx)
-            .await?;
-    }
+
+    let mut tx = pool.begin().await?;
+    sqlx::query(
+        "INSERT INTO messages(id,channel_id,sender_id,seq_id,client_msg_id,content,media_id,reply_to_id,reply_to_story_id,created_at)
+         SELECT * FROM UNNEST($1::uuid[], $2::uuid[], $3::uuid[], $4::bigint[], $5::uuid[], $6::text[], $7::uuid[], $8::uuid[], $9::uuid[], $10::timestamptz[])
+         ON CONFLICT(client_msg_id) DO NOTHING",
+    )
+    .bind(&ids)
+    .bind(&channel_ids)
+    .bind(&sender_ids)
+    .bind(&seq_ids)
+    .bind(&client_msg_ids)
+    .bind(&contents)
+    .bind(&media_ids)
+    .bind(&reply_to_ids)
+    .bind(&reply_to_story_ids)
+    .bind(&created_ats)
+    .execute(&mut *tx)
+    .await?;
+
+    let (ch_ids, ch_seqs): (Vec<Uuid>, Vec<i64>) = latest.into_iter().unzip();
+    sqlx::query(
+        "UPDATE channels AS c
+         SET last_seq_id = GREATEST(c.last_seq_id, v.seq_id)
+         FROM UNNEST($1::uuid[], $2::bigint[]) AS v(id, seq_id)
+         WHERE c.id = v.id",
+    )
+    .bind(&ch_ids)
+    .bind(&ch_seqs)
+    .execute(&mut *tx)
+    .await?;
+
     tx.commit().await?;
     Ok(())
 }

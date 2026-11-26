@@ -124,19 +124,21 @@ async fn flush(
             }
         }
         if !ack_ids.is_empty() {
-            let _: i64 = state
-                .valkey
-                .xack(MESSAGE_STREAM, MESSAGE_GROUP, ack_ids.clone())
-                .await?;
-            let _: i64 = state.valkey.xdel(MESSAGE_STREAM, ack_ids).await?;
+            ack_and_del(state, ack_ids).await?;
         }
         return Ok(());
     }
     let ids = batch.iter().map(|(id, _)| id.clone()).collect::<Vec<_>>();
-    let _: i64 = state
-        .valkey
+    ack_and_del(state, ids).await?;
+    Ok(())
+}
+
+async fn ack_and_del(state: &AppState, ids: Vec<String>) -> Result<(), AppError> {
+    let pipe = state.valkey.next().pipeline();
+    let _: () = pipe
         .xack(MESSAGE_STREAM, MESSAGE_GROUP, ids.clone())
         .await?;
-    let _: i64 = state.valkey.xdel(MESSAGE_STREAM, ids).await?;
+    let _: () = pipe.xdel(MESSAGE_STREAM, ids).await?;
+    let _: fred::types::Value = pipe.all().await?;
     Ok(())
 }

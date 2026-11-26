@@ -9,6 +9,20 @@ services:
     image: postgres:17-alpine
     container_name: codexter-postgres
     restart: unless-stopped
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=${PG_SHARED_BUFFERS:-384MB}"
+      - "-c"
+      - "work_mem=${PG_WORK_MEM:-4MB}"
+      - "-c"
+      - "maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-64MB}"
+      - "-c"
+      - "effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-768MB}"
+      - "-c"
+      - "max_connections=${PG_MAX_CONNECTIONS:-50}"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-codexter}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-codex_dev_password}
@@ -28,7 +42,13 @@ services:
     image: valkey/valkey:9.1-alpine
     container_name: codexter-valkey
     restart: unless-stopped
-    command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
+    command:
+      - "valkey-server"
+      - "/usr/local/etc/valkey/valkey.conf"
+      - "--maxmemory"
+      - "${VALKEY_MAXMEMORY:-400mb}"
+      - "--io-threads"
+      - "${VALKEY_IO_THREADS:-2}"
     ports:
       # Bind only on loopback (127.0.0.1), never 0.0.0.0
       - "127.0.0.1:${VALKEY_PORT:-6379}:6379"

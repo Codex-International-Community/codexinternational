@@ -11,6 +11,20 @@
     node_major_version: "24"
 
   tasks:
+    - name: Apply kernel sysctl tuning for Valkey, PostgreSQL, and high-concurrency sockets
+      ansible.builtin.copy:
+        dest: /etc/sysctl.d/99-codexter-tuning.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          vm.overcommit_memory = 1
+          vm.swappiness = 10
+          net.core.somaxconn = 4096
+          net.ipv4.tcp_max_syn_backlog = 4096
+          fs.file-max = 100000
+      notify: Reload sysctl
+
     - name: Install build and runtime dependencies
       ansible.builtin.apt:
         name:
@@ -123,6 +137,29 @@
           - project_env_file.stat.exists
         fail_msg: "Missing {{ project_dir }}/.env. Copy/create .env on the target server before running this playbook."
 
+    - name: Compute dynamic PostgreSQL and Valkey tuning from host specs
+      ansible.builtin.set_fact:
+        pg_shared_buffers_mb: "{{ [256, (ansible_memtotal_mb * 0.20) | int] | max }}"
+        pg_effective_cache_size_mb: "{{ [512, (ansible_memtotal_mb * 0.40) | int] | max }}"
+        pg_maintenance_work_mem_mb: "{{ [64, [(ansible_memtotal_mb * 0.03) | int, 512] | min] | max }}"
+        pg_work_mem_mb: "{{ 8 if ansible_memtotal_mb >= 4096 else 4 }}"
+        pg_max_connections: "{{ 100 if ansible_memtotal_mb >= 4096 else 50 }}"
+        valkey_maxmemory_mb: "{{ [256, [(ansible_memtotal_mb * 0.20) | int, 2048] | min] | max }}"
+        valkey_io_threads: "{{ 1 if ansible_processor_vcpus <= 2 else ([ansible_processor_vcpus, 4] | min) }}"
+
+    - name: Write dynamic resource tuning into .env
+      ansible.builtin.blockinfile:
+        path: "{{ project_dir }}/.env"
+        marker: "# {mark} ANSIBLE MANAGED RESOURCE TUNING"
+        block: |
+          PG_SHARED_BUFFERS={{ pg_shared_buffers_mb }}MB
+          PG_WORK_MEM={{ pg_work_mem_mb }}MB
+          PG_MAINTENANCE_WORK_MEM={{ pg_maintenance_work_mem_mb }}MB
+          PG_EFFECTIVE_CACHE_SIZE={{ pg_effective_cache_size_mb }}MB
+          PG_MAX_CONNECTIONS={{ pg_max_connections }}
+          VALKEY_MAXMEMORY={{ valkey_maxmemory_mb }}mb
+          VALKEY_IO_THREADS={{ valkey_io_threads }}
+
     - name: Start PostgreSQL and Valkey via Docker Compose
       become_user: "{{ app_user }}"
       ansible.builtin.command:
@@ -226,6 +263,11 @@
         state: started
 
   handlers:
+    - name: Reload sysctl
+      ansible.builtin.command:
+        cmd: sysctl --system
+      changed_when: true
+
     - name: Reload Caddy
       ansible.builtin.systemd:
         name: caddy
