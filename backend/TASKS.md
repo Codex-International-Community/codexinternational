@@ -498,4 +498,11 @@ codexinternational/
 - [x] **Task 1.5 — Domain Helpers:** `communities/permissions.rs` & `gamification/level.rs` (`calculate_level`) sudah terimplementasi beserta unit test.
 - [x] **Social Posts & Public Read-Only Threads (`0008_social_posts.sql`, `backend/src/social/`, `frontend/src/pages/PublicThreadsPage.tsx`):** Timeline sosial dengan nested replies, like/repost/bookmark, serta akses publik read-only di `/threads` (`OptionalAuthUser`).
 - [x] **Friends & Stickers (`0009_friends.sql`, `0010_nested_replies_stickers.sql`):** Modul pertemanan (`backend/src/friends/mod.rs`) dan stiker/GIF dengan deduplikasi SHA-256 (`backend/src/stickers/mod.rs`).
-- [x] **Catatan Penomoran Migrasi:** `0008`–`0011` telah terpakai oleh `social_posts`, `friends`, `nested_replies_stickers`, dan `dev_panel_verified_reports`; `0012_archive.sql` (Task 2.7) dan `0013_ai_native.sql` (Fase 10) sudah aktif; migrasi Fase 6–8 dilanjutkan mulai `0014+`.
+- [x] **Catatan Penomoran Migrasi:** `0008`–`0011` telah terpakai oleh `social_posts`, `friends`, `nested_replies_stickers`, dan `dev_panel_verified_reports`; `0012_archive.sql` (Task 2.7) dan `0013_ai_native.sql` (Fase 7) sudah aktif; migrasi lanjutan dimulai dari `0014+`.
+
+---
+
+## Kebijakan Enkripsi Teknis (Non-E2EE Text vs E2EE Audio/Video)
+
+- **Text Chat, DM Teks & Threads:** Tetap **Non-E2EE (TLS in-transit, server-readable)** demi moderasi, `content_reports`, AI Auto-Triage, *Catch Me Up*, dan *Smart Semantic Search*.
+- [ ] **Audio (Voice Chat / Telepon) & Video Call E2EE (WebRTC SFrame / Insertable Streams):** Terapkan pertukaran kunci E2EE di client untuk frame audio & video call saat subsistem WebRTC/SFU dibangun agar server/SFU tidak dapat mendekripsi aliran media.

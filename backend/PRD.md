@@ -748,3 +748,8 @@ codexinternational/
   - **Public Read-Only Threads:** `GET /api/v1/social/posts` dan `GET /api/v1/social/posts/{id}` mendukung `OptionalAuthUser` (dapat diakses publik tanpa login di `/threads` dan `/threads/:postId` dalam mode read-only), sementara `tab=saved`, `/bookmarks`, `/activity`, dan seluruh aksi tulis tetap mewajibkan `AuthUser`.
   - **Friends (`/api/v1/friends/*`):** daftar teman, pencarian user, kirim/terima/tolak permintaan pertemanan, dan hapus teman.
   - **Stickers & GIFs (`/api/v1/stickers/*`):** upload dengan deduplikasi SHA-256 dan koleksi sticker tersimpan.
+
+### P§9.4 Kebijakan Enkripsi: Server-Readable Text vs E2EE Audio/Video
+
+- **Text Chat, DM Teks, & Threads (Non-E2EE / Server-Readable):** Seluruh pesan teks menggunakan enkripsi *in-transit* (HTTPS/WSS TLS) dan disimpan *server-readable* di PostgreSQL serta R2 archive (`jsonl.zst`). Keputusan ini **disengaja demi moderasi** (`content_reports`, `dev` `on_duty`, *Auto-Triage AI*), *Catch Me Up*, dan *Smart Semantic Search*.
+- **Audio (Voice Chat / Telepon) & Video Call (E2EE):** Aliran media real-time (voice note/voice channel/telepon & video call berbasis WebRTC) menerapkan **End-to-End Encryption (E2EE)** pada level media frame (**WebRTC Insertable Streams / SFrame** di atas DTLS-SRTP), sehingga server/SFU hanya meneruskan paket terenkripsi tanpa memiliki kunci dekripsi media.
