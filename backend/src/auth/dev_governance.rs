@@ -1097,6 +1097,14 @@ pub async fn create_content_report(
     .execute(&state.pg)
     .await?;
 
+    crate::ai::features::spawn_auto_triage(
+        state.clone(),
+        report_id,
+        target_type.to_string(),
+        req.target_id,
+        reason,
+    );
+
     Ok((
         StatusCode::CREATED,
         Json(CreateReportResponse {

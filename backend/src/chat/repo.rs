@@ -232,7 +232,19 @@ pub async fn enqueue(
                 AppError::from(e)
             }
         })?;
-    serde_json::from_str(&ack).map_err(|e| AppError::Internal(e.into()))
+    let parsed: MessageAck =
+        serde_json::from_str(&ack).map_err(|e| AppError::Internal(e.into()))?;
+    if let Some(ref text) = record.content {
+        crate::ai::features::spawn_index_content(
+            state.pg.clone(),
+            "message",
+            record.id,
+            Some(channel),
+            Some(user.user_id),
+            text.clone(),
+        );
+    }
+    Ok(parsed)
 }
 
 type StreamTail = std::sync::Arc<Vec<(String, HashMap<String, String>)>>;

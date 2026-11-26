@@ -18,6 +18,7 @@ use crate::{
     state::AppState,
 };
 
+pub mod ai;
 pub mod auth;
 pub mod chat;
 pub mod communities;
@@ -64,6 +65,8 @@ async fn rest_timeout_middleware(req: Request<Body>, next: Next) -> Response {
 /// Builds the main Axum `Router` wired to `AppState`.
 pub fn app_router(state: Arc<AppState>) -> Router {
     let api = Router::new()
+        .nest("/api/v1/ai", ai::router())
+        .nest("/api/v1/dev/ai", ai::dev_router())
         .nest("/api/v1/auth", auth::router())
         .nest("/api/v1/bots", auth::bots_router())
         .nest("/api/v1/communities", communities::router())

@@ -24,8 +24,9 @@ import type { AuthUserProfile } from '../../api/client'
 import type { Server } from '../../types/chat'
 import { Icon } from '../common/Icon'
 import { DevReasonModal } from '../modals/DevReasonModal'
+import { DevAiPanel } from './DevAiPanel'
 
-type DevTab = 'users' | 'reports' | 'on-duty' | 'logs'
+type DevTab = 'users' | 'reports' | 'on-duty' | 'logs' | 'ai-keys'
 
 interface DevPanelViewProps {
   currentUser: AuthUserProfile
@@ -180,7 +181,7 @@ export function DevPanelView({
           </p>
         </div>
         <div className="dev-panel-tabs" role="tablist">
-          {(['users', 'reports', 'on-duty', 'logs'] as DevTab[]).map((t) => (
+          {(['users', 'reports', 'on-duty', 'logs', 'ai-keys'] as DevTab[]).map((t) => (
             <button
               key={t}
               type="button"
@@ -195,7 +196,9 @@ export function DevPanelView({
                   ? 'Reports Queue'
                   : t === 'on-duty'
                     ? `On-Duty (${activeOnDuty.length})`
-                    : 'Audit Logs'}
+                    : t === 'ai-keys'
+                      ? 'AI Keys & Limits'
+                      : 'Audit Logs'}
             </button>
           ))}
         </div>
@@ -510,6 +513,8 @@ export function DevPanelView({
           )}
         </div>
       )}
+
+      {tab === 'ai-keys' && <DevAiPanel onToast={onToast} />}
 
       <DevReasonModal
         open={Boolean(pendingAction)}

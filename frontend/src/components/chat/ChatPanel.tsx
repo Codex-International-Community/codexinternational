@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type RefObject } from 'react'
 import { saveSticker, type StickerItem } from '../../api/stickers'
 import { Icon } from '../common/Icon'
+import { AiAssistantBar } from './AiAssistantBar'
 import { MessageItem } from './MessageItem'
 import { Composer } from './Composer'
 import type { Attachment, Channel, Message, Server, User } from '../../types/chat'
@@ -159,6 +160,7 @@ export function ChatPanel({
 
   return (
     <>
+      {channel?.id && <AiAssistantBar channelId={channel.id} onNotify={onNotify} />}
       <div className="messages-scroll" ref={feedRef}>
         <div className="channel-welcome">
           <div className="welcome-icon">
