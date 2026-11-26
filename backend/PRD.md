@@ -753,3 +753,15 @@ codexinternational/
 
 - **Text Chat, DM Teks, & Threads (Non-E2EE / Server-Readable):** Seluruh pesan teks menggunakan enkripsi *in-transit* (HTTPS/WSS TLS) dan disimpan *server-readable* di PostgreSQL serta R2 archive (`jsonl.zst`). Keputusan ini **disengaja demi moderasi** (`content_reports`, `dev` `on_duty`, *Auto-Triage AI*), *Catch Me Up*, dan *Smart Semantic Search*.
 - **Audio (Voice Chat / Telepon) & Video Call (E2EE):** Aliran media real-time (voice note/voice channel/telepon & video call berbasis WebRTC) menerapkan **End-to-End Encryption (E2EE)** pada level media frame (**WebRTC Insertable Streams / SFrame** di atas DTLS-SRTP), sehingga server/SFU hanya meneruskan paket terenkripsi tanpa memiliki kunci dekripsi media.
+
+---
+
+## P§10. Subsistem Moat Komunitas IT (`0014_moat_features.sql`)
+
+| Fitur Moat | Tabel & Endpoint Backend | Akses & Perilaku |
+| :--- | :--- | :--- |
+| **Solved-to-Wiki** | `wiki_articles`; `POST /api/v1/moat/wiki/from-channel/{id}`, `POST /api/v1/moat/wiki/from-post/{id}`, `GET /api/v1/moat/wiki`, `GET /api/v1/moat/wiki/{slug}` | Mengubah diskusi chat/thread menjadi artikel Q&A terstruktur (dengan sintesis AI DeepSeek atau fallback ringkasan). `GET` bersifat **public read-only** (`OptionalAuthUser`) untuk SEO. |
+| **Verified Builder Profile** | `GET /api/v1/moat/builders/{username}`, `GET /api/v1/moat/builders/{username}/badge.svg` | Agregasi *Proof-of-Work* (`global_level`, `global_xp`, `approved_contributions`, `solved_wiki_count`, `posts_count`, `skills`) serta badge SVG untuk GitHub README. |
+| **Runnable Code Snippets & Diff** | `code_snippets`; `POST /api/v1/moat/snippets`, `GET /api/v1/moat/snippets/{id}`, `POST /api/v1/moat/snippets/{id}/ai-explain` | Lampiran kode/diff terstruktur (maks 32 KB) untuk sandbox client-side & inline diff viewer, plus penjelasan diff berbasis AI. |
+| **Skill Radar & Question Routing** | `user_skill_tags`, `help_radar_questions`; `GET/PUT /api/v1/moat/skills/me`, `POST/GET /api/v1/moat/radar/questions`, `POST /api/v1/moat/radar/questions/{id}/solve` | Pemetaan keahlian member (`opt_in`), pencocokan otomatis hingga 5 ahli saat pertanyaan dibuat, dan penambahan skor skill saat ditandai `SOLVED`. |
+| **Channel ↔ Threads Bridge** | `posts.source_channel_id`, `channels.resolution_post_id`, `channels.resolution_note`; `POST /api/v1/moat/channels/{id}/open-thread`, `GET/PUT/DELETE /api/v1/moat/channels/{id}/resolution` | Membuka topik diskusi baru di Threads langsung dari sebuah channel (*open topic*), serta menautkan channel ke postingan penyelesaian resmi (`resolution_post_id`). |

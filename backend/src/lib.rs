@@ -28,6 +28,7 @@ pub mod friends;
 pub mod gamification;
 pub mod health;
 pub mod media;
+pub mod moat;
 pub mod shared;
 pub mod social;
 pub mod state;
@@ -66,6 +67,7 @@ async fn rest_timeout_middleware(req: Request<Body>, next: Next) -> Response {
 pub fn app_router(state: Arc<AppState>) -> Router {
     let api = Router::new()
         .nest("/api/v1/ai", ai::router())
+        .nest("/api/v1/moat", moat::router())
         .nest("/api/v1/dev/ai", ai::dev_router())
         .nest("/api/v1/auth", auth::router())
         .nest("/api/v1/bots", auth::bots_router())

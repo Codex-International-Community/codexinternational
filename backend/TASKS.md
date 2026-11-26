@@ -506,3 +506,20 @@ codexinternational/
 
 - **Text Chat, DM Teks & Threads:** Tetap **Non-E2EE (TLS in-transit, server-readable)** demi moderasi, `content_reports`, AI Auto-Triage, *Catch Me Up*, dan *Smart Semantic Search*.
 - [ ] **Audio (Voice Chat / Telepon) & Video Call E2EE (WebRTC SFrame / Insertable Streams):** Terapkan pertukaran kunci E2EE di client untuk frame audio & video call saat subsistem WebRTC/SFU dibangun agar server/SFU tidak dapat mendekripsi aliran media.
+
+---
+
+## FASE 8 — FITUR MOAT KOMUNITAS IT (`0014_moat_features.sql`, `backend/src/moat/`)
+
+- [x] **Task 8.1 — Solved-to-Wiki (`backend/src/moat/wiki.rs`):**
+  - Konversi diskusi channel (`POST /api/v1/moat/wiki/from-channel/{id}`) dan thread (`POST /api/v1/moat/wiki/from-post/{id}`) ke `wiki_articles`, plus `GET /api/v1/moat/wiki` & `GET /api/v1/moat/wiki/{slug}` **public read-only**.
+- [x] **Task 8.2 — Verified Builder Profile (`backend/src/moat/builder.rs`):**
+  - Agregasi Proof-of-Work (`GET /api/v1/moat/builders/{username}`) dan badge SVG (`GET /api/v1/moat/builders/{username}/badge.svg`).
+- [x] **Task 8.3 — Runnable Code Snippets & Diff-First Review (`backend/src/moat/snippets.rs`):**
+  - Penyimpanan snippet & unified diff (`POST/GET /api/v1/moat/snippets`) serta penjelasan AI (`POST /api/v1/moat/snippets/{id}/ai-explain`).
+- [x] **Task 8.4 — Skill Radar & Smart Question Routing (`backend/src/moat/radar.rs`):**
+  - Opt-in skill tags (`GET/PUT /api/v1/moat/skills/me`), auto-matching pertanyaan ke hingga 5 ahli (`POST/GET /api/v1/moat/radar/questions`), dan mark solved (`POST /api/v1/moat/radar/questions/{id}/solve`).
+  - Test route guards & domain helper lulus di `backend/tests/moat_test.rs`.
+- [x] **Task 8.5 — Channel ↔ Threads Bridge (`backend/src/moat/bridge.rs`):**
+  - Membuka postingan Threads langsung dari channel (`POST /api/v1/moat/channels/{id}/open-thread`, menyimpan `posts.source_channel_id`).
+  - Menautkan channel ke postingan penyelesaian resmi (`GET/PUT/DELETE /api/v1/moat/channels/{id}/resolution`, menyimpan `channels.resolution_post_id` & `resolution_note`).
