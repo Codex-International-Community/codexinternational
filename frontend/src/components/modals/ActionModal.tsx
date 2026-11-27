@@ -285,7 +285,7 @@ export function ActionModal({
                 <div className="modal-pending" role="status">
                   <Icon name="users" size={21} />
                   <strong>No contacts yet</strong>
-                  <span>People will appear here when community member endpoints are connected.</span>
+                  <span>No people to show yet.</span>
                 </div>
               )
             ) : type === 'invite' ? (
