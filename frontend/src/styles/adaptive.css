@@ -5135,6 +5135,25 @@ dialog.modal--discord-server::backdrop {
   cursor: pointer;
 }
 
+.btn-warn:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.28);
+  border-color: rgba(245, 158, 11, 0.75);
+}
+
+.btn-danger {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+  cursor: pointer;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: rgba(239, 68, 68, 0.75);
+}
+
 /* Mobile UI polish for Social composer, post header, and sticker picker */
 @media (max-width: 720px) {
   .sticker-picker {
