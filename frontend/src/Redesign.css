@@ -699,6 +699,8 @@ button:active {
 }
 
 .avatar {
+  background: linear-gradient(140deg, #4b5563, #334155);
+  color: #fff;
   box-shadow: 0 0 0 1px rgba(240, 248, 230, .08);
 }
 
