@@ -128,7 +128,7 @@ async fn test_archive_hot_boundary_cold_tombstone_and_media_retention() {
             "INSERT INTO users (id, username, display_name, email) VALUES ($1, $2, $3, $4)",
         )
         .bind(uid)
-        .bind(format!("arch_{}", &uid.simple().to_string()[..8]))
+        .bind(format!("arch_{}", &uid.simple().to_string()[16..]))
         .bind(name)
         .bind(format!("arch_{}@example.com", uid.simple()))
         .execute(&state.pg)
