@@ -1065,7 +1065,7 @@ dialog.modal {
 
 /* Social timeline: an editorial feed, not a stack of dashboard cards. */
 .view-social .workspace-body {
-  grid-template-columns: minmax(0, 1fr) 286px;
+  grid-template-columns: minmax(0, 1fr);
   overflow: hidden;
 }
 

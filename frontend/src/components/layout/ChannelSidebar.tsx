@@ -73,7 +73,7 @@ export function ChannelSidebar({
   people,
   displayName,
   theme,
-  socialTab,
+  socialTab: _socialTab,
   voiceId,
   muted,
   deafened,
@@ -94,7 +94,7 @@ export function ChannelSidebar({
   canDeleteServer,
   onLeaveServer,
   onDeleteServer,
-  onSelectSocialTab,
+  onSelectSocialTab: _onSelectSocialTab,
   onOpenQuickSearch,
   onSelectChannel,
   onOpenDm,
@@ -213,40 +213,6 @@ export function ChannelSidebar({
           )}
           <button className="server-menu-item" type="button" role="menuitem" onClick={onCopyServerId}>
             <Icon name="copy" size={16} /> Copy Server ID
-          </button>
-        </div>
-      )}
-
-      {view === 'social' && (
-        <div className="social-side-nav">
-          <span className="side-nav-label">YOUR TIMELINE</span>
-          <button
-            type="button"
-            className={socialTab === 'for-you' ? 'selected' : ''}
-            onClick={() => onSelectSocialTab('for-you')}
-          >
-            <Icon name="compass" size={16} /> For you
-          </button>
-          <button
-            type="button"
-            className={socialTab === 'following' ? 'selected' : ''}
-            onClick={() => onSelectSocialTab('following')}
-          >
-            <Icon name="users" size={16} /> Following
-          </button>
-          <button
-            type="button"
-            className={socialTab === 'latest' ? 'selected' : ''}
-            onClick={() => onSelectSocialTab('latest')}
-          >
-            <Icon name="calendar" size={16} /> Latest
-          </button>
-          <button
-            type="button"
-            className={socialTab === 'saved' ? 'selected' : ''}
-            onClick={() => onSelectSocialTab('saved')}
-          >
-            <Icon name="bookmark" size={16} /> Saved posts
           </button>
         </div>
       )}

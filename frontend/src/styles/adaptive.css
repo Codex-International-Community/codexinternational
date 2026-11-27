@@ -4268,6 +4268,7 @@ dialog.modal--discord-server::backdrop {
   font-family: inherit;
   font-size: 15px;
   line-height: 1.5;
+  resize: none;
 }
 .app-shell.view-social .social-compose-footer > span {
   color: var(--quiet);
