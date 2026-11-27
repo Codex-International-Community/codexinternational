@@ -612,6 +612,12 @@ button:active {
 
 .composer-input {
   font-size: max(1rem, 1em);
+  font-family: inherit;
+  resize: none;
+  field-sizing: content;
+  max-height: 160px;
+  line-height: 1.45;
+  overflow-y: auto;
 }
 
 .composer-tools button:hover {
@@ -1431,15 +1437,21 @@ dialog.modal {
   background: var(--surface);
 }
 
-.social-reply-form input {
+.social-reply-form input,
+.social-reply-form textarea {
   flex: 1;
   min-width: 0;
-  height: 32px;
+  min-height: 32px;
+  max-height: 120px;
   border: 0;
   outline: 0;
   background: transparent;
   color: var(--text);
+  font-family: inherit;
   font-size: max(1rem, 1em);
+  line-height: 1.4;
+  resize: none;
+  field-sizing: content;
 }
 
 .social-reply-form button {

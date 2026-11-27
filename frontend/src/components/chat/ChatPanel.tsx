@@ -14,7 +14,7 @@ interface ChatPanelProps {
   channel?: Channel
   server?: Server
   feedRef: RefObject<HTMLDivElement | null>
-  messageInputRef: RefObject<HTMLInputElement | null>
+  messageInputRef: RefObject<HTMLTextAreaElement | null>
   messages: Message[]
   pinnedMessageIds: string[]
   composerText: string

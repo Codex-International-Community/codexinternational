@@ -973,7 +973,8 @@ dialog.bot-reveal-modal {
   padding: 7px 9px;
 }
 
-.app-shell.view-social .social-reply-form input {
+.app-shell.view-social .social-reply-form input,
+.app-shell.view-social .social-reply-form textarea {
   font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
   font-size: 16px;
 }

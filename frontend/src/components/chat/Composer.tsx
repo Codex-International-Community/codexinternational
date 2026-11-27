@@ -8,10 +8,11 @@ import {
 import type { StickerItem } from '../../api/stickers'
 import { Icon } from '../common/Icon'
 import { StickerPicker } from '../common/StickerPicker'
+import { handleEnterToSubmit } from '../../utils/composerKey'
 import type { Attachment, Message } from '../../types/chat'
 
 interface ComposerProps {
-  inputRef: RefObject<HTMLInputElement | null>
+  inputRef: RefObject<HTMLTextAreaElement | null>
   value: string
   placeholder: string
   replyTo: Message | null
@@ -105,13 +106,17 @@ export function Composer({
           <label htmlFor={inputId} className="visually-hidden">
             Write a message
           </label>
-          <input
+          <textarea
             id={inputId}
             ref={inputRef}
+            rows={1}
             className="composer-input"
             placeholder={placeholder}
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) =>
+              handleEnterToSubmit(e, Boolean(value.trim() || attachment), () => onSubmit())
+            }
           />
           <div className="composer-tools">
             <button

@@ -309,7 +309,7 @@ export function WorkspacePage({
   const [socialTab, setSocialTab] = useState<SocialTab>('for-you')
   const [followedHandles, setFollowedHandles] = useState<string[]>(loadFollowedHandles)
 
-  const messageInputRef = useRef<HTMLInputElement>(null)
+  const messageInputRef = useRef<HTMLTextAreaElement>(null)
   const chatSocketRef = useRef<WebSocket | null>(null)
   const chatSocketReadyRef = useRef(false)
   const sendingMessageRef = useRef(false)
