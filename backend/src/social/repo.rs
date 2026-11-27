@@ -190,6 +190,7 @@ pub async fn create_post(
 
     let post_id = Uuid::now_v7();
     let now = Utc::now();
+    let stored_content = encode_mentions(&state.pg, &content).await?;
 
     sqlx::query(
         "INSERT INTO posts (id, user_id, content, media_url, media_alt, sticker_id, created_at, updated_at)
@@ -197,7 +198,7 @@ pub async fn create_post(
     )
     .bind(post_id)
     .bind(user_id)
-    .bind(&content)
+    .bind(&stored_content)
     .bind(&media_url)
     .bind(&media_alt)
     .bind(sticker.as_ref().map(|s| s.id))
@@ -288,6 +289,8 @@ pub async fn create_reply(
     let now = Utc::now();
 
     let mut tx = state.pg.begin().await?;
+    let stored_content = encode_mentions(&state.pg, &content).await?;
+
     sqlx::query(
         "INSERT INTO post_replies (id, post_id, user_id, parent_reply_id, content, media_url, media_alt, sticker_id, created_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
@@ -296,7 +299,7 @@ pub async fn create_reply(
     .bind(post_id)
     .bind(user_id)
     .bind(req.parent_reply_id)
-    .bind(&content)
+    .bind(&stored_content)
     .bind(&media_url)
     .bind(&media_alt)
     .bind(sticker.as_ref().map(|s| s.id))
@@ -685,7 +688,163 @@ pub async fn list_posts(
         posts.retain(|p| p.saved);
     }
 
+    resolve_mentions(&state.pg, &mut posts).await?;
+
     Ok(posts)
+}
+
+async fn encode_mentions(pool: &sqlx::PgPool, text: &str) -> Result<String, AppError> {
+    if !text.contains('@') {
+        return Ok(text.to_string());
+    }
+
+    let mut handles = Vec::new();
+    let bytes = text.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'@' {
+            let start = i + 1;
+            let mut end = start;
+            while end < bytes.len() && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'_') {
+                end += 1;
+            }
+            let len = end - start;
+            if (2..=32).contains(&len) {
+                handles.push(text[start..end].to_ascii_lowercase());
+            }
+            i = end;
+        } else {
+            i += 1;
+        }
+    }
+
+    if handles.is_empty() {
+        return Ok(text.to_string());
+    }
+    handles.sort();
+    handles.dedup();
+
+    let rows: Vec<(Uuid, String)> =
+        sqlx::query_as("SELECT id, LOWER(username) FROM users WHERE LOWER(username) = ANY($1)")
+            .bind(&handles)
+            .fetch_all(pool)
+            .await?;
+
+    if rows.is_empty() {
+        return Ok(text.to_string());
+    }
+
+    let map: HashMap<String, Uuid> = rows.into_iter().map(|(id, u)| (u, id)).collect();
+    let mut out = String::with_capacity(text.len() + 32);
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'@' {
+            let start = i + 1;
+            let mut end = start;
+            while end < bytes.len() && (bytes[end].is_ascii_alphanumeric() || bytes[end] == b'_') {
+                end += 1;
+            }
+            let len = end - start;
+            if (2..=32).contains(&len)
+                && let Some(uid) = map.get(&text[start..end].to_ascii_lowercase())
+            {
+                out.push_str("<@");
+                out.push_str(&uid.to_string());
+                out.push('>');
+                i = end;
+                continue;
+            }
+        }
+        let ch = text[i..].chars().next().unwrap();
+        out.push(ch);
+        i += ch.len_utf8();
+    }
+
+    Ok(out)
+}
+
+async fn resolve_mentions(
+    pool: &sqlx::PgPool,
+    posts: &mut [SocialPostResponse],
+) -> Result<(), AppError> {
+    let mut ids = Vec::new();
+    let collect_ids = |text: &str, out: &mut Vec<Uuid>| {
+        let mut rest = text;
+        while let Some(pos) = rest.find("<@") {
+            let after = &rest[pos + 2..];
+            if let Some(end) = after.find('>') {
+                if let Ok(uid) = Uuid::parse_str(&after[..end]) {
+                    out.push(uid);
+                }
+                rest = &after[end + 1..];
+            } else {
+                break;
+            }
+        }
+    };
+
+    for p in posts.iter() {
+        if p.text.contains("<@") {
+            collect_ids(&p.text, &mut ids);
+        }
+        for r in &p.replies {
+            if r.text.contains("<@") {
+                collect_ids(&r.text, &mut ids);
+            }
+        }
+    }
+
+    if ids.is_empty() {
+        return Ok(());
+    }
+    ids.sort();
+    ids.dedup();
+
+    let rows: Vec<(Uuid, String)> =
+        sqlx::query_as("SELECT id, username FROM users WHERE id = ANY($1)")
+            .bind(&ids)
+            .fetch_all(pool)
+            .await?;
+
+    if rows.is_empty() {
+        return Ok(());
+    }
+    let map: HashMap<Uuid, String> = rows.into_iter().collect();
+
+    let replace_text = |text: &mut String| {
+        if !text.contains("<@") {
+            return;
+        }
+        let mut out = String::with_capacity(text.len());
+        let mut rest = text.as_str();
+        while let Some(pos) = rest.find("<@") {
+            out.push_str(&rest[..pos]);
+            let after = &rest[pos + 2..];
+            if let Some(end) = after.find('>') {
+                if let Ok(uid) = Uuid::parse_str(&after[..end])
+                    && let Some(username) = map.get(&uid)
+                {
+                    out.push('@');
+                    out.push_str(username);
+                    rest = &after[end + 1..];
+                    continue;
+                }
+            }
+            out.push_str("<@");
+            rest = after;
+        }
+        out.push_str(rest);
+        *text = out;
+    };
+
+    for p in posts.iter_mut() {
+        replace_text(&mut p.text);
+        for r in &mut p.replies {
+            replace_text(&mut r.text);
+        }
+    }
+
+    Ok(())
 }
 
 pub async fn toggle_action(
