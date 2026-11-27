@@ -18,7 +18,7 @@
 	encode gzip zstd
 
 	header {
-		Content-Security-Policy "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; frame-src https://challenges.cloudflare.com; connect-src 'self' https: wss:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; font-src 'self'; frame-src https://challenges.cloudflare.com; connect-src 'self' https: wss:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"

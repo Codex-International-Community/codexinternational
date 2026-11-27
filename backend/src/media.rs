@@ -311,6 +311,23 @@ pub fn generate_r2_key(
     }
 }
 
+/// Ensures legacy media URLs stored without a scheme (e.g. `media.example.com/...`)
+/// are returned with `https://` so browsers do not resolve them as relative paths.
+pub fn normalize_public_media_url(url: String) -> String {
+    let trimmed = url.trim();
+    if trimmed.is_empty()
+        || trimmed.starts_with("http://")
+        || trimmed.starts_with("https://")
+        || trimmed.starts_with('/')
+        || trimmed.starts_with("data:")
+        || trimmed.starts_with("blob:")
+    {
+        url
+    } else {
+        format!("https://{trimmed}")
+    }
+}
+
 pub fn attachment_from_record(
     config: &AppConfig,
     id: Uuid,
@@ -835,7 +852,8 @@ pub(crate) async fn delete_orphan_media_by_url(
     if base.is_empty() {
         return;
     }
-    let Some(r2_key) = media_url
+    let normalized_url = normalize_public_media_url(media_url.to_string());
+    let Some(r2_key) = normalized_url
         .strip_prefix(base)
         .map(|s| s.trim_start_matches('/'))
         .filter(|s| !s.is_empty())

@@ -89,7 +89,7 @@ async fn list_stickers(
         .map(|s| normalize_kind(Some(s)))
         .transpose()?;
 
-    let items = if let Some(kind) = kind_filter {
+    let mut items = if let Some(kind) = kind_filter {
         sqlx::query_as::<_, StickerItem>(
             "SELECT
                 s.id,
@@ -130,6 +130,10 @@ async fn list_stickers(
         .fetch_all(&state.pg)
         .await?
     };
+
+    for item in &mut items {
+        item.media_url = crate::media::normalize_public_media_url(std::mem::take(&mut item.media_url));
+    }
 
     Ok(Json(items))
 }
