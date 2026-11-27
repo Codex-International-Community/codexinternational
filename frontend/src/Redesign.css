@@ -2940,6 +2940,17 @@ dialog.modal {
 
   .workspace-body > .members-panel.mobile-members-open {
     display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 56px;
+    right: 0;
+    bottom: 0;
+    width: min(280px, 84vw);
+    z-index: 80;
+    background: var(--side);
+    border-left: 1px solid var(--line);
+    box-shadow: -16px 0 40px rgba(0, 0, 0, 0.45);
+    overflow-y: auto;
   }
 }
 

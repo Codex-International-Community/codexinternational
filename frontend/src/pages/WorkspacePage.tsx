@@ -2188,7 +2188,7 @@ export function WorkspacePage({
               currentUser={currentUser}
               currentDmUser={currentDm}
               people={view === 'dm' ? people : currentServerPeople}
-              mobileOpen={isMobile && membersOpen}
+              mobileOpen={membersOpen}
               onClose={() => setMembersOpen(false)}
               onInvite={() => void handleOpenInvite()}
               onOpenProfile={openProfile}
