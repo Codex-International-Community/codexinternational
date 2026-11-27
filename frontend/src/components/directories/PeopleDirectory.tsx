@@ -91,7 +91,7 @@ export function PeopleDirectory({ people, onOpenDm, onInvite }: PeopleDirectoryP
           <div className="directory-empty">
             <Icon name="users" size={24} />
             <strong>No members found yet</strong>
-            <span>Once community data is connected, you can search members and start direct conversations here.</span>
+            <span>Invite people to your community to search members and start direct conversations here.</span>
           </div>
         ) : filteredPeople.length === 0 ? (
           <div className="directory-empty">

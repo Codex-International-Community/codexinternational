@@ -23,7 +23,7 @@ export function DiscoverView({ onCreateCommunity }: DiscoverViewProps) {
         <div className="directory-empty">
           <Icon name="compass" size={24} />
           <strong>No communities to discover yet</strong>
-          <span>Community listings will appear here when the directory API is connected.</span>
+          <span>Create a new community or ask a friend for an invite link to get started.</span>
         </div>
       </div>
     </div>
