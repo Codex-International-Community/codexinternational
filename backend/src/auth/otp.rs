@@ -26,6 +26,7 @@ use crate::{
         handlers::{AuthResponse, ensure_not_suspended, normalize_platform, validate_email},
         jwt::{encode_access_token, generate_refresh_token, hash_token},
         repo::{create_device_session, find_user_by_identifier},
+        turnstile::verify_turnstile,
     },
     config::AppConfig,
     error::AppError,
@@ -176,6 +177,7 @@ impl EmailSender for BrevoEmailSender {
 pub struct SendOtpRequest {
     pub email: String,
     pub purpose: Option<String>,
+    pub turnstile_token: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -206,6 +208,7 @@ pub async fn send_otp(
     State(state): State<Arc<AppState>>,
     Json(req): Json<SendOtpRequest>,
 ) -> Result<Json<SendOtpResponse>, AppError> {
+    verify_turnstile(&state, req.turnstile_token.as_deref()).await?;
     let email = validate_email(&req.email)?;
     let purpose = normalize_purpose(req.purpose.as_deref())?;
     let email_hash = hash_token(&email);

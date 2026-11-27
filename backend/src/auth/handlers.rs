@@ -15,6 +15,7 @@ use crate::{
             NewUserParams, UserAuthRecord, UserProfile, create_device_session,
             create_user_with_device, find_user_by_id, find_user_by_identifier,
         },
+        turnstile::verify_turnstile,
     },
     error::AppError,
     state::AppState,
@@ -28,6 +29,7 @@ pub struct RegisterRequest {
     pub password: String,
     pub device_name: Option<String>,
     pub platform: Option<String>,
+    pub turnstile_token: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,6 +38,7 @@ pub struct LoginRequest {
     pub password: String,
     pub device_name: Option<String>,
     pub platform: Option<String>,
+    pub turnstile_token: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -59,6 +62,7 @@ pub async fn register(
     State(state): State<Arc<AppState>>,
     Json(req): Json<RegisterRequest>,
 ) -> Result<(StatusCode, Json<AuthResponse>), AppError> {
+    verify_turnstile(&state, req.turnstile_token.as_deref()).await?;
     let username = validate_username(&req.username)?;
     let display_name = validate_display_name(&req.display_name)?;
     let email = validate_email(&req.email)?;
@@ -116,6 +120,7 @@ pub async fn login(
     State(state): State<Arc<AppState>>,
     Json(req): Json<LoginRequest>,
 ) -> Result<(StatusCode, Json<AuthResponse>), AppError> {
+    verify_turnstile(&state, req.turnstile_token.as_deref()).await?;
     let identifier = req.identifier.trim();
     if identifier.is_empty() || req.password.is_empty() {
         return Err(AppError::BadRequest(

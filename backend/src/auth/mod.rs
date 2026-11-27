@@ -11,6 +11,7 @@ pub mod oauth;
 pub mod otp;
 pub mod password;
 pub mod repo;
+pub mod turnstile;
 pub mod uid;
 
 use std::sync::Arc;

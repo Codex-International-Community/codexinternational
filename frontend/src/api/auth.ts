@@ -23,11 +23,13 @@ export interface RegisterPayload {
   display_name: string
   email: string
   password: string
+  turnstile_token?: string
 }
 
 export interface LoginPayload {
   identifier: string
   password: string
+  turnstile_token?: string
 }
 
 const OAUTH_STATE_KEY = 'codexter_oauth_state_v1'
@@ -74,11 +76,12 @@ export async function loginWithPassword(payload: LoginPayload): Promise<AuthSess
 export async function sendEmailOtp(
   email: string,
   purpose: 'login' | 'verify_email' = 'login',
+  turnstileToken?: string,
 ): Promise<SendOtpResponse> {
   return apiRequest<SendOtpResponse>('/api/v1/auth/otp/send', {
     method: 'POST',
     auth: false,
-    body: { email, purpose },
+    body: { email, purpose, ...(turnstileToken ? { turnstile_token: turnstileToken } : {}) },
   })
 }
 

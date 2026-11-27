@@ -12,6 +12,7 @@ import {
   type OAuthProvider,
 } from '../api/auth'
 import { useViewport } from '../hooks/useViewport'
+import { isTurnstileEnabled, TurnstileWidget } from '../components/TurnstileWidget'
 
 type AuthTab = 'otp' | 'password' | 'register'
 type MobileStep = 'welcome' | 'otp-email' | 'otp-verify' | 'password' | 'register'
@@ -83,6 +84,13 @@ export function Landing({ onAuthenticated, onBrowseThreads, initialError = '' }:
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(initialError)
   const [info, setInfo] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState('')
+  const [turnstileResetKey, setTurnstileResetKey] = useState(0)
+
+  const resetTurnstile = () => {
+    setTurnstileToken('')
+    setTurnstileResetKey((k) => k + 1)
+  }
 
   useEffect(() => {
     if (cooldownSecs <= 0) return
@@ -219,11 +227,15 @@ export function Landing({ onAuthenticated, onBrowseThreads, initialError = '' }:
   const handleSendOtp = async (e?: FormEvent) => {
     e?.preventDefault()
     if (!validEmail || busy || cooldownSecs > 0) return
+    if (isTurnstileEnabled && !turnstileToken) {
+      setError('Please complete the Turnstile verification.')
+      return
+    }
     setError('')
     setInfo('')
     setBusy(true)
     try {
-      const res = await sendEmailOtp(email.trim(), 'login')
+      const res = await sendEmailOtp(email.trim(), 'login', turnstileToken || undefined)
       setOtpSent(true)
       setCooldownSecs(res.next_retry_after_secs > 0 ? res.next_retry_after_secs : 60)
       setInfo(`6-digit OTP sent to ${email.trim()}. Expires in ${Math.round(res.expires_in_secs / 60)} min.`)
@@ -234,6 +246,7 @@ export function Landing({ onAuthenticated, onBrowseThreads, initialError = '' }:
     } catch (err) {
       handleApiFailure(err)
     } finally {
+      resetTurnstile()
       setBusy(false)
     }
   }
@@ -256,12 +269,21 @@ export function Landing({ onAuthenticated, onBrowseThreads, initialError = '' }:
   const handlePasswordLogin = async (e: FormEvent) => {
     e.preventDefault()
     if (!identifier.trim() || !password || busy) return
+    if (isTurnstileEnabled && !turnstileToken) {
+      setError('Please complete the Turnstile verification.')
+      return
+    }
     setError('')
     setBusy(true)
     try {
-      await loginWithPassword({ identifier: identifier.trim(), password })
+      await loginWithPassword({
+        identifier: identifier.trim(),
+        password,
+        turnstile_token: turnstileToken || undefined,
+      })
       onAuthenticated()
     } catch (err) {
+      resetTurnstile()
       handleApiFailure(err)
     } finally {
       setBusy(false)
@@ -274,6 +296,10 @@ export function Landing({ onAuthenticated, onBrowseThreads, initialError = '' }:
       setError('Fill username, display name, valid email, and password (min 8 chars).')
       return
     }
+    if (isTurnstileEnabled && !turnstileToken) {
+      setError('Please complete the Turnstile verification.')
+      return
+    }
     setError('')
     setBusy(true)
     try {
@@ -282,9 +308,11 @@ export function Landing({ onAuthenticated, onBrowseThreads, initialError = '' }:
         display_name: displayName.trim(),
         email: email.trim(),
         password,
+        turnstile_token: turnstileToken || undefined,
       })
       onAuthenticated()
     } catch (err) {
+      resetTurnstile()
       handleApiFailure(err)
     } finally {
       setBusy(false)
@@ -346,6 +374,7 @@ export function Landing({ onAuthenticated, onBrowseThreads, initialError = '' }:
             onChange={(e) => setEmail(e.target.value)}
             disabled={busy}
           />
+          <TurnstileWidget onToken={setTurnstileToken} resetKey={turnstileResetKey} />
           <button
             type="submit"
             className={`landing-continue ${validEmail && !busy && cooldownSecs === 0 ? 'is-ready' : ''}`}
@@ -419,6 +448,7 @@ export function Landing({ onAuthenticated, onBrowseThreads, initialError = '' }:
         onChange={(e) => setPassword(e.target.value)}
         disabled={busy}
       />
+      <TurnstileWidget onToken={setTurnstileToken} resetKey={turnstileResetKey} />
       <button
         type="submit"
         className={`landing-continue ${identifier.trim() && password && !busy ? 'is-ready' : ''}`}
@@ -476,6 +506,7 @@ export function Landing({ onAuthenticated, onBrowseThreads, initialError = '' }:
         onChange={(e) => setPassword(e.target.value)}
         disabled={busy}
       />
+      <TurnstileWidget onToken={setTurnstileToken} resetKey={turnstileResetKey} />
       <button
         type="submit"
         className={`landing-continue ${username.trim() && displayName.trim() && validEmail && password.length >= 8 && !busy ? 'is-ready' : ''}`}
