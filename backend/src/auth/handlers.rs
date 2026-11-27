@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
 };
 use chrono::{Duration, Utc};
@@ -235,6 +235,22 @@ pub async fn public_profile(
     Ok(Json(PublicUserProfileResponse { user }))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct UsernameQuery {
+    pub username: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UsernameAvailableResponse {
+    pub available: bool,
+    pub username: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UpdateUsernameRequest {
+    pub username: String,
+}
+
 /// Returns the authenticated user's current profile (`GET /api/v1/auth/me`).
 pub async fn me(
     State(state): State<Arc<AppState>>,
@@ -276,6 +292,64 @@ pub async fn update_profile(
     .bind(auth.user_id)
     .fetch_one(&state.pg)
     .await?;
+
+    Ok(Json(MeResponse { user: updated }))
+}
+
+/// Checks whether a candidate username is valid and available (`GET /api/v1/auth/username-available`).
+pub async fn check_username_available(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    Query(q): Query<UsernameQuery>,
+) -> Result<Json<UsernameAvailableResponse>, AppError> {
+    let username = validate_username(&q.username)?;
+    let available: bool = sqlx::query_scalar(
+        "SELECT NOT EXISTS(SELECT 1 FROM users WHERE LOWER(username) = LOWER($1) AND id <> $2)",
+    )
+    .bind(&username)
+    .bind(auth.user_id)
+    .fetch_one(&state.pg)
+    .await?;
+
+    Ok(Json(UsernameAvailableResponse {
+        available,
+        username,
+    }))
+}
+
+/// Updates the authenticated user's username (`PATCH /api/v1/auth/username`).
+pub async fn update_username(
+    State(state): State<Arc<AppState>>,
+    auth: AuthUser,
+    Json(req): Json<UpdateUsernameRequest>,
+) -> Result<Json<MeResponse>, AppError> {
+    let record = find_user_by_id(&state.pg, auth.user_id)
+        .await?
+        .ok_or_else(|| AppError::Unauthorized("user account no longer exists".to_string()))?;
+    ensure_not_suspended(&record)?;
+
+    let username = validate_username(&req.username)?;
+
+    let updated = sqlx::query_as::<_, crate::auth::repo::UserProfile>(
+        "UPDATE users
+         SET username = $1, updated_at = NOW()
+         WHERE id = $2
+         RETURNING id, uid, uid_login_enabled, (password_hash IS NOT NULL) AS has_password,
+                   username, display_name, avatar_media_id, email, email_verified_at, bio,
+                   platform_role, platform_badge, is_verified, can_bypass_compress, global_xp, global_level, created_at",
+    )
+    .bind(&username)
+    .bind(auth.user_id)
+    .fetch_one(&state.pg)
+    .await
+    .map_err(|e| {
+        if let sqlx::Error::Database(db_err) = &e
+            && db_err.code().as_deref() == Some("23505")
+        {
+            return AppError::Conflict("username is already taken".to_string());
+        }
+        AppError::from(e)
+    })?;
 
     Ok(Json(MeResponse { user: updated }))
 }

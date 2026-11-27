@@ -30,6 +30,11 @@ pub fn router() -> Router<Arc<AppState>> {
         .route("/login", post(handlers::login))
         .route("/me", get(handlers::me).patch(handlers::update_profile))
         .route("/me/avatar", patch(handlers::update_avatar))
+        .route(
+            "/username-available",
+            get(handlers::check_username_available),
+        )
+        .route("/username", patch(handlers::update_username))
         .route("/password", put(uid::set_or_change_password))
         .route("/uid-login", patch(uid::toggle_uid_login))
         .route("/refresh", post(devices::refresh))
