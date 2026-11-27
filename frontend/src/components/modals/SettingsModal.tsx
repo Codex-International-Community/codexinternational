@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useUsernameEditor } from '../../hooks/useUsernameEditor'
 import {
   setOrChangePassword,
@@ -99,6 +99,7 @@ export function SettingsModal({
   const usernameId = useId()
   const usernameEditor = useUsernameEditor(authUser?.username ?? '')
   const avatarUploadId = useId()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
   const currentPasswordId = useId()
   const newPasswordId = useId()
   const confirmPasswordId = useId()
@@ -533,9 +534,14 @@ export function SettingsModal({
                           {avatarInfo && <small className="settings-feedback is-success">{avatarInfo}</small>}
                         </div>
                         <div className="settings-inline-actions">
-                          <label htmlFor={avatarUploadId} className="setting-action" aria-disabled={avatarBusy}>
+                          <button
+                            type="button"
+                            className="setting-action"
+                            disabled={avatarBusy}
+                            onClick={() => avatarInputRef.current?.click()}
+                          >
                             {avatarBusy ? 'Uploading…' : 'Upload photo'}
-                          </label>
+                          </button>
                           {authUser.avatar_media_id && (
                             <button
                               type="button"
@@ -547,6 +553,7 @@ export function SettingsModal({
                             </button>
                           )}
                           <input
+                            ref={avatarInputRef}
                             id={avatarUploadId}
                             type="file"
                             accept="image/avif,image/jpeg,image/png,image/webp,image/gif"

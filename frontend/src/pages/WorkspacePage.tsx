@@ -1929,6 +1929,7 @@ export function WorkspacePage({
             ) : (
               <ChatPanel
                 currentUserId={session.user.id}
+                currentUserAvatarMediaId={currentUser.avatarMediaId}
                 onOpenProfile={openProfile}
                 isDm={view === 'dm'}
                 currentDm={currentDm}
