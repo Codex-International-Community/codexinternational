@@ -609,8 +609,9 @@ export function SocialPostCard({
               <label htmlFor={replyInputId} className="visually-hidden">
                 Reply to @{replyTarget ? replyTarget.handle : post.handle}
               </label>
-              <input
+              <textarea
                 id={replyInputId}
+                rows={1}
                 autoFocus
                 value={replyDraft}
                 onChange={(e) => {
@@ -619,6 +620,14 @@ export function SocialPostCard({
                 }}
                 onClick={(e) => setReplyCursorPos(e.currentTarget.selectionStart)}
                 onKeyUp={(e) => setReplyCursorPos(e.currentTarget.selectionStart)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    e.preventDefault()
+                    if (replyDraft.trim() || replyMediaUrl || replySticker) {
+                      e.currentTarget.form?.requestSubmit()
+                    }
+                  }
+                }}
                 placeholder={`Reply to @${replyTarget ? replyTarget.handle : post.handle}`}
               />
               <input

@@ -612,6 +612,12 @@ button:active {
 
 .composer-input {
   font-size: max(1rem, 1em);
+  font-family: inherit;
+  resize: none;
+  field-sizing: content;
+  max-height: 160px;
+  line-height: 1.45;
+  overflow-y: auto;
 }
 
 .composer-tools button:hover {
@@ -693,6 +699,8 @@ button:active {
 }
 
 .avatar {
+  background: linear-gradient(140deg, #4b5563, #334155);
+  color: #fff;
   box-shadow: 0 0 0 1px rgba(240, 248, 230, .08);
 }
 
@@ -1206,7 +1214,7 @@ dialog.modal {
 }
 
 .social-compose-footer button .gf-icon {
-  filter: brightness(0) invert(1);
+  color: inherit;
 }
 
 .social-compose-footer button:disabled {
@@ -1439,7 +1447,8 @@ dialog.modal {
 }
 
 .social-post-actions button.is-liked .gf-icon {
-  filter: brightness(0) saturate(100%) invert(40%) sepia(79%) saturate(2476%) hue-rotate(336deg) brightness(95%) contrast(96%);
+  color: #ef4444;
+  fill: #ef4444;
   opacity: 1;
 }
 
@@ -1482,15 +1491,21 @@ dialog.modal {
   background: var(--surface);
 }
 
-.social-reply-form input {
+.social-reply-form input,
+.social-reply-form textarea {
   flex: 1;
   min-width: 0;
-  height: 32px;
+  min-height: 32px;
+  max-height: 120px;
   border: 0;
   outline: 0;
   background: transparent;
   color: var(--text);
+  font-family: inherit;
   font-size: max(1rem, 1em);
+  line-height: 1.4;
+  resize: none;
+  field-sizing: content;
 }
 
 .social-reply-form button {
@@ -2979,6 +2994,17 @@ dialog.modal {
 
   .workspace-body > .members-panel.mobile-members-open {
     display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 56px;
+    right: 0;
+    bottom: 0;
+    width: min(280px, 84vw);
+    z-index: 80;
+    background: var(--side);
+    border-left: 1px solid var(--line);
+    box-shadow: -16px 0 40px rgba(0, 0, 0, 0.45);
+    overflow-y: auto;
   }
 }
 

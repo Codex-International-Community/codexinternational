@@ -37,7 +37,7 @@ export function AiAssistantBar({ channelId, onNotify }: AiAssistantBarProps) {
       const res = await catchMeUpChannel(channelId)
       setCatchup(res)
     } catch (err) {
-      onNotify(err instanceof Error ? err.message : 'Gagal meringkas channel')
+      onNotify(err instanceof Error ? err.message : 'Failed to summarize channel.')
     } finally {
       setBusy(false)
     }
@@ -101,7 +101,7 @@ export function AiAssistantBar({ channelId, onNotify }: AiAssistantBarProps) {
     >
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', alignItems: 'center' }}>
         <button type="button" className="btn-xs" onClick={() => void handleCatchMeUp()} disabled={busy}>
-          Ringkas Obrolan
+          Catch Me Up
         </button>
         <button
           type="button"
@@ -126,7 +126,7 @@ export function AiAssistantBar({ channelId, onNotify }: AiAssistantBarProps) {
         </button>
         {tool !== 'none' && (
           <button type="button" className="btn-xs" onClick={() => setTool('none')}>
-            Tutup
+            Close
           </button>
         )}
       </div>
@@ -134,7 +134,7 @@ export function AiAssistantBar({ channelId, onNotify }: AiAssistantBarProps) {
       {tool === 'catchup' && (
         <div style={{ padding: '0.5rem', borderRadius: '8px', background: 'var(--bg-raised, rgba(255,255,255,0.04))' }}>
           {busy ? (
-            <span>Meringkas obrolan...</span>
+            <span>Summarizing conversation...</span>
           ) : catchup ? (
             <div>
               <strong>

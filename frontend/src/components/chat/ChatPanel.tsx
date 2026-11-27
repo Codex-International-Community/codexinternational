@@ -8,13 +8,14 @@ import type { Attachment, Channel, Message, Server, User } from '../../types/cha
 
 interface ChatPanelProps {
   currentUserId: string
+  currentUserAvatarMediaId?: string
   onOpenProfile: (userId: string) => void
   isDm: boolean
   currentDm?: User
   channel?: Channel
   server?: Server
   feedRef: RefObject<HTMLDivElement | null>
-  messageInputRef: RefObject<HTMLInputElement | null>
+  messageInputRef: RefObject<HTMLTextAreaElement | null>
   messages: Message[]
   pinnedMessageIds: string[]
   composerText: string
@@ -69,6 +70,7 @@ function localDayLabel(value: string) {
 
 export function ChatPanel({
   currentUserId,
+  currentUserAvatarMediaId,
   onOpenProfile,
   isDm,
   currentDm,
@@ -221,6 +223,7 @@ export function ChatPanel({
               <MessageItem
                 message={message}
                 currentUserId={currentUserId}
+                currentUserAvatarMediaId={currentUserAvatarMediaId}
                 onOpenProfile={onOpenProfile}
                 isPinned={pinnedMessageIds.includes(message.id)}
                 isMenuOpen={activeMenuId === message.id}

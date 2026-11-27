@@ -29,7 +29,7 @@ export function MobileTabs({ activeTab, onSelectTab }: MobileTabsProps) {
         onClick={() => onSelectTab('social')}
       >
         <Icon name="at" />
-        <span>Social</span>
+        <span>Threads</span>
       </button>
       <button
         className={activeTab === 'channels' ? 'active' : ''}

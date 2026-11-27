@@ -17,7 +17,7 @@ import { isTurnstileEnabled, TurnstileWidget } from '../components/TurnstileWidg
 type AuthTab = 'otp' | 'password' | 'register'
 type MobileStep = 'welcome' | 'otp-email' | 'otp-verify' | 'password' | 'register'
 
-const BRAND = 'Codex Internasional Community'
+const BRAND = 'Codex International Community'
 
 function BrandMark({ size = 52 }: { size?: number }) {
   return (

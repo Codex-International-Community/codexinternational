@@ -34,7 +34,7 @@ export function PeopleDirectory({ people, onOpenDm, onInvite }: PeopleDirectoryP
         <div>
           <span className="eyebrow">THE PEOPLE BEHIND THE COMMUNITY</span>
           <h1>People</h1>
-          <p>{people.length > 0 ? `${people.length} members · ${onlineCount} online.` : 'Member discovery will be available when the community API is connected.'}</p>
+          <p>{people.length > 0 ? `${people.length} ${people.length === 1 ? 'member' : 'members'} · ${onlineCount} online.` : 'No community members to show yet.'}</p>
         </div>
         <button className="primary-action" onClick={onInvite}>
           <Icon name="plus" size={15} /> Invite people
@@ -90,7 +90,7 @@ export function PeopleDirectory({ people, onOpenDm, onInvite }: PeopleDirectoryP
         {people.length === 0 ? (
           <div className="directory-empty">
             <Icon name="users" size={24} />
-            <strong>Member directory is waiting for the API</strong>
+            <strong>No members found yet</strong>
             <span>Once community data is connected, you can search members and start direct conversations here.</span>
           </div>
         ) : filteredPeople.length === 0 ? (

@@ -96,7 +96,7 @@ export function MembersPanel({
             <div className="directory-empty">
               <Icon name="users" size={22} />
               <strong>No members to show</strong>
-              <span>Member information will appear when the community API is connected.</span>
+              <span>No member details available yet.</span>
             </div>
           )}
         </>

@@ -6,6 +6,7 @@ import type { Message } from '../../types/chat'
 interface MessageItemProps {
   message: Message
   currentUserId: string
+  currentUserAvatarMediaId?: string
   onOpenProfile: (userId: string) => void
   isPinned: boolean
   isMenuOpen: boolean
@@ -25,6 +26,7 @@ interface MessageItemProps {
 export function MessageItem({
   message,
   currentUserId,
+  currentUserAvatarMediaId,
   onOpenProfile,
   isPinned,
   isMenuOpen,
@@ -67,6 +69,10 @@ export function MessageItem({
             initials: message.initials,
             tone: message.tone,
             status: 'online',
+            avatarMediaId:
+              message.authorId === 'self' || message.authorId === currentUserId
+                ? currentUserAvatarMediaId
+                : undefined,
           }}
           size="large"
         />

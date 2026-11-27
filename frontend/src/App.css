@@ -1940,8 +1940,8 @@ dialog.modal {
 .toast {
   position: fixed;
   z-index: 120;
+  top: 68px;
   right: 17px;
-  bottom: 17px;
   display: flex;
   align-items: center;
   gap: 9px;

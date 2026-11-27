@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { uploadProfileAvatar, updateProfileAvatar } from '../../api/auth'
 import { ApiError, publicApiUrl } from '../../api/client'
 import { Icon } from './Icon'
@@ -35,6 +35,7 @@ export function MemberProfile({
   onEditProfile,
 }: MemberProfileProps) {
   const avatarInputId = useId()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
   const [avatarBusy, setAvatarBusy] = useState(false)
   const [avatarError, setAvatarError] = useState('')
   const [avatarInfo, setAvatarInfo] = useState('')
@@ -195,15 +196,16 @@ export function MemberProfile({
                     Edit profile
                   </button>
                 )}
-                <label
-                  htmlFor={avatarInputId}
+                <button
+                  type="button"
                   className="member-profile-avatar-upload"
-                  aria-disabled={avatarBusy}
+                  disabled={avatarBusy}
+                  onClick={() => avatarInputRef.current?.click()}
                   title="Upload a new profile photo. GIF is supported."
                 >
                   <Icon name="image" size={15} />
                   {avatarBusy ? 'Uploading…' : 'Change photo'}
-                </label>
+                </button>
                 {user.avatarMediaId && (
                   <button
                     type="button"
@@ -215,6 +217,7 @@ export function MemberProfile({
                   </button>
                 )}
                 <input
+                  ref={avatarInputRef}
                   id={avatarInputId}
                   type="file"
                   accept="image/avif,image/jpeg,image/png,image/webp,image/gif"

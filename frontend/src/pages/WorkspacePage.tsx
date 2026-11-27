@@ -310,7 +310,7 @@ export function WorkspacePage({
   const [socialTab, setSocialTab] = useState<SocialTab>('for-you')
   const [followedHandles, setFollowedHandles] = useState<string[]>(loadFollowedHandles)
 
-  const messageInputRef = useRef<HTMLInputElement>(null)
+  const messageInputRef = useRef<HTMLTextAreaElement>(null)
   const chatSocketRef = useRef<WebSocket | null>(null)
   const chatSocketReadyRef = useRef(false)
   const sendingMessageRef = useRef(false)
@@ -1967,6 +1967,7 @@ export function WorkspacePage({
             ) : (
               <ChatPanel
                 currentUserId={session.user.id}
+                currentUserAvatarMediaId={currentUser.avatarMediaId}
                 onOpenProfile={openProfile}
                 isDm={view === 'dm'}
                 currentDm={currentDm}
@@ -2225,7 +2226,7 @@ export function WorkspacePage({
               currentUser={currentUser}
               currentDmUser={currentDm}
               people={view === 'dm' ? people : currentServerPeople}
-              mobileOpen={isMobile && membersOpen}
+              mobileOpen={membersOpen}
               onClose={() => setMembersOpen(false)}
               onInvite={() => void handleOpenInvite()}
               onOpenProfile={openProfile}

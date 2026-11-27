@@ -973,7 +973,8 @@ dialog.bot-reveal-modal {
   padding: 7px 9px;
 }
 
-.app-shell.view-social .social-reply-form input {
+.app-shell.view-social .social-reply-form input,
+.app-shell.view-social .social-reply-form textarea {
   font-family: var(--landing-sans, 'Plus Jakarta Sans', system-ui, sans-serif);
   font-size: 16px;
 }
@@ -1082,19 +1083,29 @@ dialog.bot-reveal-modal {
   }
 
   .app-shell.view-social .social-post-actions button {
-    min-height: 34px;
-    gap: 4px;
-    font-size: .68rem;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 8px;
+    gap: 5px;
+    font-size: .75rem;
   }
 
   .app-shell.view-social .social-follow-inline {
-    padding: 6px 8px;
-    font-size: .63rem;
+    min-height: 44px;
+    padding: 6px 10px;
+    font-size: .72rem;
   }
 
   .app-shell.view-social .social-compose-footer button {
-    min-height: 38px;
-    height: 38px;
+    min-width: 44px;
+    min-height: 44px;
+    height: 44px;
+  }
+
+  .app-shell.view-social .social-save-btn,
+  .app-shell.view-social .social-post-menu-trigger {
+    min-width: 44px;
+    min-height: 44px;
   }
 }
 
@@ -2823,19 +2834,16 @@ dialog.bot-reveal-modal {
   }
 }
 
-/* Gentleface line-round icon treatment */
+/* Local vector icon treatment (inherits currentColor) */
 .gf-icon {
   display: inline-block;
   flex: 0 0 auto;
   width: 16px;
   height: 16px;
-  object-fit: contain;
   vertical-align: middle;
   user-select: none;
   transition: transform .2s ease, opacity .2s ease;
 }
-.theme-dark .gf-icon { filter: invert(1); }
-.theme-light .gf-icon { filter: none; }
 button:hover > .gf-icon { opacity: 1; }
 .joined-servers {
   display: flex;
@@ -3889,19 +3897,24 @@ button:hover > .gf-icon { opacity: 1; }
   }
 
   .friends-tabs {
-    gap: 3px;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .friends-tab-heading,
   .friends-tab {
-    padding-inline: 8px;
-    font-size: .8rem;
+    min-height: 44px;
+    padding-inline: 10px;
+    font-size: .8125rem;
   }
 
   .friends-add-button {
-    min-height: 32px;
-    padding-inline: 9px;
-    font-size: .78rem;
+    min-height: 44px;
+    padding-inline: 11px;
+    font-size: .8125rem;
   }
 
   .friends-list {
@@ -4272,7 +4285,7 @@ dialog.modal--discord-server::backdrop {
   font-weight: 700;
 }
 .app-shell.view-social .social-compose-footer button .gf-icon {
-  filter: brightness(0) invert(1);
+  color: inherit;
 }
 .app-shell.view-social .social-compose-footer button:disabled { opacity: .42; }
 .app-shell.view-social .social-feed-tabs { border-bottom: 1px solid var(--line); }
@@ -4304,7 +4317,8 @@ dialog.modal--discord-server::backdrop {
   color: #ef4444;
 }
 .app-shell.view-social .social-post-actions button.is-liked .gf-icon {
-  filter: brightness(0) saturate(100%) invert(40%) sepia(79%) saturate(2476%) hue-rotate(336deg) brightness(95%) contrast(96%);
+  color: #ef4444;
+  fill: #ef4444;
   opacity: 1;
 }
 .app-shell.view-social .social-post-actions button.is-reposted,

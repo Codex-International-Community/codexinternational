@@ -5,6 +5,7 @@ import { Icon } from '../common/Icon'
 import { Avatar } from '../common/Avatar'
 import { StickerPicker } from '../common/StickerPicker'
 import { TagAutocomplete, type MentionCandidate } from '../common/TagAutocomplete'
+import { handleEnterToSubmit } from '../../utils/composerKey'
 import type { User } from '../../types/chat'
 
 export interface SocialPublishPayload {
@@ -96,6 +97,11 @@ export function SocialComposer({
           }}
           onClick={(e) => setCursorPos(e.currentTarget.selectionStart)}
           onKeyUp={(e) => setCursorPos(e.currentTarget.selectionStart)}
+          onKeyDown={(e) =>
+            handleEnterToSubmit(e, canPublish && hasContent, () =>
+              e.currentTarget.form?.requestSubmit(),
+            )
+          }
           placeholder="What’s new? Use @mention or #hashtag"
           rows={3}
           maxLength={500}

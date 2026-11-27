@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useUsernameEditor } from '../../hooks/useUsernameEditor'
 import { Icon } from '../common/Icon'
 import type { AuthUserProfile } from '../../api/client'
@@ -23,6 +23,7 @@ export function SettingsView({
 }: SettingsViewProps) {
   const displayNameId = useId()
   const usernameId = useId()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
   const usernameEditor = useUsernameEditor(authUser?.username ?? '')
   const newPasswordId = useId()
   const confirmPasswordId = useId()
@@ -254,15 +255,21 @@ export function SettingsView({
               {avatarInfo && <small style={{ color: 'var(--success, #22c55e)' }}>{avatarInfo}</small>}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-              <label htmlFor="profile-avatar-upload" className="setting-action" aria-disabled={avatarBusy}>
+              <button
+                type="button"
+                className="setting-action"
+                disabled={avatarBusy}
+                onClick={() => avatarInputRef.current?.click()}
+              >
                 {avatarBusy ? 'Uploading…' : 'Upload photo'}
-              </label>
+              </button>
               {authUser.avatar_media_id && (
                 <button type="button" className="setting-action" onClick={() => void handleRemoveAvatar()} disabled={avatarBusy}>
                   Remove
                 </button>
               )}
               <input
+                ref={avatarInputRef}
                 id="profile-avatar-upload"
                 type="file"
                 accept="image/avif,image/jpeg,image/png,image/webp,image/gif"

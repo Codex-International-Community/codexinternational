@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useUsernameEditor } from '../../hooks/useUsernameEditor'
 import {
   setOrChangePassword,
@@ -99,6 +99,7 @@ export function SettingsModal({
   const usernameId = useId()
   const usernameEditor = useUsernameEditor(authUser?.username ?? '')
   const avatarUploadId = useId()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
   const currentPasswordId = useId()
   const newPasswordId = useId()
   const confirmPasswordId = useId()
@@ -533,9 +534,14 @@ export function SettingsModal({
                           {avatarInfo && <small className="settings-feedback is-success">{avatarInfo}</small>}
                         </div>
                         <div className="settings-inline-actions">
-                          <label htmlFor={avatarUploadId} className="setting-action" aria-disabled={avatarBusy}>
+                          <button
+                            type="button"
+                            className="setting-action"
+                            disabled={avatarBusy}
+                            onClick={() => avatarInputRef.current?.click()}
+                          >
                             {avatarBusy ? 'Uploading…' : 'Upload photo'}
-                          </label>
+                          </button>
                           {authUser.avatar_media_id && (
                             <button
                               type="button"
@@ -547,6 +553,7 @@ export function SettingsModal({
                             </button>
                           )}
                           <input
+                            ref={avatarInputRef}
                             id={avatarUploadId}
                             type="file"
                             accept="image/avif,image/jpeg,image/png,image/webp,image/gif"
@@ -581,7 +588,17 @@ export function SettingsModal({
                         <small>4-20 characters. Leave empty to display your username.</small>
                       </div>
                       <div className="settings-form-actions">
-                        <button type="submit" className="btn-primary" disabled={profileBusy}>
+                        <button
+                          type="submit"
+                          className="btn-primary"
+                          disabled={
+                            profileBusy ||
+                            profileDraft.trim() ===
+                              (authUser?.display_name && authUser.display_name !== authUser.username
+                                ? authUser.display_name.trim()
+                                : '')
+                          }
+                        >
                           {profileBusy ? 'Saving…' : 'Save Name'}
                         </button>
                       </div>
@@ -795,7 +812,10 @@ export function SettingsModal({
                   <div className="settings-row">
                     <div className="settings-row-copy">
                       <strong>Communities &amp; Channels</strong>
-                      <small>{socialStats.serversCount} joined communities with real-time text channels and post sharing in Codexter.</small>
+                      <small>
+                        {socialStats.serversCount} joined{' '}
+                        {socialStats.serversCount === 1 ? 'community' : 'communities'} with real-time text channels and post sharing in Codexter.
+                      </small>
                     </div>
                   </div>
                   <div className="settings-row">
