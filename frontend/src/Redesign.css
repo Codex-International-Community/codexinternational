@@ -92,8 +92,8 @@ button:active {
 
 .server-rail .brand-mark {
   border-radius: 15px 15px 15px 5px;
-  background: var(--accent-solid);
-  color: #fff;
+  background: var(--surface2);
+  color: var(--muted);
   font-family: var(--serif);
   font-style: italic;
   font-size: 1.75rem;
@@ -103,7 +103,13 @@ button:active {
 
 .server-rail .brand-mark:hover {
   border-radius: 15px 15px 15px 5px;
-  background: var(--accent-solid-hover);
+  background: var(--hover, var(--surface2));
+  color: var(--text);
+}
+
+.server-rail .brand-mark.active,
+.server-rail .brand-mark.active:hover {
+  background: var(--accent-solid);
   color: #fff;
 }
 
@@ -2917,6 +2923,17 @@ dialog.modal {
   line-height: 1.5;
 }
 
+.composer-input:focus,
+.composer-input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.message-content > p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .composer-note {
   width: min(100%, 1040px);
   margin: 0 auto;
@@ -2929,6 +2946,22 @@ dialog.modal {
 .members-panel {
   min-width: 0;
   background: var(--side);
+}
+
+@media (min-width: 1101px) {
+  .workspace-body > .members-panel,
+  .workspace-body > .members-panel.mobile-members-open {
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    width: auto;
+    z-index: auto;
+    display: flex;
+    flex-direction: column;
+    box-shadow: none;
+    border-left: 1px solid var(--line);
+  }
 }
 
 @media (max-width: 1100px) {

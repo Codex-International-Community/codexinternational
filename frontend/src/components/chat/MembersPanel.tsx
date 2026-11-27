@@ -23,7 +23,16 @@ export function MembersPanel({
   onInvite,
   onOpenProfile,
 }: MembersPanelProps) {
-  const communityPeople = people.length > 0 ? people : [currentUser]
+  const communityPeople = (people.length > 0 ? people : [currentUser]).map((person) =>
+    person.id === currentUser.id
+      ? {
+          ...person,
+          status: currentUser.status,
+          avatarMediaId: currentUser.avatarMediaId ?? person.avatarMediaId,
+          initials: currentUser.initials || person.initials,
+        }
+      : person,
+  )
   const visiblePeople = isDm && currentDmUser ? [currentDmUser] : communityPeople
   const onlinePeople = visiblePeople.filter((person) => person.status === 'online')
   const idlePeople = visiblePeople.filter((person) => person.status !== 'online')
