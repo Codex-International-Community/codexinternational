@@ -12,6 +12,7 @@ export function handleEnterToSubmit(
     return
   }
   event.preventDefault()
+  event.stopPropagation()
   if (canSubmit) {
     submit()
   }

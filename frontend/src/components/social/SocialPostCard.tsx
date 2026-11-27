@@ -6,6 +6,7 @@ import { Avatar } from '../common/Avatar'
 import { StickerPicker } from '../common/StickerPicker'
 import { TaggedText } from '../common/TaggedText'
 import { TagAutocomplete, type MentionCandidate } from '../common/TagAutocomplete'
+import { handleEnterToSubmit } from '../../utils/composerKey'
 import type { User } from '../../types/chat'
 import type { SocialPost, SocialReply } from '../../types/social'
 
@@ -620,14 +621,13 @@ export function SocialPostCard({
                 }}
                 onClick={(e) => setReplyCursorPos(e.currentTarget.selectionStart)}
                 onKeyUp={(e) => setReplyCursorPos(e.currentTarget.selectionStart)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-                    e.preventDefault()
-                    if (replyDraft.trim() || replyMediaUrl || replySticker) {
-                      e.currentTarget.form?.requestSubmit()
-                    }
-                  }
-                }}
+                onKeyDown={(e) =>
+                  handleEnterToSubmit(
+                    e,
+                    Boolean(replyDraft.trim() || replyMediaUrl || replySticker),
+                    () => e.currentTarget.form?.requestSubmit(),
+                  )
+                }
                 placeholder={`Reply to @${replyTarget ? replyTarget.handle : post.handle}`}
               />
               <input

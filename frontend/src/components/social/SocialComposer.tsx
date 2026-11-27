@@ -69,6 +69,7 @@ export function SocialComposer({
   }
 
   const reset = () => {
+    onChange('')
     setMediaUrl(undefined)
     setMediaName(undefined)
     setSelectedSticker(undefined)

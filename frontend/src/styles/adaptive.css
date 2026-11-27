@@ -643,7 +643,7 @@ dialog.bot-reveal-modal {
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -.035em;
-  text-transform: uppercase;
+  text-transform: none;
   text-wrap: balance;
 }
 
@@ -760,7 +760,7 @@ dialog.bot-reveal-modal {
   font-weight: 700;
   line-height: 1.04;
   letter-spacing: -.025em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .app-shell .workspace .chat-panel > .workspace-empty p {
@@ -851,7 +851,7 @@ dialog.bot-reveal-modal {
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -.035em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .app-shell.view-social .social-heading p {
@@ -1166,7 +1166,7 @@ dialog.bot-reveal-modal {
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -.035em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .app-shell.view-channels .directory-heading p,
@@ -1439,7 +1439,7 @@ dialog.bot-reveal-modal {
   width: min(100%, 620px);
   margin: 18px auto;
   padding: 40px 22px;
-  border: 1px dashed var(--accent-border);
+  border: 1px solid var(--line);
   border-radius: 15px 15px 15px 4px;
   background: var(--surface);
   text-align: center;
@@ -3465,7 +3465,17 @@ button:hover > .gf-icon { opacity: 1; }
     white-space: nowrap;
   }
   .app-shell .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
     flex: 0 0 auto;
+  }
+  .app-shell .topbar-actions button {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
   }
   .app-shell .page-scroll {
     padding: 16px 14px;
@@ -3487,20 +3497,31 @@ button:hover > .gf-icon { opacity: 1; }
     font-size: 0.68rem;
   }
   .app-shell .friends-toolbar {
-    gap: 6px;
-    min-height: 50px;
-    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 56px;
+    padding: 6px 10px;
+  }
+  .app-shell .friends-tabs {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    padding-right: 4px;
   }
   .app-shell .friends-tab-heading,
   .app-shell .friends-tab {
-    min-height: 30px;
-    padding-inline: 8px;
-    font-size: 0.78rem;
+    min-height: 44px;
+    padding-inline: 10px;
+    font-size: 0.8125rem;
   }
   .app-shell .friends-add-button {
-    min-height: 30px;
-    padding-inline: 10px;
-    font-size: 0.76rem;
+    flex: 0 0 auto;
+    min-height: 44px;
+    padding-inline: 12px;
+    font-size: 0.8125rem;
+    -webkit-font-smoothing: antialiased;
+    text-shadow: none;
   }
 }
 
@@ -4268,6 +4289,7 @@ dialog.modal--discord-server::backdrop {
   font-family: inherit;
   font-size: 15px;
   line-height: 1.5;
+  resize: none;
 }
 .app-shell.view-social .social-compose-footer > span {
   color: var(--quiet);
@@ -4288,6 +4310,14 @@ dialog.modal--discord-server::backdrop {
   color: inherit;
 }
 .app-shell.view-social .social-compose-footer button:disabled { opacity: .42; }
+@media (max-width: 767px) {
+  .app-shell.view-social .social-compose-footer button,
+  .app-shell.view-social .social-post-menu-trigger {
+    min-width: 44px;
+    min-height: 44px;
+    height: 44px;
+  }
+}
 .app-shell.view-social .social-feed-tabs { border-bottom: 1px solid var(--line); }
 .app-shell.view-social .social-feed-tabs button {
   color: var(--muted);
@@ -6057,7 +6087,7 @@ button.text-tag:hover {
   margin: 0;
   font-size: 12.5px;
   font-weight: 700;
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.04em;
   color: var(--muted);
 }
