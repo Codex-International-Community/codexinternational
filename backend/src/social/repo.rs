@@ -820,15 +820,14 @@ async fn resolve_mentions(
         while let Some(pos) = rest.find("<@") {
             out.push_str(&rest[..pos]);
             let after = &rest[pos + 2..];
-            if let Some(end) = after.find('>') {
-                if let Ok(uid) = Uuid::parse_str(&after[..end])
-                    && let Some(username) = map.get(&uid)
-                {
-                    out.push('@');
-                    out.push_str(username);
-                    rest = &after[end + 1..];
-                    continue;
-                }
+            if let Some(end) = after.find('>')
+                && let Ok(uid) = Uuid::parse_str(&after[..end])
+                && let Some(username) = map.get(&uid)
+            {
+                out.push('@');
+                out.push_str(username);
+                rest = &after[end + 1..];
+                continue;
             }
             out.push_str("<@");
             rest = after;
