@@ -132,7 +132,8 @@ async fn list_stickers(
     };
 
     for item in &mut items {
-        item.media_url = crate::media::normalize_public_media_url(std::mem::take(&mut item.media_url));
+        item.media_url =
+            crate::media::normalize_public_media_url(std::mem::take(&mut item.media_url));
     }
 
     Ok(Json(items))

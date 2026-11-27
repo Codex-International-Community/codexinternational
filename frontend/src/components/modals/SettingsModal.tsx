@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState, type FormEvent } from 'react'
+import { useUsernameEditor } from '../../hooks/useUsernameEditor'
 import {
   setOrChangePassword,
   toggleUidLogin,
@@ -95,6 +96,8 @@ export function SettingsModal({
   onLogout,
 }: SettingsModalProps) {
   const displayNameId = useId()
+  const usernameId = useId()
+  const usernameEditor = useUsernameEditor(authUser?.username ?? '')
   const avatarUploadId = useId()
   const currentPasswordId = useId()
   const newPasswordId = useId()
@@ -587,6 +590,51 @@ export function SettingsModal({
                     </form>
                   </div>
                 </div>
+
+                {authUser && (
+                  <div className="settings-block">
+                    <h3>Username</h3>
+                    <div className="settings-panel">
+                      <form className="settings-subform" onSubmit={usernameEditor.handleSubmit}>
+                        <div className="settings-field">
+                          <label htmlFor={usernameId}>Username</label>
+                          <input
+                            id={usernameId}
+                            value={usernameEditor.draft}
+                            maxLength={32}
+                            placeholder="your_username"
+                            onChange={(e) => usernameEditor.setDraft(e.target.value)}
+                            disabled={usernameEditor.busy}
+                          />
+                          <small>
+                            {usernameEditor.status === 'checking' && 'Checking availability…'}
+                            {usernameEditor.status === 'available' && 'Username is available.'}
+                            {usernameEditor.status === 'taken' && 'Username is already taken.'}
+                            {usernameEditor.status === 'invalid' &&
+                              '3-32 characters: lowercase letters, numbers, underscores.'}
+                            {usernameEditor.status === 'idle' &&
+                              '3-32 characters (a-z, 0-9, _).'}
+                          </small>
+                        </div>
+                        <div className="settings-form-actions">
+                          <button
+                            type="submit"
+                            className="btn-primary"
+                            disabled={!usernameEditor.canSubmit}
+                          >
+                            {usernameEditor.busy ? 'Saving…' : 'Save Username'}
+                          </button>
+                        </div>
+                        {usernameEditor.error && (
+                          <p className="settings-feedback is-error">{usernameEditor.error}</p>
+                        )}
+                        {usernameEditor.info && (
+                          <p className="settings-feedback is-success">{usernameEditor.info}</p>
+                        )}
+                      </form>
+                    </div>
+                  </div>
+                )}
 
                 <div className="settings-block">
                   <h3>Presence Status</h3>

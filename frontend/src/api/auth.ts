@@ -258,3 +258,21 @@ export async function updateProfile(displayName: string): Promise<AuthUserProfil
   updateSessionUser(res.user)
   return res.user
 }
+
+export async function checkUsernameAvailability(
+  username: string,
+): Promise<{ available: boolean; username: string }> {
+  const params = new URLSearchParams({ username })
+  return apiRequest<{ available: boolean; username: string }>(
+    `/api/v1/auth/username-available?${params.toString()}`,
+  )
+}
+
+export async function updateUsername(username: string): Promise<AuthUserProfile> {
+  const res = await apiRequest<{ user: AuthUserProfile }>('/api/v1/auth/username', {
+    method: 'PATCH',
+    body: { username },
+  })
+  updateSessionUser(res.user)
+  return res.user
+}

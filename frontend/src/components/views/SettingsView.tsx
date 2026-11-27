@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react'
+import { useUsernameEditor } from '../../hooks/useUsernameEditor'
 import { Icon } from '../common/Icon'
 import type { AuthUserProfile } from '../../api/client'
 import { ApiError, publicApiUrl } from '../../api/client'
@@ -21,6 +22,8 @@ export function SettingsView({
   onLogout,
 }: SettingsViewProps) {
   const displayNameId = useId()
+  const usernameId = useId()
+  const usernameEditor = useUsernameEditor(authUser?.username ?? '')
   const newPasswordId = useId()
   const confirmPasswordId = useId()
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle')
@@ -317,6 +320,45 @@ export function SettingsView({
           {profileError && <p style={{ color: 'var(--danger, #ef4444)' }}>{profileError}</p>}
           {profileInfo && <p style={{ color: 'var(--success, #22c55e)' }}>{profileInfo}</p>}
         </form>
+        {authUser && (
+          <form
+            onSubmit={usernameEditor.handleSubmit}
+            style={{ display: 'grid', gap: 8, marginTop: 16 }}
+          >
+            <label htmlFor={usernameId}>Username</label>
+            <input
+              id={usernameId}
+              value={usernameEditor.draft}
+              maxLength={32}
+              placeholder="your_username"
+              onChange={(e) => usernameEditor.setDraft(e.target.value)}
+              disabled={usernameEditor.busy}
+            />
+            <small style={{ opacity: 0.75 }}>
+              {usernameEditor.status === 'checking' && 'Checking availability…'}
+              {usernameEditor.status === 'available' && 'Username is available.'}
+              {usernameEditor.status === 'taken' && 'Username is already taken.'}
+              {usernameEditor.status === 'invalid' &&
+                '3-32 characters: lowercase letters, numbers, underscores.'}
+              {usernameEditor.status === 'idle' && '3-32 characters (a-z, 0-9, _).'}
+            </small>
+            <div>
+              <button
+                type="submit"
+                className="setting-action"
+                disabled={!usernameEditor.canSubmit}
+              >
+                {usernameEditor.busy ? 'Saving…' : 'Save Username'}
+              </button>
+            </div>
+            {usernameEditor.error && (
+              <p style={{ color: 'var(--danger, #ef4444)' }}>{usernameEditor.error}</p>
+            )}
+            {usernameEditor.info && (
+              <p style={{ color: 'var(--success, #22c55e)' }}>{usernameEditor.info}</p>
+            )}
+          </form>
+        )}
       </section>
 
       <section className="settings-card">
