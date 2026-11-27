@@ -2823,19 +2823,16 @@ dialog.bot-reveal-modal {
   }
 }
 
-/* Gentleface line-round icon treatment */
+/* Local vector icon treatment (inherits currentColor) */
 .gf-icon {
   display: inline-block;
   flex: 0 0 auto;
   width: 16px;
   height: 16px;
-  object-fit: contain;
   vertical-align: middle;
   user-select: none;
   transition: transform .2s ease, opacity .2s ease;
 }
-.theme-dark .gf-icon { filter: invert(1); }
-.theme-light .gf-icon { filter: none; }
 button:hover > .gf-icon { opacity: 1; }
 .joined-servers {
   display: flex;
@@ -4272,7 +4269,7 @@ dialog.modal--discord-server::backdrop {
   font-weight: 700;
 }
 .app-shell.view-social .social-compose-footer button .gf-icon {
-  filter: brightness(0) invert(1);
+  color: inherit;
 }
 .app-shell.view-social .social-compose-footer button:disabled { opacity: .42; }
 .app-shell.view-social .social-feed-tabs { border-bottom: 1px solid var(--line); }
@@ -4304,7 +4301,8 @@ dialog.modal--discord-server::backdrop {
   color: #ef4444;
 }
 .app-shell.view-social .social-post-actions button.is-liked .gf-icon {
-  filter: brightness(0) saturate(100%) invert(40%) sepia(79%) saturate(2476%) hue-rotate(336deg) brightness(95%) contrast(96%);
+  color: #ef4444;
+  fill: #ef4444;
   opacity: 1;
 }
 .app-shell.view-social .social-post-actions button.is-reposted,
