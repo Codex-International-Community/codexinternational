@@ -1264,6 +1264,58 @@ dialog.modal {
   scroll-margin-top: 65px;
 }
 
+.social-profile-avatar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.social-profile-avatar-button:focus-visible,
+.social-profile-name-button:focus-visible {
+  outline: 2px solid var(--accent-solid);
+  outline-offset: 3px;
+}
+
+.social-profile-name-button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.social-profile-name-button:hover {
+  color: var(--accent);
+}
+
+.social-post-meta .social-profile-name-button {
+  font-size: 0.9375rem;
+}
+
+.social-reply-author-trigger {
+  flex: 0 0 auto;
+}
+
+.social-reply-avatar .social-profile-avatar-button {
+  width: 22px;
+  height: 22px;
+}
+
+.social-profile-avatar-button:hover {
+  opacity: .82;
+}
+
 .social-post-avatar {
   padding-top: 2px;
 }
