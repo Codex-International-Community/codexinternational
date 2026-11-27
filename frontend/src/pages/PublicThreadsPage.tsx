@@ -127,6 +127,7 @@ export function PublicThreadsPage({
         ) : (
           <SocialFeed
             currentUser={GUEST_USER}
+            onOpenProfile={() => onSignIn()}
             currentUsername=""
             posts={posts}
             socialTab={socialTab}

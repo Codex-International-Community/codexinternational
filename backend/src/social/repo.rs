@@ -586,7 +586,8 @@ pub async fn list_posts(
                     rr.sticker_id,
                     rr.sticker_kind,
                     rr.sticker_label,
-                    rr.sticker_media_url.map(crate::media::normalize_public_media_url),
+                    rr.sticker_media_url
+                        .map(crate::media::normalize_public_media_url),
                 ),
                 created_at: rr.created_at,
             });
@@ -666,7 +667,8 @@ pub async fn list_posts(
                 row.sticker_id,
                 row.sticker_kind,
                 row.sticker_label,
-                row.sticker_media_url.map(crate::media::normalize_public_media_url),
+                row.sticker_media_url
+                    .map(crate::media::normalize_public_media_url),
             ),
             likes,
             reposts,

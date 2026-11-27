@@ -29,9 +29,7 @@ pub async fn verify_turnstile(state: &AppState, token: Option<&str>) -> Result<(
     let token = token
         .map(str::trim)
         .filter(|t| !t.is_empty())
-        .ok_or_else(|| {
-            AppError::BadRequest("Turnstile verification is required".to_string())
-        })?;
+        .ok_or_else(|| AppError::BadRequest("Turnstile verification is required".to_string()))?;
 
     let client = HTTP_CLIENT.get_or_init(|| {
         reqwest::Client::builder()
